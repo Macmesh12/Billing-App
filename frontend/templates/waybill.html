@@ -1,0 +1,138 @@
+{#
+Waybill template (frontend/templates/waybill.html)
+Context:
+ - form: form fields for editable waybill
+ - waybill: optional model instance used for preview/PDF
+#}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Waybill | Billing App{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/waybill.css' %}">
+{% endblock %}
+
+{% block content %}
+<section id="waybill-module" class="module{% if preview %} is-preview{% endif %}">
+    <div class="module-header">
+        <h2>Waybill</h2>
+        <div class="module-actions">
+            {% if waybill %}
+                <a href="{% url 'waybill-pdf' waybill.pk %}" class="button" target="_blank" rel="noopener">Download PDF</a>
+            {% endif %}
+            {% if not preview %}
+                <button id="waybill-preview-toggle" class="button button-secondary" type="button">Preview</button>
+                <button id="waybill-submit" class="button" type="submit" form="waybill-form">Save Waybill</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="module-body">
+    <form id="waybill-form" class="document waybill document-editable" method="post" action="{% url 'waybill-form' %}" {% if preview %}hidden{% endif %}>
+            {% csrf_token %}
+            <header class="document-header">
+                <div>
+                    <h3>WAYBILL</h3>
+                    <p>No.: {{ waybill.waybill_number|default:"WB-NEW" }}</p>
+                    <p>Date: {{ form.issue_date }}</p>
+                </div>
+                <div class="sender-receiver">
+                    <p><strong>Customer:</strong> {{ form.customer_name }}</p>
+                    <p><strong>Destination:</strong> {{ form.destination }}</p>
+                </div>
+            </header>
+
+            <section class="sender-receiver">
+                <p><strong>Driver:</strong> {{ form.driver_name }}</p>
+                <p><strong>Receiver:</strong> {{ form.receiver_name }}</p>
+            </section>
+
+            <input type="hidden" id="waybill-items-payload" name="items_payload" value='{{ form.items_payload.value|default:"[]" }}'>
+
+            <table class="document-items" id="waybill-items-table">
+                <thead>
+                    <tr>
+                        <th>Description of Goods</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <button type="button" id="waybill-add-item" class="button button-secondary">Add Item</button>
+
+            <section class="document-footer">
+                <div>
+                    <p><strong>Driver Signature:</strong></p>
+                    <div class="signature-line"></div>
+                </div>
+                <div>
+                    <p><strong>Receiver Signature:</strong></p>
+                    <div class="signature-line"></div>
+                </div>
+            </section>
+        </form>
+
+        <article id="waybill-preview" class="document waybill" {% if not preview %}hidden{% endif %}>
+            <header class="document-header">
+                <div>
+                    <h3>WAYBILL</h3>
+                    <p>No.: {{ waybill.waybill_number|default:"WB-NEW" }}</p>
+                    <p>Date: {{ waybill.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
+                </div>
+                <div class="sender-receiver">
+                    <p><strong>Customer:</strong> {{ waybill.customer_name|default:form.customer_name.value }}</p>
+                    <p><strong>Destination:</strong> {{ waybill.destination|default:form.destination.value }}</p>
+                </div>
+            </header>
+
+            {% if not preview %}
+            <div class="preview-actions">
+                <button class="button button-secondary" data-exit-preview>Back to Edit</button>
+            </div>
+            {% endif %}
+
+            <table class="document-items">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="waybill-preview-rows">
+                    {% if waybill %}
+                        {% for item in waybill.items %}
+                            <tr>
+                                <td>{{ item.description }}</td>
+                                <td>{{ item.quantity|floatformat:2 }}</td>
+                                <td>{{ item.unit_price|floatformat:2 }}</td>
+                                <td>{{ item.total|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+
+            <section class="document-footer">
+                <div>
+                    <p><strong>Driver:</strong> {{ waybill.driver_name|default:form.driver_name.value }}</p>
+                    <div class="signature-line">Driver Signature</div>
+                </div>
+                <div>
+                    <p><strong>Receiver:</strong> {{ waybill.receiver_name|default:form.receiver_name.value }}</p>
+                    <div class="signature-line">Receiver Signature</div>
+                </div>
+            </section>
+        </article>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/waybill.js' %}"></script>
+{% endblock %}

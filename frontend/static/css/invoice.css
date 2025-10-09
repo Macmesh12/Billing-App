@@ -1,0 +1,52 @@
+.document-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.document-meta {
+    margin-bottom: 1.5rem;
+}
+
+.document-meta p {
+    margin: 0.3rem 0;
+}
+
+.document-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+}
+
+.document-items th,
+.document-items td {
+    border: 1px solid var(--border);
+    padding: 0.6rem;
+    text-align: left;
+}
+
+.document-totals {
+    margin-left: auto;
+    max-width: 280px;
+}
+
+.document-totals p {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.4rem 0;
+}
+
+.document-totals .grand {
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.document-footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+}

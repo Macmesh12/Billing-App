@@ -1,0 +1,138 @@
+{#
+Invoice template (frontend/templates/invoice.html)
+Expected context variables:
+ - form: Django form or fields for editable inputs (form.customer_name, form.issue_date, etc.)
+ - invoice: Optional invoice object used for preview and PDF rendering on the server
+ - tax_rows: List of tax rows (name, rate_percent, rate, amount) built by the view
+
+This template is intended to be editable in the browser (document-editable class).
+The same template can be rendered server-side for PDF export when 'preview' context is true.
+#}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Invoice | Billing App{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/invoice.css' %}">
+{% endblock %}
+
+{% block content %}
+<section id="invoice-module" class="module{% if preview %} is-preview{% endif %}">
+    <div class="module-header">
+        <h2>Invoice</h2>
+        <div class="module-actions">
+            {% if invoice %}
+                <a href="{% url 'invoice-pdf' invoice.pk %}" class="button" target="_blank" rel="noopener">Download PDF</a>
+            {% endif %}
+            {% if not preview %}
+                <button id="invoice-preview-toggle" class="button button-secondary" type="button">Preview</button>
+                <button id="invoice-submit" class="button" type="button">Save Invoice</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="module-body">
+    <form id="invoice-form" class="document document-editable" method="post" action="{% url 'invoice-form' %}" {% if preview %}hidden{% endif %}>
+            {% csrf_token %}
+
+            <header class="document-header">
+                <div>
+                    <h3>INVOICE</h3>
+                    <p class="document-number">Invoice No.: {{ invoice.invoice_number|default:"INV-NEW" }}</p>
+                </div>
+                <div class="document-meta">
+                    <p><strong>Date:</strong> {{ form.issue_date }}</p>
+                    <p><strong>Classification:</strong> {{ form.classification }}</p>
+                </div>
+            </header>
+
+            <section class="document-meta">
+                <p><strong>Billed To:</strong> {{ form.customer_name }}</p>
+            </section>
+
+            <input type="hidden" id="invoice-items-payload" name="items_payload" value='{{ form.items_payload.value|default:"[]" }}'>
+
+            <table class="document-items" id="invoice-items-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <button type="button" id="invoice-add-item" class="button button-secondary">Add Item</button>
+
+            <section class="document-totals">
+                <p><span>Subtotal:</span> <span id="invoice-subtotal">0.00</span></p>
+                {% for row in tax_rows %}
+                    <p><span>{{ row.name|upper }} ({{ row.rate_percent|floatformat:2 }}%):</span> <span data-levy="{{ row.name }}" data-rate="{{ row.rate }}">{{ row.amount|default:"0.00" }}</span></p>
+                {% endfor %}
+                <p class="grand"><span>Grand Total:</span> <span id="invoice-grand-total">0.00</span></p>
+            </section>
+
+        </form>
+
+        <div id="invoice-preview" class="document" {% if not preview %}hidden{% endif %}>
+            <header class="document-header">
+                <h3>INVOICE</h3>
+                <p class="document-number">Invoice No.: {{ invoice.invoice_number|default:"INV-NEW" }}</p>
+                <p class="document-date">Date: {{ invoice.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
+            </header>
+            {% if not preview %}
+            <div class="preview-actions">
+                <button class="button button-secondary" data-exit-preview>Back to Edit</button>
+            </div>
+            {% endif %}
+
+            <section class="document-meta">
+                <p><strong>Billed To:</strong> {{ invoice.customer_name|default:form.customer_name.value }}</p>
+                <p><strong>Classification:</strong> {{ invoice.classification|default:form.classification.value }}</p>
+            </section>
+
+            <table class="document-items">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="invoice-preview-rows">
+                    {% if invoice %}
+                        {% for item in invoice.items %}
+                            <tr>
+                                <td>{{ item.description }}</td>
+                                <td>{{ item.quantity|floatformat:2 }}</td>
+                                <td>{{ item.unit_price|floatformat:2 }}</td>
+                                <td>{{ item.total|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+
+            <section class="document-totals">
+                <p><span>Subtotal:</span> <span id="invoice-preview-subtotal">{{ invoice.subtotal|default:"0.00"|floatformat:2 }}</span></p>
+                {% for row in tax_rows %}
+                    <p><span>{{ row.name|upper }}:</span> <span data-preview-levy="{{ row.name }}">{{ row.amount|default:"0.00" }}</span></p>
+                {% endfor %}
+                <p class="grand"><span>Grand Total:</span> <span id="invoice-preview-grand">{{ invoice.grand_total|default:"0.00"|floatformat:2 }}</span></p>
+            </section>
+
+            <footer class="document-footer">
+                <p>Thank you for your business.</p>
+            </footer>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/invoice.js' %}"></script>
+{% endblock %}

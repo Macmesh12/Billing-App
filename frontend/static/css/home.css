@@ -1,0 +1,61 @@
+.dashboard-hero {
+    display: grid;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.dashboard-hero h2 {
+    margin: 0;
+    font-size: 2.2rem;
+}
+
+.dashboard-hero p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 1.05rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+}
+
+.module-card {
+    background: #fff;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 12px 32px -24px rgba(31, 111, 235, 0.6);
+    position: relative;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.module-card:hover,
+.module-card:focus-within,
+.module-card.is-active {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+}
+
+.module-card h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+.module-card p {
+    margin: 0 0 1rem;
+    color: var(--muted);
+}
+
+.module-card .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-decoration: none;
+}
+
+.module-card .button svg {
+    width: 1rem;
+    height: 1rem;
+}

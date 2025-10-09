@@ -1,0 +1,27 @@
+{
+  "name": "billing-app-desktop",
+  "version": "0.1.0",
+  "main": "main.js",
+  "scripts": {
+    "dev": "concurrently \"npm:django\" \"npm:electron\"",
+    "django": "python ../backend/manage.py runserver 127.0.0.1:8765",
+    "electron": "wait-on http://127.0.0.1:8765 && electron .",
+    "package": "electron-builder"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^29.1.0",
+    "electron-builder": "^24.13.3",
+    "wait-on": "^7.0.1"
+  },
+  "build": {
+    "appId": "com.billingapp.desktop",
+    "files": [
+      "**/*",
+      "!node_modules/.cache/**"
+    ],
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

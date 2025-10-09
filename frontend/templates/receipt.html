@@ -1,0 +1,92 @@
+{#
+Receipt template (frontend/templates/receipt.html)
+Context:
+ - form: form fields for editable receipt
+ - receipt: optional model instance for preview/PDF
+
+Editable layout matches the preview layout so users can type directly into the document.
+#}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Receipt | Billing App{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/receipt.css' %}">
+{% endblock %}
+
+{% block content %}
+<section id="receipt-module" class="module{% if preview %} is-preview{% endif %}">
+    <div class="module-header">
+        <h2>Receipt</h2>
+        <div class="module-actions">
+            {% if receipt %}
+                <a href="{% url 'receipt-pdf' receipt.pk %}" class="button" target="_blank" rel="noopener">Download PDF</a>
+            {% endif %}
+            {% if not preview %}
+                <button id="receipt-preview-toggle" class="button button-secondary" type="button">Preview</button>
+                <button id="receipt-submit" class="button" type="submit" form="receipt-form">Save Receipt</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="module-body">
+    <form id="receipt-form" class="document receipt document-editable" method="post" action="{% url 'receipt-form' %}" {% if preview %}hidden{% endif %}>
+            {% csrf_token %}
+            <header class="document-header">
+                <div class="logo-placeholder">Your Logo</div>
+                <div>
+                    <h3>RECEIPT</h3>
+                    <p>No.: {{ receipt.receipt_number|default:"REC-NEW" }}</p>
+                    <p>Date: {{ form.issue_date }}</p>
+                </div>
+            </header>
+
+            <section class="receipt-body">
+                <p><strong>Received From:</strong> {{ form.received_from }}</p>
+                <p><strong>Amount:</strong> {{ form.amount }}</p>
+                <p><strong>Payment Method:</strong> {{ form.payment_method }}</p>
+                <p><strong>For:</strong> {{ form.description }}</p>
+            </section>
+
+            <section class="receipt-footer">
+                <p><strong>Approved By:</strong> {{ form.approved_by }}</p>
+                <div class="signature-line">Signature</div>
+            </section>
+        </form>
+
+        <article id="receipt-preview" class="document receipt" {% if not preview %}hidden{% endif %}>
+            <header class="document-header">
+                <div class="logo-placeholder">Your Logo</div>
+                <div>
+                    <h3>RECEIPT</h3>
+                    <p>No.: {{ receipt.receipt_number|default:"REC-NEW" }}</p>
+                    <p>Date: {{ receipt.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
+                </div>
+            </header>
+
+            {% if not preview %}
+            <div class="preview-actions">
+                <button class="button button-secondary" data-exit-preview>Back to Edit</button>
+            </div>
+            {% endif %}
+
+            <section class="receipt-body">
+                <p><strong>Received From:</strong> {{ receipt.received_from|default:form.received_from.value }}</p>
+                <p><strong>Amount:</strong> {{ receipt.amount|default:form.amount.value|floatformat:2 }}</p>
+                <p><strong>Payment Method:</strong> {{ receipt.payment_method|default:form.payment_method.value }}</p>
+                <p><strong>For:</strong> {{ receipt.description|default:form.description.value }}</p>
+            </section>
+
+            <section class="receipt-footer">
+                <p><strong>Approved By:</strong> {{ receipt.approved_by|default:form.approved_by.value }}</p>
+                <div class="signature-line">Signature</div>
+            </section>
+        </article>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/receipt.js' %}"></script>
+{% endblock %}

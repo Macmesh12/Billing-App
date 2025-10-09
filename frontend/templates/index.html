@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard | Billing App{% endblock %}
+
+{% block extra_css %}
+{# Use Django static helper so STATIC_URL and storage backends are respected. Previously this linked to /frontend/static/... which bypasses Django's static resolving and will fail in many deployments. #}
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="dashboard-hero">
+    <h2>Track invoices, receipts, and logistics from one workspace.</h2>
+    <p>Use the quick actions below to jump straight into the document editor you need. Data stays in sync with previews and PDF exports automatically.</p>
+</section>
+
+<section class="dashboard-grid" aria-label="Billing modules">
+    <article class="module-card">
+        <h3>Invoices</h3>
+        <p>Capture line items, compute levies, and export client-ready documents instantly.</p>
+        <a class="button" href="{% url 'invoice-form' %}">
+            Open Invoice
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
+            </svg>
+        </a>
+    </article>
+
+    <article class="module-card">
+        <h3>Receipts</h3>
+        <p>Produce official receipt slips with payment method tracking and sign-off sections.</p>
+        <a class="button" href="{% url 'receipt-form' %}">
+            Open Receipt
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
+            </svg>
+        </a>
+    </article>
+
+    <article class="module-card">
+        <h3>Waybills</h3>
+        <p>Log delivery manifests, calculate totals, and prepare printable documents for drivers.</p>
+        <a class="button" href="{% url 'waybill-form' %}">
+            Open Waybill
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
+            </svg>
+        </a>
+    </article>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/home.js' %}"></script>
+{% endblock %}
