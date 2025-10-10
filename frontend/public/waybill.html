@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waybill | Billing App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/css/general.css">
+    <link rel="stylesheet" href="../static/css/waybill.css">
+    <script>
+        window.BILLING_APP_CONFIG = {
+            apiBaseUrl: "http://127.0.0.1:8765"
+        };
+    </script>
+</head>
+<body class="billing-app">
+<header class="app-header">
+    <div class="app-brand">
+        <h1>Billing App</h1>
+    </div>
+    <nav class="app-nav" aria-label="Primary">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link" href="invoice.html">Invoice</a>
+        <a class="nav-link" href="receipt.html">Receipt</a>
+        <a class="nav-link active" href="waybill.html">Waybill</a>
+    </nav>
+</header>
+
+<main class="app-main">
+    <section id="waybill-module" class="module" data-document-type="waybill">
+        <div class="module-header">
+            <h2>Waybill</h2>
+            <div class="module-actions">
+                <button id="waybill-preview-toggle" class="button button-secondary" type="button">Preview</button>
+                <button id="waybill-submit" class="button" type="button">Save Waybill</button>
+            </div>
+        </div>
+
+        <div class="module-body">
+            <form id="waybill-form" class="document waybill document-editable" novalidate>
+                <header class="document-header">
+                    <div>
+                        <h3>WAYBILL</h3>
+                        <p>No.: <span id="waybill-number">WB-NEW</span></p>
+                        <label class="field-inline">
+                            <span>Date:</span>
+                            <input type="date" id="waybill-issue-date" name="issue_date" required>
+                        </label>
+                    </div>
+                    <div class="sender-receiver">
+                        <label class="field-block">
+                            <span>Customer:</span>
+                            <input type="text" id="waybill-customer" name="customer_name" required>
+                        </label>
+                        <label class="field-block">
+                            <span>Destination:</span>
+                            <input type="text" id="waybill-destination" name="destination" required>
+                        </label>
+                    </div>
+                </header>
+
+                <section class="sender-receiver">
+                    <label class="field-block">
+                        <span>Driver:</span>
+                        <input type="text" id="waybill-driver" name="driver_name" required>
+                    </label>
+                    <label class="field-block">
+                        <span>Receiver:</span>
+                        <input type="text" id="waybill-receiver" name="receiver_name" required>
+                    </label>
+                </section>
+
+                <input type="hidden" id="waybill-items-payload" name="items_payload" value="[]">
+
+                <table class="document-items" id="waybill-items-table">
+                    <thead>
+                        <tr>
+                            <th>Description of Goods</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <button type="button" id="waybill-add-item" class="button button-secondary">Add Item</button>
+
+                <section class="document-footer">
+                    <div>
+                        <p><strong>Driver Signature:</strong></p>
+                        <div class="signature-line"></div>
+                    </div>
+                    <div>
+                        <p><strong>Receiver Signature:</strong></p>
+                        <div class="signature-line"></div>
+                    </div>
+                </section>
+            </form>
+
+            <article id="waybill-preview" class="document waybill" hidden>
+                <header class="document-header">
+                    <div>
+                        <h3>WAYBILL</h3>
+                        <p>No.: <span id="waybill-preview-number">WB-NEW</span></p>
+                        <p>Date: <span id="waybill-preview-date">—</span></p>
+                    </div>
+                    <div class="sender-receiver">
+                        <p><strong>Customer:</strong> <span id="waybill-preview-customer">—</span></p>
+                        <p><strong>Destination:</strong> <span id="waybill-preview-destination">—</span></p>
+                    </div>
+                </header>
+
+                <div class="preview-actions">
+                    <button class="button button-secondary" data-exit-preview>Back to Edit</button>
+                </div>
+
+                <table class="document-items">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="waybill-preview-rows"></tbody>
+                </table>
+
+                <section class="document-footer">
+                    <div>
+                        <p><strong>Driver:</strong> <span id="waybill-preview-driver">—</span></p>
+                        <div class="signature-line">Driver Signature</div>
+                    </div>
+                    <div>
+                        <p><strong>Receiver:</strong> <span id="waybill-preview-receiver">—</span></p>
+                        <div class="signature-line">Receiver Signature</div>
+                    </div>
+                </section>
+            </article>
+        </div>
+        <div class="module-toast" id="waybill-toast" role="status" aria-live="polite" hidden></div>
+    </section>
+</main>
+
+<footer class="app-footer">
+    <p>&copy; <span id="waybill-current-year"></span> Billing App. All rights reserved.</p>
+</footer>
+
+<script src="../static/js/main.js" defer></script>
+<script src="../static/js/waybill.js" defer></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("waybill-current-year").textContent = new Date().getFullYear();
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice | Billing App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/css/general.css">
+    <link rel="stylesheet" href="../static/css/invoice.css">
+    <script>
+        window.BILLING_APP_CONFIG = {
+            apiBaseUrl: "http://127.0.0.1:8765"
+        };
+    </script>
+</head>
+<body class="billing-app">
+<header class="app-header">
+    <div class="app-brand">
+        <h1>Billing App</h1>
+    </div>
+    <nav class="app-nav" aria-label="Primary">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link active" href="invoice.html">Invoice</a>
+        <a class="nav-link" href="receipt.html">Receipt</a>
+        <a class="nav-link" href="waybill.html">Waybill</a>
+    </nav>
+</header>
+
+<main class="app-main">
+    <section id="invoice-module" class="module" data-document-type="invoice">
+        <div class="module-header">
+            <h2>Invoice</h2>
+            <div class="module-actions">
+                <button id="invoice-preview-toggle" class="button button-secondary" type="button">Preview</button>
+                <button id="invoice-submit" class="button" type="button">Save Invoice</button>
+            </div>
+        </div>
+
+        <div class="module-body">
+            <form id="invoice-form" class="document document-editable" novalidate>
+                <header class="document-header">
+                    <div>
+                        <h3>INVOICE</h3>
+                        <p class="document-number">Invoice No.: <span id="invoice-number">INV-NEW</span></p>
+                    </div>
+                    <div class="document-meta">
+                        <label class="field-inline">
+                            <span>Date:</span>
+                            <input type="date" id="invoice-issue-date" name="issue_date" required>
+                        </label>
+                        <label class="field-inline">
+                            <span>Classification:</span>
+                            <input type="text" id="invoice-classification" name="classification" placeholder="Service" required>
+                        </label>
+                    </div>
+                </header>
+
+                <section class="document-meta">
+                    <label class="field-block">
+                        <span>Billed To:</span>
+                        <input type="text" id="invoice-customer" name="customer_name" placeholder="Client name" required>
+                    </label>
+                </section>
+
+                <input type="hidden" id="invoice-items-payload" name="items_payload" value="[]">
+
+                <table class="document-items" id="invoice-items-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <button type="button" id="invoice-add-item" class="button button-secondary">Add Item</button>
+
+                <section class="document-totals" id="invoice-totals">
+                    <p><span>Subtotal:</span> <span id="invoice-subtotal">0.00</span></p>
+                    <div id="invoice-levies"></div>
+                    <p class="grand"><span>Grand Total:</span> <span id="invoice-grand-total">0.00</span></p>
+                </section>
+            </form>
+
+            <div id="invoice-preview" class="document" hidden>
+                <header class="document-header">
+                    <h3>INVOICE</h3>
+                    <p class="document-number">Invoice No.: <span id="invoice-preview-number">INV-NEW</span></p>
+                    <p class="document-date">Date: <span id="invoice-preview-date">—</span></p>
+                </header>
+
+                <div class="preview-actions">
+                    <button class="button button-secondary" data-exit-preview>Back to Edit</button>
+                </div>
+
+                <section class="document-meta">
+                    <p><strong>Billed To:</strong> <span id="invoice-preview-customer">—</span></p>
+                    <p><strong>Classification:</strong> <span id="invoice-preview-classification">—</span></p>
+                </section>
+
+                <table class="document-items">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-preview-rows"></tbody>
+                </table>
+
+                <section class="document-totals">
+                    <p><span>Subtotal:</span> <span id="invoice-preview-subtotal">0.00</span></p>
+                    <div id="invoice-preview-levies"></div>
+                    <p class="grand"><span>Grand Total:</span> <span id="invoice-preview-grand">0.00</span></p>
+                </section>
+
+                <footer class="document-footer">
+                    <p>Thank you for your business.</p>
+                </footer>
+            </div>
+        </div>
+        <div class="module-toast" id="invoice-toast" role="status" aria-live="polite" hidden></div>
+    </section>
+</main>
+
+<footer class="app-footer">
+    <p>&copy; <span id="invoice-current-year"></span> Billing App. All rights reserved.</p>
+</footer>
+
+<script src="../static/js/main.js" defer></script>
+<script src="../static/js/invoice.js" defer></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("invoice-current-year").textContent = new Date().getFullYear();
+    });
+</script>
+</body>
+</html>

@@ -1,12 +1,12 @@
 (() => {
     document.addEventListener("DOMContentLoaded", () => {
         const currentPath = window.location.pathname;
+        const currentFile = currentPath.split("/").filter(Boolean).pop() || "index.html";
         document.querySelectorAll(".app-nav .nav-link").forEach((link) => {
             const href = link.getAttribute("href");
             if (!href) return;
-            if (href === "/" && currentPath === "/") {
-                link.classList.add("active");
-            } else if (href !== "/" && currentPath.startsWith(href)) {
+            const normalizedHref = href.replace(/^\.\//, "");
+            if (normalizedHref === currentFile || (currentFile === "index.html" && normalizedHref === "/")) {
                 link.classList.add("active");
             }
         });
@@ -30,7 +30,7 @@
             if (!moduleEl) return;
             const showPreview = Boolean(isPreview);
             moduleEl.classList.toggle("is-preview", showPreview);
-            const form = moduleEl.querySelector("form");
+            const form = moduleEl.querySelector("form.document-editable");
             if (form) {
                 if (showPreview) {
                     form.setAttribute("hidden", "hidden");
@@ -38,14 +38,15 @@
                     form.removeAttribute("hidden");
                 }
             }
-            const previewEl = moduleEl.querySelector(".document");
-            if (previewEl) {
-                if (showPreview) {
-                    previewEl.removeAttribute("hidden");
-                } else {
-                    previewEl.setAttribute("hidden", "hidden");
+            moduleEl.querySelectorAll(".document").forEach((doc) => {
+                if (!doc.classList.contains("document-editable")) {
+                    if (showPreview) {
+                        doc.removeAttribute("hidden");
+                    } else {
+                        doc.setAttribute("hidden", "hidden");
+                    }
                 }
-            }
+            });
         },
     };
 

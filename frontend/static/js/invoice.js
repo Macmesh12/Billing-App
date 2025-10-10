@@ -9,48 +9,122 @@
     const togglePreview = typeof helpers.togglePreview === "function"
         ? helpers.togglePreview
         : () => {};
+
     const moduleId = "invoice-module";
-    const form = document.getElementById("invoice-form");
-    if (!form) return;
-
-    const itemsPayload = document.getElementById("invoice-items-payload");
-    const itemsTableBody = document.querySelector("#invoice-items-table tbody");
-    const subtotalEl = document.getElementById("invoice-subtotal");
-    const grandTotalEl = document.getElementById("invoice-grand-total");
-    const levyEls = document.querySelectorAll("[data-levy]");
-    const previewSubtotalEl = document.getElementById("invoice-preview-subtotal");
-    const previewGrandEl = document.getElementById("invoice-preview-grand");
-    const previewRows = document.getElementById("invoice-preview-rows");
-    const addItemBtn = document.getElementById("invoice-add-item");
-    const previewToggleBtn = document.getElementById("invoice-preview-toggle");
-    const submitBtn = document.getElementById("invoice-submit");
     const moduleEl = document.getElementById(moduleId);
+    const form = document.getElementById("invoice-form");
+    if (!moduleEl || !form) return;
 
-    let items = [];
+    const config = window.BILLING_APP_CONFIG || {};
+    const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
 
-    function loadInitialItems() {
-        try {
-            items = JSON.parse(itemsPayload.value || "[]");
-        } catch (error) {
-            items = [];
+    const elements = {
+        itemsPayload: document.getElementById("invoice-items-payload"),
+        itemsTableBody: document.querySelector("#invoice-items-table tbody"),
+        previewRows: document.getElementById("invoice-preview-rows"),
+        subtotal: document.getElementById("invoice-subtotal"),
+        grandTotal: document.getElementById("invoice-grand-total"),
+        previewSubtotal: document.getElementById("invoice-preview-subtotal"),
+        previewGrand: document.getElementById("invoice-preview-grand"),
+        levyContainer: document.getElementById("invoice-levies"),
+        previewLevyContainer: document.getElementById("invoice-preview-levies"),
+        addItemBtn: document.getElementById("invoice-add-item"),
+        previewToggleBtn: document.getElementById("invoice-preview-toggle"),
+        submitBtn: document.getElementById("invoice-submit"),
+        toast: document.getElementById("invoice-toast"),
+        invoiceNumber: document.getElementById("invoice-number"),
+        previewNumber: document.getElementById("invoice-preview-number"),
+        previewCustomer: document.getElementById("invoice-preview-customer"),
+        previewClassification: document.getElementById("invoice-preview-classification"),
+        previewDate: document.getElementById("invoice-preview-date"),
+    };
+
+    const inputs = {
+        customer: document.getElementById("invoice-customer"),
+        classification: document.getElementById("invoice-classification"),
+        issueDate: document.getElementById("invoice-issue-date"),
+    };
+
+    const state = {
+        items: [],
+        levies: [],
+        invoiceId: null,
+        invoiceNumber: "INV-NEW",
+        isSaving: false,
+    };
+
+    const levyValueMap = new Map();
+    const previewLevyValueMap = new Map();
+
+    function showToast(message, tone = "success") {
+        const el = elements.toast;
+        if (!el) return;
+        el.textContent = message;
+        el.className = `module-toast is-${tone}`;
+        el.hidden = false;
+        setTimeout(() => {
+            el.hidden = true;
+        }, 4000);
+    }
+
+    function buildPayload() {
+        return {
+            customer_name: inputs.customer?.value || "",
+            classification: inputs.classification?.value || "",
+            issue_date: inputs.issueDate?.value || "",
+            items_payload: JSON.stringify(state.items),
+        };
+    }
+
+    async function callApi(path, options = {}) {
+        const url = `${API_BASE}${path}`;
+        const response = await fetch(url, {
+            headers: {
+                "Content-Type": "application/json",
+                ...(options.headers || {}),
+            },
+            ...options,
+        });
+        if (!response.ok) {
+            let errorDetail = await response.json().catch(() => ({}));
+            const message = errorDetail.errors ? JSON.stringify(errorDetail.errors) : `${response.status} ${response.statusText}`;
+            throw new Error(message);
         }
-        if (!Array.isArray(items)) {
-            items = [];
+        if (response.status === 204) {
+            return null;
         }
-        if (items.length === 0) {
-            items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
-        }
-        renderItems();
+        return response.json();
+    }
+
+    function renderLevyPlaceholders() {
+        if (!elements.levyContainer || !elements.previewLevyContainer) return;
+        elements.levyContainer.innerHTML = "";
+        elements.previewLevyContainer.innerHTML = "";
+        levyValueMap.clear();
+        previewLevyValueMap.clear();
+
+        state.levies.forEach(({ name, rate }) => {
+            const line = document.createElement("p");
+            line.innerHTML = `<span>${name.toUpperCase()} (${(rate * 100).toFixed(2)}%):</span> <span data-levy="${name}">0.00</span>`;
+            elements.levyContainer.appendChild(line);
+            const valueEl = line.querySelector("[data-levy]");
+            levyValueMap.set(name, valueEl);
+
+            const previewLine = document.createElement("p");
+            previewLine.innerHTML = `<span>${name.toUpperCase()}:</span> <span data-preview-levy="${name}">0.00</span>`;
+            elements.previewLevyContainer.appendChild(previewLine);
+            const previewVal = previewLine.querySelector("[data-preview-levy]");
+            previewLevyValueMap.set(name, previewVal);
+        });
     }
 
     function renderItems() {
-        if (itemsTableBody) {
-            itemsTableBody.innerHTML = "";
-        }
-        if (previewRows) {
-            previewRows.innerHTML = "";
-        }
-        items.forEach((item, index) => {
+        const tableBody = elements.itemsTableBody;
+        const previewBody = elements.previewRows;
+        if (tableBody) tableBody.innerHTML = "";
+        if (previewBody) previewBody.innerHTML = "";
+
+        state.items.forEach((item, index) => {
             const row = document.createElement("tr");
             row.innerHTML = `
                 <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
@@ -59,9 +133,7 @@
                 <td class="row-total">${formatCurrency(item.total || 0)}</td>
                 <td><button type="button" class="button button-secondary" data-remove="${index}">Remove</button></td>
             `;
-            if (itemsTableBody) {
-                itemsTableBody.appendChild(row);
-            }
+            tableBody?.appendChild(row);
 
             const previewRow = document.createElement("tr");
             previewRow.innerHTML = `
@@ -70,79 +142,192 @@
                 <td>${formatCurrency(item.unit_price || 0)}</td>
                 <td>${formatCurrency(item.total || 0)}</td>
             `;
-            if (previewRows) {
-                previewRows.appendChild(previewRow);
-            }
+            previewBody?.appendChild(previewRow);
         });
-        itemsPayload.value = JSON.stringify(items);
+
+        if (state.items.length === 0) {
+            const placeholderRow = document.createElement("tr");
+            placeholderRow.innerHTML = `<td colspan="5" class="empty-state">No line items yet. Add one to begin.</td>`;
+            tableBody?.appendChild(placeholderRow);
+        }
+
+        if (elements.itemsPayload) {
+            elements.itemsPayload.value = JSON.stringify(state.items);
+        }
+
         recalcTotals();
     }
 
     function recalcTotals() {
-        const subtotal = items.reduce((sum, item) => sum + parseNumber(item.total), 0);
-        if (subtotalEl) {
-            subtotalEl.textContent = formatCurrency(subtotal);
-        }
-        if (previewSubtotalEl) {
-            previewSubtotalEl.textContent = formatCurrency(subtotal);
-        }
+        const subtotal = state.items.reduce((sum, item) => sum + parseNumber(item.total), 0);
+        elements.subtotal && (elements.subtotal.textContent = formatCurrency(subtotal));
+        elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(subtotal));
 
         let levyTotal = 0;
-        levyEls.forEach((el) => {
-            const levyName = el.getAttribute("data-levy");
-            const rate = Number(el.getAttribute("data-rate")) || 0;
+        state.levies.forEach(({ name, rate }) => {
             const amount = subtotal * rate;
-            el.textContent = formatCurrency(amount);
-            const previewEl = document.querySelector(`[data-preview-levy="${levyName}"]`);
-            if (previewEl) {
-                previewEl.textContent = formatCurrency(amount);
-            }
+            levyValueMap.get(name)?.textContent = formatCurrency(amount);
+            previewLevyValueMap.get(name)?.textContent = formatCurrency(amount);
             levyTotal += amount;
         });
 
         const grandTotal = subtotal + levyTotal;
-        if (grandTotalEl) {
-            grandTotalEl.textContent = formatCurrency(grandTotal);
-        }
-        if (previewGrandEl) {
-            previewGrandEl.textContent = formatCurrency(grandTotal);
+        elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(grandTotal));
+        elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(grandTotal));
+    }
+
+    function syncPreviewFromForm() {
+        elements.previewCustomer && (elements.previewCustomer.textContent = inputs.customer?.value || "—");
+        elements.previewClassification && (elements.previewClassification.textContent = inputs.classification?.value || "—");
+        elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
+        elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+    }
+
+    async function calculateServerTotals() {
+        try {
+            const payload = buildPayload();
+            const result = await callApi("/invoices/api/calculate-preview/", {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
+            if (!result) return;
+            elements.subtotal && (elements.subtotal.textContent = formatCurrency(result.subtotal));
+            elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(result.subtotal));
+            Object.entries(result.levies || {}).forEach(([name, amount]) => {
+                levyValueMap.get(name)?.textContent = formatCurrency(amount);
+                previewLevyValueMap.get(name)?.textContent = formatCurrency(amount);
+            });
+            elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(result.grand_total));
+            elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(result.grand_total));
+        } catch (error) {
+            console.warn("Failed to calculate preview totals", error);
         }
     }
 
-    if (itemsTableBody) {
-        itemsTableBody.addEventListener("input", (event) => {
+    async function handlePreviewToggle() {
+        syncPreviewFromForm();
+        await calculateServerTotals();
+        togglePreview(moduleId, true);
+    }
+
+    async function handleSave() {
+        if (state.isSaving) return;
+        state.isSaving = true;
+        elements.submitBtn?.setAttribute("disabled", "disabled");
+        const payload = buildPayload();
+
+        try {
+            const method = state.invoiceId ? "PUT" : "POST";
+            const path = state.invoiceId
+                ? `/invoices/api/${state.invoiceId}/`
+                : `/invoices/api/create/`;
+            const result = await callApi(path, {
+                method,
+                body: JSON.stringify(payload),
+            });
+            if (result && result.invoice_number) {
+                state.invoiceNumber = result.invoice_number;
+                elements.invoiceNumber && (elements.invoiceNumber.textContent = result.invoice_number);
+                elements.previewNumber && (elements.previewNumber.textContent = result.invoice_number);
+            }
+            if (result && result.id) {
+                state.invoiceId = result.id;
+            }
+            showToast("Invoice saved successfully.");
+        } catch (error) {
+            console.error(error);
+            showToast(`Failed to save invoice: ${error.message}`, "error");
+        } finally {
+            state.isSaving = false;
+            elements.submitBtn?.removeAttribute("disabled");
+        }
+    }
+
+    function getQueryParam(name) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(name);
+    }
+
+    async function loadConfig() {
+        try {
+            const data = await callApi("/invoices/api/config/");
+            const taxSettings = data?.tax_settings || {};
+            state.levies = Object.entries(taxSettings).map(([name, rate]) => ({
+                name,
+                rate: Number(rate) || 0,
+            }));
+        } catch (error) {
+            console.warn("Failed to load invoice config", error);
+            state.levies = [];
+        }
+        renderLevyPlaceholders();
+        recalcTotals();
+    }
+
+    async function loadExistingInvoice() {
+        const id = getQueryParam("id");
+        if (!id) {
+            state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+            renderItems();
+            return;
+        }
+        try {
+            const data = await callApi(`/invoices/api/${id}/`);
+            state.invoiceId = data.id;
+            state.invoiceNumber = data.invoice_number || state.invoiceNumber;
+            elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
+            elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+            if (inputs.customer) inputs.customer.value = data.customer_name || "";
+            if (inputs.classification) inputs.classification.value = data.classification || "";
+            if (inputs.issueDate && data.issue_date) inputs.issueDate.value = data.issue_date;
+            const receivedItems = Array.isArray(data.items) ? data.items : [];
+            state.items = receivedItems.length ? receivedItems : [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+            renderItems();
+        } catch (error) {
+            console.error("Failed to load invoice", error);
+            state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+            renderItems();
+        }
+    }
+
+    function attachEventListeners() {
+        elements.itemsTableBody?.addEventListener("input", (event) => {
             const target = event.target;
             const field = target.getAttribute("data-field");
             const index = Number(target.getAttribute("data-index"));
             if (Number.isNaN(index) || !field) return;
-            items[index][field] = parseNumber(target.value);
-            items[index].total = items[index].quantity * items[index].unit_price;
+            const item = state.items[index] || {};
+            if (field === "description") {
+                item.description = target.value;
+            } else {
+                item[field] = parseNumber(target.value);
+            }
+            item.total = parseNumber(item.quantity) * parseNumber(item.unit_price);
+            state.items[index] = item;
             renderItems();
         });
 
-        itemsTableBody.addEventListener("click", (event) => {
+        elements.itemsTableBody?.addEventListener("click", (event) => {
             const button = event.target.closest("button[data-remove]");
             if (!button) return;
             const index = Number(button.getAttribute("data-remove"));
-            items.splice(index, 1);
+            state.items.splice(index, 1);
             renderItems();
         });
-    }
 
-    if (addItemBtn) {
-        addItemBtn.addEventListener("click", () => {
-            items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
+        elements.addItemBtn?.addEventListener("click", () => {
+            state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
             renderItems();
         });
-    }
 
-    if (previewToggleBtn) {
-        previewToggleBtn.addEventListener("click", () => {
-            togglePreview(moduleId, true);
+        elements.previewToggleBtn?.addEventListener("click", () => {
+            handlePreviewToggle();
         });
-    }
 
-    if (moduleEl) {
+        elements.submitBtn?.addEventListener("click", () => {
+            handleSave();
+        });
+
         moduleEl.addEventListener("click", (event) => {
             if (event.target.matches("[data-exit-preview]")) {
                 event.preventDefault();
@@ -151,11 +336,10 @@
         });
     }
 
-    if (submitBtn) {
-        submitBtn.addEventListener("click", () => {
-            form.submit();
-        });
-    }
-
-    loadInitialItems();
+    (async function init() {
+        attachEventListeners();
+        await loadConfig();
+        await loadExistingInvoice();
+        syncPreviewFromForm();
+    })();
 })();

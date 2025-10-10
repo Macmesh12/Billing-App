@@ -1,32 +1,66 @@
-# Billing App — AI Playbook
 
-## Architecture at a glance
-- Django project lives in `backend/`; feature apps are `invoices/`, `receipts/`, and `waybills/`, each with models, forms, views, urls, admin, and `services/` helpers.
-- HTML lives under `frontend/templates/`; every document template extends `base.html` and switches between edit/preview states via module-level CSS classes.
-- Static assets sit in `frontend/static/`: shared styles in `css/general.css`, module overrides in `css/{invoice,receipt,waybill}.css`, and JS in `js/{main,invoice,receipt,waybill}.js`.
-- Electron shell in `electron/` boots Django (`python backend/manage.py runserver 127.0.0.1:8765`) before opening a `BrowserWindow`; `package.json` scripts rely on `concurrently` + `wait-on`.
+```instructions
+# Billing App — AI Playbook (concise)
 
-## Key backend patterns
-- Tax percentages are centralized in `billing_app/settings.py::TAX_SETTINGS`; every invoice view uses `_build_tax_rows` in `invoices/views.py` to hydrate totals for templates and PDFs.
-- Invoice math lives in `invoices/services/calculator.py` (Decimal-based); numbering helpers are in each app’s `services/numbering.py` and exposed via `model` properties (e.g., `Invoice.invoice_number`).
-- Document views are class-based: form screens use `FormView`, detail/PDF reuse the same template with a `preview` flag. PDFs render through WeasyPrint when installed; HTML falls back if the lib is missing.
-- JSON form payloads (line items) are stored on the model via `JSONField`. The associated `ModelForm` parses/sanitizes JSON (see `InvoiceForm._parse_items`) and rehydrates the hidden field in `__init__` for edit/detail flows.
+## Big picture
+- Desktop app packaged with Electron. Electron spawns a local Django process and opens a BrowserWindow that loads the app from `http://127.0.0.1:8765/`.
+- Frontend/UI artifacts live in `frontend/` (templates + static). Backend is a Django project in `backend/`—logic, DB, PDF generation and HTTP API.
+- Domain apps: `invoices/`, `receipts/`, `waybills/`. Each app follows the pattern: `models.py`, `forms.py`, `views.py`, `urls.py`, and `services/` for small helpers.
 
-## Frontend conventions
-- `static/js/main.js` exposes a global `BillingApp` helper with currency formatting, number parsing, and preview toggling (which also flips `hidden` attributes). Module scripts consume this helper—no ES modules.
-- Invoice and waybill scripts (`static/js/invoice.js`, `static/js/waybill.js`) keep an in-memory `items` array, render editable rows, sync the hidden JSON field, and mirror rows into preview tables. They guard DOM lookups so detail/PDF views don’t crash.
-- Templates render server totals for PDFs but expect JS to refresh them in edit mode. Always keep `data-` attributes (e.g., `data-levy`, `data-rate`) intact when modifying markup—calculations depend on them.
+## Project-specific patterns and rationale
+- Centralized tax config: `backend/billing_app/settings.py::TAX_SETTINGS`. Business logic reads directly from this setting (see `invoices/views._build_tax_rows`).
+- Decimal-first math: `invoices/services/calculator.py` uses `Decimal` and explicit rounding—do not replace with floats.
+- Line items stored as JSON on models; `InvoiceForm._parse_items` is the canonical parser/validator for line-item payloads.
+- Templates are dual-use (edit + preview). Preview mode is enabled by `preview` context flag; JS updates the edit view but server must recompute totals for PDF/save.
 
-## Electron workflow
-- `electron/main.js` spawns Django via Node’s `child_process.spawn` and kills it on `will-quit`; keep the server port aligned with `settings.ALLOWED_HOSTS` and `mainWindow.loadURL`.
-- Development script (`npm run dev`) requires Python in PATH; adjust to `python3` if contributors use that executable name.
+## API-first conventions (current recommended approach)
+- The repo exposes small JSON endpoints under each app. Examples:
+  - `POST /invoices/api/calculate-preview/` — returns subtotal, levies, grand_total (uses `InvoiceForm._parse_items` + `calculate_totals`).
+  - `POST /invoices/api/create/` — creates invoice using `InvoiceForm`.
+  - `GET /invoices/api/<pk>/` — returns invoice DTO (items, totals, number).
+- API implementations live in `backend/invoices/api.py`, `backend/receipts/api.py`, `backend/waybills/api.py`. They intentionally reuse forms/models/services to keep business rules centralized.
 
-## Build & test habits
-- Python deps listed in `backend/requirements.txt`; create a venv inside `backend/` and run `python manage.py migrate` before first launch.
-- Unit tests live alongside each app (e.g., `invoices/tests.py` covers numbering + tax math). Prefer `python manage.py test invoices` for quick checks when touching those services.
-- Ignore generated PDFs/SQLite DB—`.gitignore` already excludes `backend/db.sqlite3` and build artifacts.
+## Startup and developer workflows (exact commands)
+1. Create & activate venv, install Python deps:
+	```bash
+	python3 -m venv backend/.venv
+	source backend/.venv/bin/activate
+	pip install -r backend/requirements.txt
+	```
+2. Migrate DB and run dev server:
+	```bash
+	cd backend
+	python manage.py migrate
+	python manage.py runserver 127.0.0.1:8765
+	```
+3. Run targeted tests for backend logic (fast):
+	```bash
+	cd backend
+	python manage.py test invoices
+	```
 
-## When extending features
-- Reuse `_build_tax_rows` when new invoice-related templates need levy breakdowns.
-- Mirror any new document module across: model/service/form/view/template/static JS/CSS folders to retain parity with existing apps.
-- Keep preview controls wired through `BillingApp.togglePreview`; if you introduce new interactive blocks, add selectors there instead of duplicating logic.
+## Key files to inspect when making changes
+- Business & math: `backend/invoices/services/calculator.py` and `backend/invoices/services/numbering.py`.
+- Form parsing: `backend/invoices/forms.py` (look for `_parse_items`).
+- API examples: `backend/invoices/api.py` — copy pattern for new endpoints (reuse forms + services).
+- Frontend: `frontend/templates/*` and `frontend/static/*` (JS uses global `BillingApp` in `frontend/static/js/main.js`).
+- Electron wiring: `electron/main.js` shows how Django is spawned and the dev workflow uses `wait-on` + `concurrently`.
+
+## Conventions & gotchas (explicit)
+- Always use Django `{% load static %}` + `{% static 'css/xyz.css' %}` in templates. `STATIC_URL` is `/static/` and `STATICFILES_DIRS` points to `frontend/static/`.
+- When adding frontend endpoints, prefer JSON APIs consumed by the Electron-bundled UI (Option B). Keep server-side validation in forms.
+- PDF rendering uses WeasyPrint if present. When WeasyPrint is missing, views return rendered HTML and set `X-WeasyPrint-Disabled: 1`.
+- The initial API helpers use `@csrf_exempt` for desktop convenience. If you expose beyond local desktop, add CSRF/auth and remove exemptions.
+
+## Packaging & distribution notes
+- Packaging approaches:
+  - Bundle a Python runtime and run Django as a child process from Electron (current dev flow). Ensure migrations run on first-run and DB is stored in user-data folder.
+  - Alternative: Build the backend into a native binary (PyInstaller) and ship that binary with Electron.
+- Static files inside a packaged app: either ship collected static files or use WhiteNoise to serve bundled static files reliably.
+
+## Example developer tasks for AI agents
+- Add an API endpoint for invoice calculations: reuse `InvoiceForm._parse_items` and `invoices/services/calculator.calculate_totals`.
+- Convert a server-rendered template into a static frontend page that calls the API: move logic to JS + `fetch('/invoices/api/calculate-preview/')`.
+
+If you want, I can expand this playbook with an exact Electron startup script, a packaging checklist, or sample frontend fetch examples. Reply which section to expand.
+```

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Billing App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/css/general.css">
+    <link rel="stylesheet" href="../static/css/home.css">
+    <script>
+        window.BILLING_APP_CONFIG = {
+            apiBaseUrl: "http://127.0.0.1:8765"
+        };
+    </script>
+</head>
+<body class="billing-app">
+    <header class="app-header">
+        <div class="app-brand">
+            <h1>Billing App</h1>
+        </div>
+        <nav class="app-nav" aria-label="Primary">
+            <a class="nav-link" href="index.html">Dashboard</a>
+            <a class="nav-link" href="invoice.html">Invoice</a>
+            <a class="nav-link" href="receipt.html">Receipt</a>
+            <a class="nav-link" href="waybill.html">Waybill</a>
+        </nav>
+    </header>
+
+    <main class="app-main">
+        <section class="dashboard-hero">
+            <h2>Track invoices, receipts, and logistics from one workspace.</h2>
+            <p>Use the quick actions below to jump straight into the document editor you need. Data stays in sync with previews and PDF exports automatically.</p>
+        </section>
+
+        <section class="dashboard-grid" aria-label="Billing modules">
+            <article class="module-card">
+                <h3>Invoices</h3>
+                <p>Capture line items, compute levies, and export client-ready documents instantly.</p>
+                <a class="button" href="invoice.html">
+                    Open Invoice
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
+                    </svg>
+                </a>
+            </article>
+
+            <article class="module-card">
+                <h3>Receipts</h3>
+                <p>Produce official receipt slips with payment method tracking and sign-off sections.</p>
+                <a class="button" href="receipt.html">
+                    Open Receipt
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
+                    </svg>
+                </a>
+            </article>
+
+            <article class="module-card">
+                <h3>Waybills</h3>
+                <p>Log delivery manifests, calculate totals, and prepare printable documents for drivers.</p>
+                <a class="button" href="waybill.html">
+                    Open Waybill
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
+                    </svg>
+                </a>
+            </article>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>&copy; <span id="current-year"></span> Billing App. All rights reserved.</p>
+    </footer>
+
+    <script src="../static/js/main.js" defer></script>
+    <script src="../static/js/home.js" defer></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("current-year").textContent = new Date().getFullYear();
+        });
+    </script>
+</body>
+</html>

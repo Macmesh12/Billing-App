@@ -9,11 +9,13 @@ function createWindow() {
     width: 1280,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
     }
   });
 
-  mainWindow.loadURL('http://127.0.0.1:8765');
+  const frontendEntry = path.join(__dirname, '..', 'frontend', 'public', 'index.html');
+  mainWindow.loadFile(frontendEntry);
 }
 
 function startDjango() {
