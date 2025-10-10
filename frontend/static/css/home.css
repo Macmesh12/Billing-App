@@ -1,51 +1,56 @@
 .dashboard-hero {
     display: grid;
-    gap: 1.5rem;
-    margin-bottom: 2.5rem;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 14px;
+    background: linear-gradient(100deg, rgba(31,111,235,0.06), rgba(31,111,235,0.02));
+    border: 1px solid rgba(31,111,235,0.08);
 }
 
 .dashboard-hero h2 {
     margin: 0;
-    font-size: 2.2rem;
+    font-size: 1.6rem;
+    letter-spacing: -0.2px;
 }
 
 .dashboard-hero p {
     margin: 0;
-    color: var(--muted);
-    font-size: 1.05rem;
+    color: var(--muted-2);
+    font-size: 1rem;
 }
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
 }
 
 .module-card {
-    background: #fff;
-    border: 1px solid transparent;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 12px 32px -24px rgba(31, 111, 235, 0.6);
+    background: var(--card-bg);
+    border: 1px solid rgba(16,24,40,0.04);
+    border-radius: 14px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-soft);
     position: relative;
-    transition: transform 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .module-card:hover,
 .module-card:focus-within,
 .module-card.is-active {
     transform: translateY(-4px);
-    border-color: var(--accent);
+    box-shadow: var(--shadow-strong);
 }
 
 .module-card h3 {
     margin-top: 0;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.35rem;
 }
 
 .module-card p {
-    margin: 0 0 1rem;
-    color: var(--muted);
+    margin: 0 0 0.9rem;
+    color: var(--muted-2);
 }
 
 .module-card .button {

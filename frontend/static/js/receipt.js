@@ -188,6 +188,11 @@
                 togglePreview(moduleId, false);
             }
         });
+
+        // Live preview sync for a responsive feel
+        form.addEventListener("input", () => {
+            syncPreview();
+        });
     }
 
     (async function init() {

@@ -269,6 +269,11 @@
                 togglePreview(moduleId, false);
             }
         });
+
+        // Live preview sync on form input
+        form.addEventListener("input", () => {
+            syncPreview();
+        });
     }
 
     (async function init() {

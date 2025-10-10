@@ -1,20 +1,16 @@
 .receipt {
-    border: 2px solid var(--border);
-    max-width: 720px;
+    max-width: 760px;
     margin: 0 auto;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow-soft);
+    padding: 1.25rem;
 }
 
-.receipt .document-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid var(--border);
-    padding-bottom: 1rem;
-    margin-bottom: 1.5rem;
-}
+.receipt .document-header { gap: 0.75rem 1rem; }
 
 .logo-placeholder {
-    border: 1px dashed var(--border);
+    border: 1px dashed rgba(16,24,40,0.08);
     padding: 1rem;
     font-size: 0.9rem;
     text-align: center;
@@ -23,15 +19,46 @@
 }
 
 .receipt-body {
-    margin-bottom: 2rem;
+    margin-bottom: 1.25rem;
 }
 
 .receipt-body p {
-    margin: 0.4rem 0;
+    margin: 0.35rem 0;
+    color: var(--muted-2);
 }
 
 .receipt-footer {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+}
+
+.receipt .document-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.receipt .document-items th,
+.receipt .document-items td {
+    padding: 0.65rem 0.6rem;
+}
+
+.receipt .document-items thead th {
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: var(--muted-2);
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    border-bottom: 1px solid rgba(16,24,40,0.06);
+    background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(250,250,255,0.5));
+}
+
+.receipt .document-items tbody tr:hover {
+    background: linear-gradient(90deg, rgba(246,250,255,0.65), rgba(255,255,255,0.45));
+}
+
+@media (max-width: 780px) {
+    .receipt { padding: 1rem; }
+    .receipt .document-header { flex-direction: column; align-items: flex-start; }
 }

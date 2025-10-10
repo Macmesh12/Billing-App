@@ -275,8 +275,21 @@
         }
     }
 
+    // Simple debounce helper
+    function debounce(fn, delay = 250) {
+        let t;
+        return function (...args) {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
+
+    const debouncedServerTotals = debounce(calculateServerTotals, 300);
+
     async function handlePreviewToggle() {
         // Function to handle preview toggle button click
+        // Ensure preview table reflects latest items before switching view
+        renderItems();
         syncPreviewFromForm();
         await calculateServerTotals();
         togglePreview(moduleId, true);
@@ -381,7 +394,15 @@
             }
             item.total = parseNumber(item.quantity) * parseNumber(item.unit_price);
             state.items[index] = item;
-            renderItems();
+            // Update only what's needed to avoid breaking typing focus
+            const rowEl = target.closest("tr");
+            const totalEl = rowEl ? rowEl.querySelector(".row-total") : null;
+            if (totalEl) totalEl.textContent = formatCurrency(item.total || 0);
+            if (elements.itemsPayload) {
+                elements.itemsPayload.value = JSON.stringify(state.items);
+            }
+            recalcTotals();
+            debouncedServerTotals();
         });
 
         elements.itemsTableBody?.addEventListener("click", (event) => {
@@ -395,6 +416,7 @@
         elements.addItemBtn?.addEventListener("click", () => {
             state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
             renderItems();
+            debouncedServerTotals();
         });
 
         elements.previewToggleBtn?.addEventListener("click", () => {
@@ -419,6 +441,7 @@
         await loadConfig();
         await loadExistingInvoice();
         syncPreviewFromForm();
+        debouncedServerTotals();
     })();
     });
 })();

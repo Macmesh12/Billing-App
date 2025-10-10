@@ -1,10 +1,20 @@
 :root {
     --accent: #1f6feb;
+    --accent-2: #60a5fa;
     --accent-dark: #144b9a;
-    --border: #d0d7de;
+    --border: #e6eefc;
     --bg: #f6f8fa;
-    --text: #24292f;
-    --muted: #57606a;
+    --bg-2: linear-gradient(180deg, #f8fbff 0%, #f6f8fa 100%);
+    --card-bg: #ffffff;
+    --text: #0f1724;
+    --muted: #556070;
+    --muted-2: #7b8794;
+    --success: #10b981;
+    --danger: #ef4444;
+    --glass: rgba(255,255,255,0.6);
+    --radius: 12px;
+    --shadow-soft: 0 8px 30px rgba(16,24,40,0.06);
+    --shadow-strong: 0 20px 50px rgba(2,6,23,0.12);
 }
 
 * {
@@ -14,23 +24,28 @@
 body,
 body.billing-app {
     margin: 0;
-    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     color: var(--text);
-    background: var(--bg);
+    background: var(--bg-2);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .app-header {
-    background: #fff;
-    border-bottom: 1px solid var(--border);
-    padding: 1.5rem 2rem;
+    background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,0.55));
+    border-bottom: 1px solid rgba(16,24,40,0.04);
+    padding: 1.25rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
 }
 
 .app-header h1 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
+    letter-spacing: -0.2px;
+    color: var(--text);
 }
 
 .app-nav {
@@ -59,11 +74,12 @@ body.billing-app {
 }
 
 .module {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    background: var(--card-bg);
+    border: 1px solid rgba(16,24,40,0.04);
+    border-radius: var(--radius);
     padding: 1.5rem;
-    box-shadow: 0 10px 30px -20px rgba(15, 23, 42, 0.3);
+    box-shadow: var(--shadow-soft);
+    transition: box-shadow 180ms ease, transform 180ms ease;
 }
 
 .module-header {
@@ -75,7 +91,8 @@ body.billing-app {
 
 .module-header h2 {
     margin: 0;
-    font-size: 1.75rem;
+    font-size: 1.125rem;
+    color: var(--text);
 }
 
 .module-actions {
@@ -84,23 +101,29 @@ body.billing-app {
 }
 
 .button {
-    background: var(--accent);
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
     color: #fff;
     border: none;
-    border-radius: 6px;
-    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
+    padding: 0.6rem 1.1rem;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 0.95rem;
+    box-shadow: 0 6px 18px rgba(31,99,234,0.12);
+    transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
 }
 
 .button:hover {
-    background: var(--accent-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-strong);
 }
 
 .button-secondary {
     background: transparent;
     color: var(--accent);
-    border: 1px solid var(--accent);
+    border: 1px solid rgba(31,111,235,0.12);
+    padding: 0.5rem 0.9rem;
+    border-radius: 10px;
 }
 
 .app-main {
@@ -128,10 +151,11 @@ label {
 }
 
 input, textarea, select {
-    padding: 0.6rem;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 1rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(16,24,40,0.06);
+    border-radius: 8px;
+    font-size: 0.975rem;
+    background: linear-gradient(180deg, rgba(250,251,255,0.8), rgba(255,255,255,0.6));
 }
 
 textarea {
@@ -146,8 +170,8 @@ textarea {
 
 .line-items th,
 .line-items td {
-    border: 1px solid var(--border);
-    padding: 0.6rem;
+    border-bottom: 1px solid rgba(16,24,40,0.04);
+    padding: 0.6rem 0.75rem;
     text-align: left;
 }
 
@@ -171,18 +195,19 @@ textarea {
 
 .totals {
     margin-top: 1.5rem;
-    border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 12px;
     padding: 1rem;
-    max-width: 360px;
+    max-width: 420px;
     margin-left: auto;
+    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,252,255,0.9));
+    box-shadow: 0 10px 30px rgba(15,23,42,0.03);
 }
 
 .totals-row {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0.5rem;
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .totals-row.grand {
@@ -192,17 +217,52 @@ textarea {
 }
 
 .document {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    background: var(--card-bg);
+    border-radius: 10px;
     padding: 2rem;
+    box-shadow: var(--shadow-soft);
+}
+
+/* Letterhead-style header inside documents */
+.document .document-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 1rem 1.25rem;
+    padding: 1rem 1.25rem;
+    margin: -0.5rem -0.5rem 1rem;
+    border-radius: 8px;
+    background: linear-gradient(100deg, rgba(31,111,235,0.06), rgba(31,111,235,0.02));
+    border: 1px solid rgba(31,111,235,0.08);
+}
+
+.document .document-header h3 {
+    margin: 0 0 0.35rem 0;
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
+}
+
+.document .document-number,
+.document .document-date {
+    margin: 0.15rem 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.document .document-number span,
+.document .document-date span {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(31,111,235,0.08);
+    color: var(--text);
 }
 
 .document-editable .document-meta,
 .document-editable .receipt-body,
 .document-editable .sender-receiver {
     display: grid;
-    gap: 0.6rem;
+    gap: 0.75rem;
 }
 
 .document-editable p {
@@ -216,11 +276,29 @@ textarea {
     font-weight: 600;
 }
 
+/* Field layout utilities */
+.field-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.field-block {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.document .document-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem 1rem;
+}
+
 .document-editable input,
 .document-editable select,
 .document-editable textarea {
     border: none;
-    border-bottom: 1px dotted var(--border);
+    border-bottom: 1px dotted rgba(16,24,40,0.06);
     background: transparent;
     font: inherit;
     padding: 0.1rem 0.25rem;
@@ -271,14 +349,14 @@ textarea {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
-    background: #111827;
+    background: rgba(17,24,39,0.95);
     color: #fff;
-    padding: 0.9rem 1.4rem;
-    border-radius: 8px;
-    box-shadow: 0 12px 30px -12px rgba(15, 23, 42, 0.5);
-    font-weight: 600;
+    padding: 0.85rem 1.2rem;
+    border-radius: 12px;
+    box-shadow: 0 18px 50px rgba(2,6,23,0.4);
+    font-weight: 700;
     z-index: 2000;
-    transition: opacity 0.2s ease;
+    transition: transform 160ms ease, opacity 160ms ease;
 }
 
 .module-toast.is-error {
@@ -290,4 +368,94 @@ textarea {
     color: var(--muted);
     font-style: italic;
     padding: 1rem 0;
+}
+
+/* Modernize native date inputs */
+input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: linear-gradient(180deg, rgba(250,251,255,0.8), rgba(255,255,255,0.6));
+    padding: 0.55rem 0.7rem;
+    border: 1px solid rgba(16,24,40,0.06);
+    border-radius: 8px;
+    line-height: 1.2;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: opacity(0.7);
+}
+
+input, textarea, select {
+    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+input::placeholder, textarea::placeholder {
+    color: rgba(85, 96, 112, 0.65);
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: rgba(31,111,235,0.35);
+    box-shadow: 0 0 0 4px rgba(31,111,235,0.12);
+    background: #fff;
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"],
+.is-invalid {
+    border-color: rgba(239,68,68,0.55) !important;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.18) !important;
+}
+
+input:disabled, textarea:disabled, select:disabled {
+    background: rgba(245,247,250,0.8);
+    color: rgba(85,96,112,0.7);
+    cursor: not-allowed;
+}
+
+.button[disabled], .button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Enhanced form field responsiveness and accessibility */
+input, textarea, select {
+    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: rgba(85, 96, 112, 0.65);
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: rgba(31,111,235,0.35);
+    box-shadow: 0 0 0 4px rgba(31,111,235,0.12);
+    background: #fff;
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"],
+.is-invalid {
+    border-color: rgba(239,68,68,0.55) !important;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.18) !important;
+}
+
+input:disabled, textarea:disabled, select:disabled {
+    background: rgba(245,247,250,0.8);
+    color: rgba(85,96,112,0.7);
+    cursor: not-allowed;
+}
+
+.button[disabled], .button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
