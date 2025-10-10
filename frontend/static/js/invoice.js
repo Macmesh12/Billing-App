@@ -1,24 +1,71 @@
 (function () {
-    const helpers = window.BillingApp || {};
-    const formatCurrency = typeof helpers.formatCurrency === "function"
-        ? helpers.formatCurrency
-        : (value) => Number(value || 0).toFixed(2);
-    const parseNumber = typeof helpers.parseNumber === "function"
-        ? helpers.parseNumber
-        : (value) => Number.parseFloat(value || 0) || 0;
-    const togglePreview = typeof helpers.togglePreview === "function"
-        ? helpers.togglePreview
-        : () => {};
+    // IIFE to encapsulate the invoice module logic
+    function onReady(callback) {
+        // Ensure script runs when DOM is fully parsed
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", callback, { once: true });
+        } else {
+            callback();
+        }
+    }
 
-    const moduleId = "invoice-module";
-    const moduleEl = document.getElementById(moduleId);
-    const form = document.getElementById("invoice-form");
-    if (!moduleEl || !form) return;
+    onReady(() => {
+        const helpers = window.BillingApp || {};
+        // Get helper functions from global BillingApp object, with fallbacks
+        const formatCurrency = typeof helpers.formatCurrency === "function"
+            ? helpers.formatCurrency
+            : (value) => Number(value || 0).toFixed(2);
+        // Function to format numbers as currency strings
+        const parseNumber = typeof helpers.parseNumber === "function"
+            ? helpers.parseNumber
+            : (value) => Number.parseFloat(value || 0) || 0;
+        // Function to parse strings to numbers safely
 
-    const config = window.BILLING_APP_CONFIG || {};
-    const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
+        const moduleId = "invoice-module";
+        // ID of the invoice module element
+        const moduleEl = document.getElementById(moduleId);
+        // Reference to the module DOM element
+        const form = document.getElementById("invoice-form");
+        // Reference to the invoice form element
+        if (!moduleEl || !form) return;
+        // Exit if required elements are not found
+
+        function toggleModulePreview(isPreview) {
+            // Local fallback toggle for preview mode
+            const showPreview = Boolean(isPreview);
+            moduleEl.classList.toggle("is-preview", showPreview);
+            if (showPreview) {
+                form.setAttribute("hidden", "hidden");
+            } else {
+                form.removeAttribute("hidden");
+            }
+            moduleEl.querySelectorAll(".document").forEach((doc) => {
+                if (!doc.classList.contains("document-editable")) {
+                    if (showPreview) {
+                        doc.removeAttribute("hidden");
+                    } else {
+                        doc.setAttribute("hidden", "hidden");
+                    }
+                }
+            });
+        }
+
+        const togglePreview = typeof helpers.togglePreview === "function"
+            ? (moduleIdentifier, isPreview) => helpers.togglePreview(moduleIdentifier, isPreview)
+            : (moduleIdentifier, isPreview) => {
+                if (moduleIdentifier === moduleId) {
+                    toggleModulePreview(isPreview);
+                }
+            };
+        // Function to toggle between edit and preview modes with fallback
+
+        const config = window.BILLING_APP_CONFIG || {};
+        // Global config object from window
+        const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
+        // Base URL for API calls
 
     const elements = {
+        // Object containing references to key DOM elements
         itemsPayload: document.getElementById("invoice-items-payload"),
         itemsTableBody: document.querySelector("#invoice-items-table tbody"),
         previewRows: document.getElementById("invoice-preview-rows"),
@@ -40,12 +87,14 @@
     };
 
     const inputs = {
+        // Object containing references to form input elements
         customer: document.getElementById("invoice-customer"),
         classification: document.getElementById("invoice-classification"),
         issueDate: document.getElementById("invoice-issue-date"),
     };
 
     const state = {
+        // Application state object
         items: [],
         levies: [],
         invoiceId: null,
@@ -54,9 +103,12 @@
     };
 
     const levyValueMap = new Map();
+    // Map to store levy value elements for quick updates
     const previewLevyValueMap = new Map();
+    // Map for preview levy elements
 
     function showToast(message, tone = "success") {
+        // Function to display toast notifications
         const el = elements.toast;
         if (!el) return;
         el.textContent = message;
@@ -68,6 +120,7 @@
     }
 
     function buildPayload() {
+        // Function to build JSON payload from form data
         return {
             customer_name: inputs.customer?.value || "",
             classification: inputs.classification?.value || "",
@@ -77,6 +130,7 @@
     }
 
     async function callApi(path, options = {}) {
+        // Function to make API calls with error handling
         const url = `${API_BASE}${path}`;
         const response = await fetch(url, {
             headers: {
@@ -97,6 +151,7 @@
     }
 
     function renderLevyPlaceholders() {
+        // Function to render levy placeholders in edit and preview sections
         if (!elements.levyContainer || !elements.previewLevyContainer) return;
         elements.levyContainer.innerHTML = "";
         elements.previewLevyContainer.innerHTML = "";
@@ -119,6 +174,7 @@
     }
 
     function renderItems() {
+        // Function to render invoice items in table and preview
         const tableBody = elements.itemsTableBody;
         const previewBody = elements.previewRows;
         if (tableBody) tableBody.innerHTML = "";
@@ -159,6 +215,7 @@
     }
 
     function recalcTotals() {
+        // Function to recalculate and update totals display
         const subtotal = state.items.reduce((sum, item) => sum + parseNumber(item.total), 0);
         elements.subtotal && (elements.subtotal.textContent = formatCurrency(subtotal));
         elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(subtotal));
@@ -166,8 +223,14 @@
         let levyTotal = 0;
         state.levies.forEach(({ name, rate }) => {
             const amount = subtotal * rate;
-            levyValueMap.get(name)?.textContent = formatCurrency(amount);
-            previewLevyValueMap.get(name)?.textContent = formatCurrency(amount);
+            const levyEl = levyValueMap.get(name);
+            if (levyEl) {
+                levyEl.textContent = formatCurrency(amount);
+            }
+            const previewEl = previewLevyValueMap.get(name);
+            if (previewEl) {
+                previewEl.textContent = formatCurrency(amount);
+            }
             levyTotal += amount;
         });
 
@@ -177,6 +240,7 @@
     }
 
     function syncPreviewFromForm() {
+        // Function to sync preview fields with form inputs
         elements.previewCustomer && (elements.previewCustomer.textContent = inputs.customer?.value || "—");
         elements.previewClassification && (elements.previewClassification.textContent = inputs.classification?.value || "—");
         elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
@@ -184,6 +248,7 @@
     }
 
     async function calculateServerTotals() {
+        // Function to calculate totals using server API
         try {
             const payload = buildPayload();
             const result = await callApi("/invoices/api/calculate-preview/", {
@@ -194,8 +259,14 @@
             elements.subtotal && (elements.subtotal.textContent = formatCurrency(result.subtotal));
             elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(result.subtotal));
             Object.entries(result.levies || {}).forEach(([name, amount]) => {
-                levyValueMap.get(name)?.textContent = formatCurrency(amount);
-                previewLevyValueMap.get(name)?.textContent = formatCurrency(amount);
+                const levyEl = levyValueMap.get(name);
+                if (levyEl) {
+                    levyEl.textContent = formatCurrency(amount);
+                }
+                const previewEl = previewLevyValueMap.get(name);
+                if (previewEl) {
+                    previewEl.textContent = formatCurrency(amount);
+                }
             });
             elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(result.grand_total));
             elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(result.grand_total));
@@ -205,12 +276,14 @@
     }
 
     async function handlePreviewToggle() {
+        // Function to handle preview toggle button click
         syncPreviewFromForm();
         await calculateServerTotals();
         togglePreview(moduleId, true);
     }
 
     async function handleSave() {
+        // Function to handle save/submit button click
         if (state.isSaving) return;
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
@@ -244,11 +317,13 @@
     }
 
     function getQueryParam(name) {
+        // Function to get URL query parameter
         const params = new URLSearchParams(window.location.search);
         return params.get(name);
     }
 
     async function loadConfig() {
+        // Function to load tax configuration from API
         try {
             const data = await callApi("/invoices/api/config/");
             const taxSettings = data?.tax_settings || {};
@@ -265,6 +340,7 @@
     }
 
     async function loadExistingInvoice() {
+        // Function to load existing invoice data if ID in URL
         const id = getQueryParam("id");
         if (!id) {
             state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
@@ -291,6 +367,7 @@
     }
 
     function attachEventListeners() {
+        // Function to attach all event listeners
         elements.itemsTableBody?.addEventListener("input", (event) => {
             const target = event.target;
             const field = target.getAttribute("data-field");
@@ -337,9 +414,11 @@
     }
 
     (async function init() {
+        // Initialization function, runs on load
         attachEventListeners();
         await loadConfig();
         await loadExistingInvoice();
         syncPreviewFromForm();
     })();
+    });
 })();

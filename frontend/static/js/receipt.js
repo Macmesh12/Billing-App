@@ -1,17 +1,28 @@
 (function () {
+    // IIFE for receipt module
     const helpers = window.BillingApp || {};
+    // Get global helpers
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
+    // Fallback for togglePreview
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
+    // Fallback for formatCurrency
 
     const moduleId = "receipt-module";
+    // Module ID
     const moduleEl = document.getElementById(moduleId);
+    // Module element
     const form = document.getElementById("receipt-form");
+    // Form element
     if (!moduleEl || !form) return;
+    // Exit if elements not found
 
     const config = window.BILLING_APP_CONFIG || {};
+    // Global config
     const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
+    // API base URL
 
     const elements = {
+        // DOM elements object
         previewToggleBtn: document.getElementById("receipt-preview-toggle"),
         submitBtn: document.getElementById("receipt-submit"),
         toast: document.getElementById("receipt-toast"),
@@ -26,6 +37,7 @@
     };
 
     const inputs = {
+        // Input elements object
         receivedFrom: document.getElementById("receipt-received-from"),
         amount: document.getElementById("receipt-amount"),
         paymentMethod: document.getElementById("receipt-payment-method"),
@@ -35,12 +47,14 @@
     };
 
     const state = {
+        // State object
         receiptId: null,
         receiptNumber: "REC-NEW",
         isSaving: false,
     };
 
     function showToast(message, tone = "success") {
+        // Function to show toast
         const el = elements.toast;
         if (!el) return;
         el.textContent = message;
@@ -52,6 +66,7 @@
     }
 
     function buildPayload() {
+        // Build payload from inputs
         return {
             received_from: inputs.receivedFrom?.value || "",
             amount: inputs.amount?.value || "",
@@ -63,6 +78,7 @@
     }
 
     async function callApi(path, options = {}) {
+        // API call function
         const url = `${API_BASE}${path}`;
         const response = await fetch(url, {
             headers: {
@@ -81,6 +97,7 @@
     }
 
     function syncPreview() {
+        // Sync preview with form data
         elements.previewNumber && (elements.previewNumber.textContent = state.receiptNumber);
         elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
         elements.previewReceivedFrom && (elements.previewReceivedFrom.textContent = inputs.receivedFrom?.value || "—");
@@ -91,11 +108,13 @@
     }
 
     async function handlePreview() {
+        // Handle preview toggle
         syncPreview();
         togglePreview(moduleId, true);
     }
 
     async function handleSave() {
+        // Handle save/submit
         if (state.isSaving) return;
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
@@ -126,10 +145,12 @@
     }
 
     function getQueryParam(name) {
+        // Get URL query param
         return new URLSearchParams(window.location.search).get(name);
     }
 
     async function loadExistingReceipt() {
+        // Load existing receipt if ID in URL
         const id = getQueryParam("id");
         if (!id) return;
         try {
@@ -152,6 +173,7 @@
     }
 
     function attachEventListeners() {
+        // Attach event listeners
         elements.previewToggleBtn?.addEventListener("click", () => {
             handlePreview();
         });
@@ -169,6 +191,7 @@
     }
 
     (async function init() {
+        // Init function
         attachEventListeners();
         await loadExistingReceipt();
         syncPreview();

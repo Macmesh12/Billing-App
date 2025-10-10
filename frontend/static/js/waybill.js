@@ -1,18 +1,30 @@
 (function () {
+    // IIFE for waybill module
     const helpers = window.BillingApp || {};
+    // Get global helpers
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
+    // Fallback for togglePreview
     const parseNumber = typeof helpers.parseNumber === "function" ? helpers.parseNumber : (value) => Number.parseFloat(value || 0) || 0;
+    // Fallback for parseNumber
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
+    // Fallback for formatCurrency
 
     const moduleId = "waybill-module";
+    // Module ID
     const moduleEl = document.getElementById(moduleId);
+    // Module element
     const form = document.getElementById("waybill-form");
+    // Form element
     if (!moduleEl || !form) return;
+    // Exit if elements not found
 
     const config = window.BILLING_APP_CONFIG || {};
+    // Global config
     const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
+    // API base URL
 
     const elements = {
+        // DOM elements object
         itemsPayload: document.getElementById("waybill-items-payload"),
         itemsTableBody: document.querySelector("#waybill-items-table tbody"),
         previewRows: document.getElementById("waybill-preview-rows"),
@@ -30,6 +42,7 @@
     };
 
     const inputs = {
+        // Input elements object
         issueDate: document.getElementById("waybill-issue-date"),
         customer: document.getElementById("waybill-customer"),
         destination: document.getElementById("waybill-destination"),
@@ -38,6 +51,7 @@
     };
 
     const state = {
+        // State object
         items: [],
         waybillId: null,
         waybillNumber: "WB-NEW",
@@ -45,6 +59,7 @@
     };
 
     function showToast(message, tone = "success") {
+        // Function to show toast
         const el = elements.toast;
         if (!el) return;
         el.textContent = message;
@@ -56,6 +71,7 @@
     }
 
     async function callApi(path, options = {}) {
+        // API call function
         const response = await fetch(`${API_BASE}${path}`, {
             headers: {
                 "Content-Type": "application/json",
@@ -73,6 +89,7 @@
     }
 
     function renderItems() {
+        // Function to render items in table and preview
         const tableBody = elements.itemsTableBody;
         const previewBody = elements.previewRows;
         tableBody && (tableBody.innerHTML = "");
@@ -111,6 +128,7 @@
     }
 
     function syncPreview() {
+        // Sync preview with form data
         elements.previewNumber && (elements.previewNumber.textContent = state.waybillNumber);
         elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
         elements.previewCustomer && (elements.previewCustomer.textContent = inputs.customer?.value || "—");
@@ -120,6 +138,7 @@
     }
 
     function buildPayload() {
+        // Build payload from inputs
         return {
             customer_name: inputs.customer?.value || "",
             issue_date: inputs.issueDate?.value || "",
@@ -131,11 +150,13 @@
     }
 
     async function handlePreview() {
+        // Handle preview toggle
         syncPreview();
         togglePreview(moduleId, true);
     }
 
     async function handleSave() {
+        // Handle save/submit
         if (state.isSaving) return;
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
@@ -166,10 +187,12 @@
     }
 
     function getQueryParam(name) {
+        // Get URL query param
         return new URLSearchParams(window.location.search).get(name);
     }
 
     async function loadExistingWaybill() {
+        // Load existing waybill if ID in URL
         const id = getQueryParam("id");
         if (!id) {
             state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
@@ -202,6 +225,7 @@
     }
 
     function attachEventListeners() {
+        // Attach event listeners
         elements.itemsTableBody?.addEventListener("input", (event) => {
             const target = event.target;
             const field = target.getAttribute("data-field");
@@ -248,6 +272,7 @@
     }
 
     (async function init() {
+        // Init function
         attachEventListeners();
         await loadExistingWaybill();
     })();
