@@ -27,13 +27,19 @@
         submitBtn: document.getElementById("receipt-submit"),
         toast: document.getElementById("receipt-toast"),
         number: document.getElementById("receipt-number"),
-        previewNumber: document.getElementById("receipt-preview-number"),
-        previewDate: document.getElementById("receipt-preview-date"),
-        previewReceivedFrom: document.getElementById("receipt-preview-received-from"),
-        previewAmount: document.getElementById("receipt-preview-amount"),
-        previewPaymentMethod: document.getElementById("receipt-preview-payment-method"),
-        previewDescription: document.getElementById("receipt-preview-description"),
-        previewApprovedBy: document.getElementById("receipt-preview-approved-by"),
+        previewNumberEls: document.querySelectorAll(".js-receipt-preview-number"),
+        previewDateEls: document.querySelectorAll(".js-receipt-preview-date"),
+        previewLocationEls: document.querySelectorAll(".js-receipt-preview-location"),
+        previewCompanyNameEls: document.querySelectorAll(".js-receipt-preview-company-name"),
+        previewCompanyTaglineEls: document.querySelectorAll(".js-receipt-preview-company-tagline"),
+        previewReceivedFromEls: document.querySelectorAll(".js-receipt-preview-received-from"),
+        previewAmountEls: document.querySelectorAll(".js-receipt-preview-amount"),
+        previewPaymentMethodEls: document.querySelectorAll(".js-receipt-preview-payment-method"),
+        previewDescriptionEls: document.querySelectorAll(".js-receipt-preview-description"),
+        previewApprovedByEls: document.querySelectorAll(".js-receipt-preview-approved-by"),
+        previewContactEls: document.querySelectorAll(".js-receipt-preview-contact"),
+        previewTotalAmountEls: document.querySelectorAll(".js-receipt-preview-total-amount"),
+        previewBalanceEls: document.querySelectorAll(".js-receipt-preview-balance"),
     };
 
     const inputs = {
@@ -44,6 +50,12 @@
         description: document.getElementById("receipt-description"),
         approvedBy: document.getElementById("receipt-approved-by"),
         issueDate: document.getElementById("receipt-issue-date"),
+        companyName: document.getElementById("receipt-company-name"),
+        companyTagline: document.getElementById("receipt-company-tagline"),
+        location: document.getElementById("receipt-location"),
+        totalAmount: document.getElementById("receipt-total-amount"),
+        balance: document.getElementById("receipt-balance"),
+        contact: document.getElementById("receipt-contact"),
     };
 
     const state = {
@@ -52,6 +64,36 @@
         receiptNumber: "REC-NEW",
         isSaving: false,
     };
+
+    function setText(target, text) {
+        if (!target) return;
+        if (typeof target.length === "number" && !target.nodeType) {
+            Array.from(target).forEach((node) => {
+                if (node) node.textContent = text;
+            });
+            return;
+        }
+        target.textContent = text;
+    }
+
+    function valueOrPlaceholder(field, fallback = "—") {
+        if (!field) return fallback;
+        const value = (field.value || "").trim();
+        if (value) return value;
+        if (field.placeholder) return field.placeholder.trim();
+        return fallback;
+    }
+
+    function formatDisplayDate(value) {
+        if (!value) return "—";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return new Intl.DateTimeFormat("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+        }).format(date);
+    }
 
     function showToast(message, tone = "success") {
         // Function to show toast
@@ -98,13 +140,21 @@
 
     function syncPreview() {
         // Sync preview with form data
-        elements.previewNumber && (elements.previewNumber.textContent = state.receiptNumber);
-        elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
-        elements.previewReceivedFrom && (elements.previewReceivedFrom.textContent = inputs.receivedFrom?.value || "—");
-        elements.previewAmount && (elements.previewAmount.textContent = formatCurrency(inputs.amount?.value || 0));
-        elements.previewPaymentMethod && (elements.previewPaymentMethod.textContent = inputs.paymentMethod?.value || "—");
-        elements.previewDescription && (elements.previewDescription.textContent = inputs.description?.value || "—");
-        elements.previewApprovedBy && (elements.previewApprovedBy.textContent = inputs.approvedBy?.value || "—");
+        setText(elements.previewNumberEls, state.receiptNumber);
+        const prettyDate = formatDisplayDate(inputs.issueDate?.value || "");
+        setText(elements.previewDateEls, prettyDate);
+        setText(elements.previewLocationEls, valueOrPlaceholder(inputs.location, "Accra, Ghana"));
+        setText(elements.previewReceivedFromEls, inputs.receivedFrom?.value || "—");
+        setText(elements.previewDescriptionEls, valueOrPlaceholder(inputs.description, "—"));
+        const formattedAmount = `GH¢ ${formatCurrency(inputs.amount?.value || 0)}`;
+        setText(elements.previewAmountEls, formattedAmount);
+        setText(elements.previewPaymentMethodEls, valueOrPlaceholder(inputs.paymentMethod, "—"));
+        setText(elements.previewCompanyNameEls, valueOrPlaceholder(inputs.companyName, "MULTIMEDI@"));
+        setText(elements.previewCompanyTaglineEls, valueOrPlaceholder(inputs.companyTagline, "Creative Digital Studio"));
+        setText(elements.previewApprovedByEls, valueOrPlaceholder(inputs.approvedBy, "—"));
+        setText(elements.previewContactEls, valueOrPlaceholder(inputs.contact, "CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719   WWW.SPAQUELSMULTIMEDIA.ORG   SPAQUELS@GMAIL.COM"));
+        setText(elements.previewTotalAmountEls, valueOrPlaceholder(inputs.totalAmount, "GH¢ 31,000"));
+        setText(elements.previewBalanceEls, valueOrPlaceholder(inputs.balance, "GH¢ 21,000"));
     }
 
     async function handlePreview() {
@@ -129,7 +179,7 @@
             if (result?.receipt_number) {
                 state.receiptNumber = result.receipt_number;
                 elements.number && (elements.number.textContent = state.receiptNumber);
-                elements.previewNumber && (elements.previewNumber.textContent = state.receiptNumber);
+                setText(elements.previewNumberEls, state.receiptNumber);
             }
             if (result?.id) {
                 state.receiptId = result.id;
@@ -158,7 +208,7 @@
             state.receiptId = data.id;
             state.receiptNumber = data.receipt_number || state.receiptNumber;
             elements.number && (elements.number.textContent = state.receiptNumber);
-            elements.previewNumber && (elements.previewNumber.textContent = state.receiptNumber);
+            setText(elements.previewNumberEls, state.receiptNumber);
             if (inputs.receivedFrom) inputs.receivedFrom.value = data.received_from || "";
             if (inputs.amount) inputs.amount.value = data.amount ?? "";
             if (inputs.paymentMethod) inputs.paymentMethod.value = data.payment_method || "";

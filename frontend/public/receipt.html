@@ -40,71 +40,129 @@
         </div>
 
         <div class="module-body">
-            <form id="receipt-form" class="document receipt document-editable" novalidate>
-                <header class="document-header">
-                    <div class="logo-placeholder">Your Logo</div>
-                    <div>
-                        <h3>RECEIPT</h3>
-                        <p>No.: <span id="receipt-number">REC-NEW</span></p>
-                        <label class="field-inline">
-                            <span>Date:</span>
+            <form id="receipt-form" class="document receipt-document document-editable" novalidate>
+                <div class="receipt-letterhead">
+                    <div class="letterhead-left">
+                        <label class="field-block">
+                            <span>Date</span>
                             <input type="date" id="receipt-issue-date" name="issue_date" required>
                         </label>
+                        <label class="field-block">
+                            <span>Location</span>
+                            <input type="text" id="receipt-location" placeholder="Accra, Ghana" aria-label="Receipt location">
+                        </label>
                     </div>
-                </header>
+                    <div class="letterhead-center">
+                        <h3>RECEIPT</h3>
+                        <p>No.: <span id="receipt-number">REC-NEW</span></p>
+                    </div>
+                    <div class="letterhead-right">
+                        <input type="text" id="receipt-company-name" placeholder="MULTIMEDI@" aria-label="Company name">
+                        <textarea id="receipt-company-tagline" rows="2" placeholder="Creative Digital Studio" aria-label="Company tagline"></textarea>
+                    </div>
+                </div>
 
                 <section class="receipt-body">
                     <label class="field-block">
-                        <span>Received From:</span>
-                        <input type="text" id="receipt-received-from" name="received_from" required>
+                        <span>Received From</span>
+                        <input type="text" id="receipt-received-from" name="received_from" placeholder="Client name" required>
                     </label>
+
                     <label class="field-block">
-                        <span>Amount:</span>
-                        <input type="number" step="0.01" id="receipt-amount" name="amount" required>
+                        <span>Payment Description</span>
+                        <textarea id="receipt-description" name="description" rows="3" placeholder="Part payment for design and print works" required></textarea>
                     </label>
-                    <label class="field-block">
-                        <span>Payment Method:</span>
-                        <input type="text" id="receipt-payment-method" name="payment_method" required>
-                    </label>
-                    <label class="field-block">
-                        <span>For:</span>
-                        <textarea id="receipt-description" name="description" rows="3" required></textarea>
-                    </label>
+
+                    <div class="receipt-amount-grid">
+                        <label class="field-block">
+                            <span>Amount Paid (GHe)</span>
+                            <input type="number" step="0.01" id="receipt-amount" name="amount" placeholder="10000" required>
+                        </label>
+                        <label class="field-block">
+                            <span>Payment Method</span>
+                            <input type="text" id="receipt-payment-method" name="payment_method" placeholder="Mobile Money" required>
+                        </label>
+                    </div>
+
+                    <div class="receipt-highlight-grid">
+                        <label class="field-block receipt-highlight">
+                            <span>Total Invoice Amount</span>
+                            <input type="text" id="receipt-total-amount" placeholder="GH¢ 31,000" aria-label="Total invoice amount">
+                        </label>
+                        <label class="field-block receipt-highlight">
+                            <span>Balance After Payment</span>
+                            <input type="text" id="receipt-balance" placeholder="GH¢ 21,000" aria-label="Payment balance">
+                        </label>
+                    </div>
                 </section>
 
-                <section class="receipt-footer">
+                <section class="receipt-signature">
                     <label class="field-block">
-                        <span>Approved By:</span>
-                        <input type="text" id="receipt-approved-by" name="approved_by" required>
+                        <span>Approved By</span>
+                        <input type="text" id="receipt-approved-by" name="approved_by" placeholder="YB (Nana Adwoa)" required>
                     </label>
                     <div class="signature-line">Signature</div>
                 </section>
+
+                <section class="receipt-contact-bar">
+                    <input type="text" id="receipt-contact" placeholder="CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719   WWW.SPAQUELSMULTIMEDIA.ORG   SPAQUELS@GMAIL.COM" aria-label="Contact information line">
+                </section>
             </form>
 
-            <article id="receipt-preview" class="document receipt" hidden>
-                <header class="document-header">
-                    <div class="logo-placeholder">Your Logo</div>
-                    <div>
-                        <h3>RECEIPT</h3>
-                        <p>No.: <span id="receipt-preview-number">REC-NEW</span></p>
-                        <p>Date: <span id="receipt-preview-date">—</span></p>
-                    </div>
-                </header>
-
+            <article id="receipt-preview" class="document receipt-document" hidden>
                 <div class="preview-actions">
                     <button class="button button-secondary" data-exit-preview>Back to Edit</button>
                 </div>
 
+                <div class="receipt-letterhead">
+                    <div class="letterhead-left">
+                        <p class="js-receipt-preview-date">—</p>
+                        <p class="js-receipt-preview-location">Accra, Ghana</p>
+                    </div>
+                    <div class="letterhead-center">
+                        <h3>RECEIPT</h3>
+                        <p>No.: <span class="js-receipt-preview-number">REC-NEW</span></p>
+                    </div>
+                    <div class="letterhead-right">
+                        <h4 class="js-receipt-preview-company-name">MULTIMEDI@</h4>
+                        <p class="js-receipt-preview-company-tagline">Creative Digital Studio</p>
+                    </div>
+                </div>
+
                 <section class="receipt-body">
-                    <p><strong>Received From:</strong> <span id="receipt-preview-received-from">—</span></p>
-                    <p><strong>Amount:</strong> <span id="receipt-preview-amount">0.00</span></p>
-                    <p><strong>Payment Method:</strong> <span id="receipt-preview-payment-method">—</span></p>
-                    <p><strong>For:</strong> <span id="receipt-preview-description">—</span></p>
+                    <p><strong>Received From:</strong> <span class="js-receipt-preview-received-from">—</span></p>
+                    <p class="js-receipt-preview-description">Part payment for design and print works</p>
+
+                    <div class="receipt-amount-grid">
+                        <div class="receipt-amount-card">
+                            <span>Amount Paid (GHe)</span>
+                            <span class="js-receipt-preview-amount">GH¢ 0.00</span>
+                        </div>
+                        <div class="receipt-amount-card">
+                            <span>Payment Method</span>
+                            <span class="js-receipt-preview-payment-method">—</span>
+                        </div>
+                    </div>
+
+                    <div class="receipt-highlight-grid">
+                        <div class="receipt-highlight">
+                            <span>Total Invoice Amount</span>
+                            <span class="js-receipt-preview-total-amount">GH¢ 0.00</span>
+                        </div>
+                        <div class="receipt-highlight">
+                            <span>Balance After Payment</span>
+                            <span class="js-receipt-preview-balance">GH¢ 0.00</span>
+                        </div>
+                    </div>
                 </section>
 
-                <section class="receipt-footer">
-                    <p><strong>Approved By:</strong> <span id="receipt-preview-approved-by">—</span></p>
+                <section class="receipt-signature">
+                    <p><strong>Approved By:</strong> <span class="js-receipt-preview-approved-by">—</span></p>
                     <div class="signature-line">Signature</div>
+                </section>
+
+                <section class="receipt-contact-bar">
+                    <p class="js-receipt-preview-contact">CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719   WWW.SPAQUELSMULTIMEDIA.ORG   SPAQUELS@GMAIL.COM</p>
                 </section>
             </article>
         </div>

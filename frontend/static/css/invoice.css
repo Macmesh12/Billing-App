@@ -1,80 +1,293 @@
-/* Specific tweaks can layer on top of global letterhead styles if needed */
-.document-header {
-    gap: 0.75rem 1rem;
+/* Invoice layout refinements */
+.invoice-letterhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    padding: 1.75rem 2rem;
+
+    margin-bottom: 2rem;
 }
 
-.document-meta {
-    margin-bottom: 1.5rem;
+
+
+.logo-placeholder {
+    width: 260px;
+    height: 170px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    margin-top: 50px;
+    margin-left: 100%;
+
+   
 }
 
-.document-meta p {
-    margin: 0.25rem 0;
-    color: var(--muted-2);
+.brand-details {
+    display: grid;
+    gap: 0.5rem;
+    min-width: 220px;
+}
+
+.brand-details input,
+.brand-details textarea {
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.brand-details textarea {
+    resize: vertical;
+    min-height: 72px;
+}
+
+.letterhead-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    text-align: center;
+    font-size: 0.9rem;
+    margin-top: 10%;
+}
+
+.letterhead-meta span,
+.letterhead-meta input {
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.letterhead-meta .document-number {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.letterhead-meta .document-number span,
+.letterhead-meta .document-date span,
+.letterhead-meta .document-classification span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(31,111,235,0.12);
+    color: var(--text);
+}
+.invoice-contact{
+    position: relative;
+    margin-top: 10%;
+    margin-right: 0;
+}
+.invoice-contact-bar {
+    border-top: 2px solid rgba(16,24,40,0.06);
+    padding-top: 1rem;
+    margin-top: 2rem;
+    text-align: center;
+    color: var(--muted);
+    letter-spacing: 0.35px;
+}
+
+.invoice-contact-bar input,
+.invoice-contact-bar p {
+    text-align: center;
+    font-weight: 600;
+    color: inherit;
+}
+
+.invoice-title {
+    text-align: center;
+    margin: 2rem auto 1.5rem;
+    display: grid;
+    gap: 0.75rem;
+    max-width: 640px;
+}
+
+.invoice-title h3 {
+    margin: 0;
+    font-size: 1.35rem;
+    letter-spacing: 0.8px;
+}
+
+.invoice-title textarea {
+    min-height: 68px;
+}
+
+.invoice-contact {
+    margin: 1.5rem 0 2rem;
 }
 
 .document-items {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 1rem;
-    overflow: auto;
+    margin-bottom: 1.5rem;
+    box-shadow: inset 0 0 0 1px rgba(16,24,40,0.05);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.document-items thead {
+    background: linear-gradient(120deg, rgba(31,111,235,0.12), rgba(255,255,255,0.9));
 }
 
 .document-items th,
 .document-items td {
-    padding: 0.75rem 0.6rem;
+    padding: 0.85rem 0.75rem;
     text-align: left;
+    border-bottom: 1px solid rgba(16,24,40,0.05);
+    font-size: 0.92rem;
 }
 
-.document-items thead th {
+.document-items th {
     text-transform: uppercase;
-    font-size: 0.75rem;
-    color: var(--muted-2);
     font-weight: 700;
     letter-spacing: 0.6px;
-    border-bottom: 1px solid rgba(16,24,40,0.04);
-    background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(250,250,255,0.5));
+    color: var(--muted-2);
+    font-size: 0.75rem;
+}
+
+.document-items td:last-child {
+    width: 80px;
 }
 
 .document-items tbody tr:hover {
-    background: linear-gradient(90deg, rgba(246,250,255,0.65), rgba(255,255,255,0.45));
+    background: rgba(31,111,235,0.04);
 }
 
-.document-items td.amount,
-.document-items td.qty {
-    text-align: right;
+.document-items input {
+    border-bottom: 1px dashed rgba(16,24,40,0.12);
+    padding: 0.25rem 0.35rem;
+}
+
+.document-items input:focus {
+    border-bottom-color: var(--accent);
+}
+
+.invoice-summary {
+    display: grid;
+    gap: 1rem;
+    margin: 2rem 0 2.5rem auto;
+    max-width: 420px;
+    padding: 1.2rem 1.5rem;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(241,244,255,0.9));
+    box-shadow: 0 16px 40px rgba(15,23,42,0.08);
+}
+
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.summary-table th,
+.summary-table td {
+    padding: 0.4rem 0;
+    text-align: left;
+}
+
+.summary-table th {
+    font-size: 0.9rem;
+    letter-spacing: 0.4px;
+}
+
+.summary-table td {
     font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    text-align: right;
 }
 
-.document-totals {
-    margin-left: auto;
-    max-width: 360px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,252,255,0.95));
-    border-radius: 10px;
-    padding: 1rem;
-    box-shadow: 0 14px 40px rgba(15,23,42,0.04);
+.summary-table .with-vat {
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
 }
 
-.document-totals p {
-    display: flex;
-    justify-content: space-between;
-    margin: 0.4rem 0;
+.levies-table {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--muted);
 }
 
-.document-totals .grand {
-    border-top: 1px dashed rgba(16,24,40,0.06);
-    padding-top: 0.6rem;
-    font-size: 1.125rem;
-    font-weight: 800;
+.levies-table span:last-child {
+    font-weight: 700;
     color: var(--text);
 }
 
-.document-footer {
-    text-align: center;
+.grand-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-top: 1px dashed rgba(16,24,40,0.08);
+    font-size: 1.125rem;
+    font-weight: 800;
+}
+
+.invoice-notes {
+    margin: 2.5rem 0;
+    font-size: 11px;
+    font-style: italic;
+}
+
+.invoice-notes h4 {
+    margin-bottom: 0.8rem;
+    letter-spacing: 0.4px;
+}
+
+.invoice-notes textarea {
+    width: 100%;
+    min-height: 180px;
+    line-height: 1.5;
+}
+
+.invoice-notes ul {
+    list-style: disc;
+    padding-left: 1.2rem;
     color: var(--muted);
-    font-size: 0.9rem;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.invoice-notes ul .empty-state {
+    list-style: none;
+    font-style: italic;
+    color: var(--muted);
+}
+
+.invoice-signature {
+    margin: 2rem 0 2.5rem;
+}
+
+.invoice-signature p {
+    margin: 0.25rem 0;
+}
+
+
+
+.module.is-preview .invoice-letterhead {
+    background: linear-gradient(120deg, rgba(31,111,235,0.12), rgba(255,255,255,0.95));
 }
 
 @media (max-width: 900px) {
-    .document-header { flex-direction: column; align-items: flex-start; }
-    .document-totals { max-width: 100%; width: 100%; margin-top: 1rem; }
+    .invoice-letterhead {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .letterhead-brand {
+        flex-direction: column;
+    }
+
+    .letterhead-meta {
+        justify-items: center;
+    }
+
+    .invoice-summary {
+        margin-left: 0;
+        max-width: 100%;
+    }
 }

@@ -15,6 +15,13 @@
         const formatCurrency = typeof helpers.formatCurrency === "function"
             ? helpers.formatCurrency
             : (value) => Number(value || 0).toFixed(2);
+        const formatQuantity = typeof helpers.formatQuantity === "function"
+            ? helpers.formatQuantity
+            : (value) => {
+                const numeric = Number.parseFloat(value || 0);
+                if (!Number.isFinite(numeric)) return "0";
+                return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2);
+            };
         // Function to format numbers as currency strings
         const parseNumber = typeof helpers.parseNumber === "function"
             ? helpers.parseNumber
@@ -23,7 +30,7 @@
 
         const moduleId = "invoice-module";
         // ID of the invoice module element
-        const moduleEl = document.getElementById(moduleId);
+    const moduleEl = document.getElementById(moduleId);
         // Reference to the module DOM element
         const form = document.getElementById("invoice-form");
         // Reference to the invoice form element
@@ -84,6 +91,13 @@
         previewCustomer: document.getElementById("invoice-preview-customer"),
         previewClassification: document.getElementById("invoice-preview-classification"),
         previewDate: document.getElementById("invoice-preview-date"),
+        previewCompanyName: document.getElementById("invoice-preview-company-name"),
+        previewCompanyInfo: document.getElementById("invoice-preview-company-info"),
+        previewClientRef: document.getElementById("invoice-preview-client-ref"),
+        previewIntro: document.getElementById("invoice-preview-intro"),
+        previewNotesList: document.getElementById("invoice-preview-notes"),
+        previewSignatory: document.getElementById("invoice-preview-signatory"),
+        previewContact: document.getElementById("invoice-preview-contact"),
     };
 
     const inputs = {
@@ -91,6 +105,13 @@
         customer: document.getElementById("invoice-customer"),
         classification: document.getElementById("invoice-classification"),
         issueDate: document.getElementById("invoice-issue-date"),
+        companyName: document.getElementById("invoice-company-name"),
+        companyInfo: document.getElementById("invoice-company-info"),
+        clientRef: document.getElementById("invoice-client-ref"),
+        intro: document.getElementById("invoice-intro"),
+        notes: document.getElementById("invoice-notes"),
+        signatory: document.getElementById("invoice-signatory"),
+        contact: document.getElementById("invoice-contact"),
     };
 
     const state = {
@@ -150,6 +171,35 @@
         return response.json();
     }
 
+    function valueOrPlaceholder(field, fallback = "—") {
+        if (!field) return fallback;
+        const value = (field.value || "").trim();
+        if (value) return value;
+        return field.placeholder ? field.placeholder.trim() : fallback;
+    }
+
+    function renderPreviewNotes(notesText) {
+        if (!elements.previewNotesList) return;
+        elements.previewNotesList.innerHTML = "";
+        const lines = (notesText || "").split(/\r?\n/)
+            .map((line) => line.replace(/^[-•\s]+/, "").trim())
+            .filter(Boolean);
+
+        if (lines.length === 0) {
+            const placeholderItem = document.createElement("li");
+            placeholderItem.className = "empty-state";
+            placeholderItem.textContent = "Add notes to display terms.";
+            elements.previewNotesList.appendChild(placeholderItem);
+            return;
+        }
+
+        lines.forEach((line) => {
+            const item = document.createElement("li");
+            item.textContent = line;
+            elements.previewNotesList.appendChild(item);
+        });
+    }
+
     function renderLevyPlaceholders() {
         // Function to render levy placeholders in edit and preview sections
         if (!elements.levyContainer || !elements.previewLevyContainer) return;
@@ -166,7 +216,7 @@
             levyValueMap.set(name, valueEl);
 
             const previewLine = document.createElement("p");
-            previewLine.innerHTML = `<span>${name.toUpperCase()}:</span> <span data-preview-levy="${name}">0.00</span>`;
+            previewLine.innerHTML = `<span>${name.toUpperCase()} (${(rate * 100).toFixed(2)}%):</span> <span data-preview-levy="${name}">0.00</span>`;
             elements.previewLevyContainer.appendChild(previewLine);
             const previewVal = previewLine.querySelector("[data-preview-levy]");
             previewLevyValueMap.set(name, previewVal);
@@ -194,7 +244,7 @@
             const previewRow = document.createElement("tr");
             previewRow.innerHTML = `
                 <td>${item.description || ""}</td>
-                <td>${formatCurrency(item.quantity || 0)}</td>
+                <td>${formatQuantity(item.quantity || 0)}</td>
                 <td>${formatCurrency(item.unit_price || 0)}</td>
                 <td>${formatCurrency(item.total || 0)}</td>
             `;
@@ -205,6 +255,11 @@
             const placeholderRow = document.createElement("tr");
             placeholderRow.innerHTML = `<td colspan="5" class="empty-state">No line items yet. Add one to begin.</td>`;
             tableBody?.appendChild(placeholderRow);
+            if (previewBody) {
+                const previewPlaceholder = document.createElement("tr");
+                previewPlaceholder.innerHTML = `<td colspan="4" class="empty-state">No line items yet.</td>`;
+                previewBody.appendChild(previewPlaceholder);
+            }
         }
 
         if (elements.itemsPayload) {
@@ -245,6 +300,13 @@
         elements.previewClassification && (elements.previewClassification.textContent = inputs.classification?.value || "—");
         elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
         elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+        elements.previewCompanyName && (elements.previewCompanyName.textContent = valueOrPlaceholder(inputs.companyName, "Spaquels Enterprise"));
+        elements.previewCompanyInfo && (elements.previewCompanyInfo.textContent = valueOrPlaceholder(inputs.companyInfo, "Creative Designs | Logo Creation | Branding | Printing"));
+        elements.previewClientRef && (elements.previewClientRef.textContent = valueOrPlaceholder(inputs.clientRef, ""));
+        elements.previewIntro && (elements.previewIntro.textContent = valueOrPlaceholder(inputs.intro, "Please find below for your appraisal and detailed pro-forma invoice."));
+    renderPreviewNotes(valueOrPlaceholder(inputs.notes, ""));
+        elements.previewSignatory && (elements.previewSignatory.textContent = valueOrPlaceholder(inputs.signatory, "Raphael Quame Achegbie"));
+        elements.previewContact && (elements.previewContact.textContent = valueOrPlaceholder(inputs.contact, "Spaquelsenterprise@gmail.com  •  +233 (0)5 457 0325  •  +233 (0)5 188 1934  •  Bankers: Fidelity Bank"));
     }
 
     async function calculateServerTotals() {
@@ -377,6 +439,7 @@
             state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
             renderItems();
         }
+        syncPreviewFromForm();
     }
 
     function attachEventListeners() {
@@ -433,6 +496,24 @@
                 togglePreview(moduleId, false);
             }
         });
+
+        const liveSyncFields = [
+            inputs.customer,
+            inputs.classification,
+            inputs.companyName,
+            inputs.companyInfo,
+            inputs.clientRef,
+            inputs.intro,
+            inputs.notes,
+            inputs.signatory,
+            inputs.contact,
+        ];
+        liveSyncFields.forEach((field) => {
+            field?.addEventListener("input", () => {
+                syncPreviewFromForm();
+            });
+        });
+        inputs.issueDate?.addEventListener("change", syncPreviewFromForm);
     }
 
     (async function init() {

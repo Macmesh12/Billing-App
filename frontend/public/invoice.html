@@ -1,238 +1,214 @@
 <!DOCTYPE html>
-<!-- HTML5 document type declaration -->
 <html lang="en">
-<!-- Root element with English language attribute -->
 <head>
-    <!-- Document head containing metadata and links -->
     <meta charset="UTF-8">
-    <!-- Character encoding set to UTF-8 for proper text rendering -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <!-- Compatibility mode for Internet Explorer -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Responsive viewport meta tag for mobile devices -->
     <title>Invoice | Billing App</title>
-    <!-- Page title displayed in browser tab -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <!-- Preconnect to Google Fonts for faster loading -->
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Preconnect to Google Fonts static resources -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Link to Google Fonts Inter font family -->
     <link rel="stylesheet" href="../static/css/general.css">
-    <!-- Link to general CSS styles -->
     <link rel="stylesheet" href="../static/css/invoice.css">
-    <!-- Link to invoice-specific CSS styles -->
     <script>
-        // Inline script to set global configuration
         window.BILLING_APP_CONFIG = {
             apiBaseUrl: "http://127.0.0.1:8765"
-            // Base URL for API calls to the Django backend
         };
     </script>
 </head>
 <body class="billing-app">
-<!-- Body element with billing-app class for styling -->
 <header class="app-header">
-    <!-- Application header -->
     <div class="app-brand">
-        <!-- Branding section -->
         <h1>Billing App</h1>
-        <!-- Main application title -->
     </div>
     <nav class="app-nav" aria-label="Primary">
-        <!-- Primary navigation menu -->
         <a class="nav-link" href="index.html">Dashboard</a>
-        <!-- Link to dashboard page -->
         <a class="nav-link active" href="invoice.html">Invoice</a>
-        <!-- Active link to current invoice page -->
         <a class="nav-link" href="receipt.html">Receipt</a>
-        <!-- Link to receipt page -->
         <a class="nav-link" href="waybill.html">Waybill</a>
-        <!-- Link to waybill page -->
     </nav>
 </header>
 
 <main class="app-main">
-    <!-- Main content area -->
     <section id="invoice-module" class="module" data-document-type="invoice">
-        <!-- Invoice module section -->
         <div class="module-header">
-            <!-- Module header with title and actions -->
             <h2>Invoice</h2>
-            <!-- Module title -->
             <div class="module-actions">
-                <!-- Action buttons -->
                 <button id="invoice-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <!-- Button to toggle preview mode -->
                 <button id="invoice-submit" class="button" type="button">Save Invoice</button>
-                <!-- Button to submit and save the invoice -->
             </div>
         </div>
 
         <div class="module-body">
-            <!-- Module body containing form and preview -->
             <form id="invoice-form" class="document document-editable" novalidate>
-                <!-- Invoice form with no validation -->
-                <header class="document-header">
-                    <!-- Document header -->
-                    <div>
-                        <h3>INVOICE</h3>
-                        <!-- Invoice heading -->
-                        <p class="document-number">Invoice No.: <span id="invoice-number">INV-NEW</span></p>
-                        <!-- Invoice number display -->
+                <div class="invoice-letterhead">
+                    <div class="letterhead-brand">
+                        <img src="/assets/logo.png" alt="Logo placeholder" class="logo-placeholder">
+                       
                     </div>
-                    <div class="document-meta">
-                        <!-- Document metadata -->
-                        <label class="field-inline">
-                            <!-- Inline field for date -->
-                            <span>Date:</span>
-                            <!-- Date label -->
-                            <input type="date" id="invoice-issue-date" name="issue_date" required>
-                            <!-- Date input field -->
-                        </label>
-                        <label class="field-inline">
-                            <!-- Inline field for classification -->
-                            <span>Classification:</span>
-                            <!-- Classification label -->
-                            <input type="text" id="invoice-classification" name="classification" placeholder="Service" required>
-                            <!-- Classification input field -->
-                        </label>
-                    </div>
-                </header>
 
-                <section class="document-meta">
-                    <!-- Customer section -->
-                    <label class="field-block">
-                        <!-- Block field for customer -->
-                        <span>Billed To:</span>
-                        <!-- Billed to label -->
-                        <input type="text" id="invoice-customer" name="customer_name" placeholder="Client name" required>
-                        <!-- Customer name input -->
-                    </label>
-                </section>
+                   
+                    <div class="letterhead-meta">
+                        <p class="document-number">Invoice No.:</p>
+                        
+                        <label class="field-inline">
+                            <span>Date:  <input type="date" id="invoice-issue-date" name="issue_date" required></span> 
+                        </label>
+                         <section class="invoice-contact">
+                            <label class="field-block">
+                              <span>Billed To:   <input type="text" id="invoice-customer" name="customer_name" placeholder="Client name" required></span>
+                            </label>
+                      </section>
+                    </div>
+                </div>
+
+                <div class="invoice-title">
+                    <h3>PRO-FORMA INVOICE</h3>
+                    <textarea id="invoice-intro" rows="2" aria-label="Introductory message">Please find below for your appraisal and detailed pro-forma invoice.</textarea>
+                </div>
+
+               
 
                 <input type="hidden" id="invoice-items-payload" name="items_payload" value="[]">
-                <!-- Hidden input for items JSON payload -->
 
                 <table class="document-items" id="invoice-items-table">
-                    <!-- Items table -->
                     <thead>
-                        <!-- Table header -->
                         <tr>
-                            <!-- Header row -->
-                            <th>Description</th>
-                            <!-- Description column header -->
-                            <th>Quantity</th>
-                            <!-- Quantity column header -->
-                            <th>Unit Price</th>
-                            <!-- Unit price column header -->
-                            <th>Total</th>
-                            <!-- Total column header -->
+                            <th class="description">Description / Classification</th>
+                            <th>Qty</th>
+                            <th>Cost per Unit (GHC)</th>
+                            <th>Total Cost (GHC)</th>
                             <th></th>
-                            <!-- Empty header for actions -->
                         </tr>
                     </thead>
                     <tbody></tbody>
-                    <!-- Table body for dynamic rows -->
                 </table>
                 <button type="button" id="invoice-add-item" class="button button-secondary">Add Item</button>
-                <!-- Button to add new item row -->
 
-                <section class="document-totals" id="invoice-totals">
-                    <!-- Totals section -->
-                    <p><span>Subtotal:</span> <span id="invoice-subtotal">0.00</span></p>
-                    <!-- Subtotal display -->
-                    <div id="invoice-levies"></div>
-                    <!-- Container for tax levies -->
-                    <p class="grand"><span>Grand Total:</span> <span id="invoice-grand-total">0.00</span></p>
-                    <!-- Grand total display -->
+                <div class="invoice-summary">
+                    <table class="summary-table">
+                        <tbody>
+                            <tr>
+                                <th>Sub Total</th>
+                                <td class="with-vat">Without VAT</td>
+                                <td id="invoice-subtotal">0.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="levies-table" id="invoice-levies"></div>
+                    <div class="grand-total">
+                        <span>Grand Total</span>
+                        <span id="invoice-grand-total">0.00</span>
+                    </div>
+                </div>
+
+                <section class="invoice-notes">
+                    <h4>Notes</h4>
+                    <textarea id="invoice-notes" rows="6" aria-label="Invoice notes list">• Invoices we submit in respect of our services (any other payable charges) will be paid in full or a deposit of 70% made either by cash, bank or mobile money.
+• Work is guaranteed once a deposit or a full payment is paid. NOTE!!: full payment should be made 3 days after delivery or on delivery.
+• Job completion date is communicated once payment is received.
+• Money paid is not refundable.
+• All items brought for service must be checked well before leaving the premises, we will not be held liable in the event that a mistake occurred.
+• Delivery options available at a fee.</textarea>
+                </section>
+
+                <section class="invoice-signature">
+                    <p>(Production Manager)</p>
+                    <input type="text" id="invoice-signatory" placeholder="Raphael Quame Achegbie" aria-label="Signatory name">
+                    <div class="signature-line">Signature</div>
+                </section>
+
+                <section class="invoice-contact-bar">
+                    <input type="text" id="invoice-contact" placeholder="Spaquelsenterprise@gmail.com  •  +233 (0)5 457 0325  •  +233 (0)5 188 1934  •  Bankers: Fidelity Bank" aria-label="Contact information line">
                 </section>
             </form>
 
             <div id="invoice-preview" class="document" hidden>
-                <!-- Preview section, hidden by default -->
-                <header class="document-header">
-                    <!-- Preview header -->
-                    <h3>INVOICE</h3>
-                    <!-- Preview invoice heading -->
-                    <p class="document-number">Invoice No.: <span id="invoice-preview-number">INV-NEW</span></p>
-                    <!-- Preview invoice number -->
-                    <p class="document-date">Date: <span id="invoice-preview-date">—</span></p>
-                    <!-- Preview date -->
-                </header>
-
                 <div class="preview-actions">
-                    <!-- Preview actions -->
                     <button class="button button-secondary" data-exit-preview>Back to Edit</button>
-                    <!-- Button to exit preview -->
                 </div>
 
-                <section class="document-meta">
-                    <!-- Preview customer and classification -->
+                <div class="invoice-letterhead">
+                    <div class="letterhead-brand">
+                        <img src="/assets/logo.png" alt="Company Logo   Placeholder" class="logo-placeholder">
+                    </div>
+                    <div class="letterhead-meta">
+                        <p class="document-number">Invoice No.: <span id="invoice-preview-number">INV-NEW</span></p>
+                        <p class="document-date">Date: <span id="invoice-preview-date">—</span></p>
+                        <p class="document-classification">Classification: <span id="invoice-preview-classification">—</span></p>
+                    </div>
+                </div>
+
+                <div class="invoice-title">
+                    <h3>PRO-FORMA INVOICE</h3>
+                    <p class="intro" id="invoice-preview-intro">Please find below for your appraisal and detailed pro-forma invoice.</p>
+                </div>
+
+                <section class="invoice-contact">
                     <p><strong>Billed To:</strong> <span id="invoice-preview-customer">—</span></p>
-                    <!-- Preview customer -->
-                    <p><strong>Classification:</strong> <span id="invoice-preview-classification">—</span></p>
-                    <!-- Preview classification -->
                 </section>
 
                 <table class="document-items">
-                    <!-- Preview items table -->
                     <thead>
-                        <!-- Preview table header -->
                         <tr>
-                            <!-- Header row -->
-                            <th>Description</th>
-                            <!-- Description header -->
-                            <th>Quantity</th>
-                            <!-- Quantity header -->
-                            <th>Unit Price</th>
-                            <!-- Unit price header -->
-                            <th>Total</th>
-                            <!-- Total header -->
+                            <th class="description">Description / Classification</th>
+                            <th>Qty</th>
+                            <th>Cost per Unit (GHe)</th>
+                            <th>Total Cost (GHe)</th>
                         </tr>
                     </thead>
                     <tbody id="invoice-preview-rows"></tbody>
-                    <!-- Preview table body -->
                 </table>
 
-                <section class="document-totals">
-                    <!-- Preview totals -->
-                    <p><span>Subtotal:</span> <span id="invoice-preview-subtotal">0.00</span></p>
-                    <!-- Preview subtotal -->
-                    <div id="invoice-preview-levies"></div>
-                    <!-- Preview levies -->
-                    <p class="grand"><span>Grand Total:</span> <span id="invoice-preview-grand">0.00</span></p>
-                    <!-- Preview grand total -->
+                <div class="invoice-summary">
+                    <table class="summary-table">
+                        <tbody>
+                            <tr>
+                                <th>Sub Total</th>
+                                <td class="with-vat">Without VAT</td>
+                                <td id="invoice-preview-subtotal">0.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="levies-table" id="invoice-preview-levies"></div>
+                    <div class="grand-total">
+                        <span>Grand Total</span>
+                        <span id="invoice-preview-grand">0.00</span>
+                    </div>
+                </div>
+
+                <section class="invoice-notes">
+                    <h4>Notes</h4>
+                    <ul id="invoice-preview-notes"></ul>
                 </section>
 
-                <footer class="document-footer">
-                    <!-- Document footer -->
-                    <p>Thank you for your business.</p>
-                    <!-- Footer message -->
-                </footer>
+                <section class="invoice-signature">
+                    <p>(Production Manager)</p>
+                    <p id="invoice-preview-signatory">Raphael Quame Achegbie</p>
+                    <div class="signature-line">Signature</div>
+                </section>
+
+                <section class="invoice-contact-bar">
+                        <input type="text" id="invoice-company-name" placeholder="Spaquels Enterprise" aria-label="Company name">
+                        <textarea id="invoice-company-info" rows="3" placeholder="Creative Designs | Logo Creation | Branding | Printing" aria-label="Company tagline"></textarea>
+                    <p id="invoice-preview-contact">Spaquelsenterprise@gmail.com  •  +233 (0)5 457 0325  •  +233 (0)5 188 1934  •  Bankers: Fidelity Bank</p>
+                </section>
             </div>
         </div>
+
         <div class="module-toast" id="invoice-toast" role="status" aria-live="polite" hidden></div>
-        <!-- Toast notification area -->
     </section>
 </main>
 
 <footer class="app-footer">
-    <!-- Application footer -->
     <p>&copy; <span id="invoice-current-year"></span> Billing App. All rights reserved.</p>
-    <!-- Copyright notice with dynamic year -->
 </footer>
 
 <script src="../static/js/main.js" defer></script>
-<!-- Load main JavaScript file -->
 <script src="../static/js/invoice.js" defer></script>
-<!-- Load invoice-specific JavaScript file -->
 <script>
-    // Script to set current year in footer
     document.addEventListener("DOMContentLoaded", () => {
-        // Wait for DOM to load
         document.getElementById("invoice-current-year").textContent = new Date().getFullYear();
-        // Set current year
     });
 </script>
 </body>
