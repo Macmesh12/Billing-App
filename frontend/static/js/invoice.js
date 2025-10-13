@@ -55,6 +55,11 @@
                     }
                 }
             });
+            const exitBtn = document.getElementById("invoice-exit-preview");
+            if (exitBtn) {
+                if (showPreview) exitBtn.removeAttribute("hidden");
+                else exitBtn.setAttribute("hidden", "hidden");
+            }
         }
 
         const togglePreview = typeof helpers.togglePreview === "function"
@@ -119,7 +124,7 @@
         items: [],
         levies: [],
         invoiceId: null,
-        invoiceNumber: "INV-NEW",
+        invoiceNumber: "INV-001",
         isSaving: false,
     };
 
@@ -210,13 +215,13 @@
 
         state.levies.forEach(({ name, rate }) => {
             const line = document.createElement("p");
-            line.innerHTML = `<span>${name.toUpperCase()} (${(rate * 100).toFixed(2)}%):</span> <span data-levy="${name}">0.00</span>`;
+            line.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-levy="${name}">0.00</span>`;
             elements.levyContainer.appendChild(line);
             const valueEl = line.querySelector("[data-levy]");
             levyValueMap.set(name, valueEl);
 
             const previewLine = document.createElement("p");
-            previewLine.innerHTML = `<span>${name.toUpperCase()} (${(rate * 100).toFixed(2)}%):</span> <span data-preview-levy="${name}">0.00</span>`;
+            previewLine.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-preview-levy="${name}">0.00</span>`;
             elements.previewLevyContainer.appendChild(previewLine);
             const previewVal = previewLine.querySelector("[data-preview-levy]");
             previewLevyValueMap.set(name, previewVal);
@@ -300,13 +305,11 @@
         elements.previewClassification && (elements.previewClassification.textContent = inputs.classification?.value || "—");
         elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
         elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
-        elements.previewCompanyName && (elements.previewCompanyName.textContent = valueOrPlaceholder(inputs.companyName, "Spaquels Enterprise"));
         elements.previewCompanyInfo && (elements.previewCompanyInfo.textContent = valueOrPlaceholder(inputs.companyInfo, "Creative Designs | Logo Creation | Branding | Printing"));
         elements.previewClientRef && (elements.previewClientRef.textContent = valueOrPlaceholder(inputs.clientRef, ""));
         elements.previewIntro && (elements.previewIntro.textContent = valueOrPlaceholder(inputs.intro, "Please find below for your appraisal and detailed pro-forma invoice."));
-    renderPreviewNotes(valueOrPlaceholder(inputs.notes, ""));
-        elements.previewSignatory && (elements.previewSignatory.textContent = valueOrPlaceholder(inputs.signatory, "Raphael Quame Achegbie"));
-        elements.previewContact && (elements.previewContact.textContent = valueOrPlaceholder(inputs.contact, "Spaquelsenterprise@gmail.com  •  +233 (0)5 457 0325  •  +233 (0)5 188 1934  •  Bankers: Fidelity Bank"));
+        // Sync notes into preview list
+        renderPreviewNotes(inputs.notes?.value || "");
     }
 
     async function calculateServerTotals() {
@@ -406,9 +409,22 @@
                 name,
                 rate: Number(rate) || 0,
             }));
+            if (!state.levies.length) {
+                state.levies = [
+                    { name: "NHIL", rate: 0.025 },
+                    { name: "GETFund Levy", rate: 0.025 },
+                    { name: "COVID", rate: 0.01 },
+                    { name: "VAT", rate: 0.15 },
+                ];
+            }
         } catch (error) {
             console.warn("Failed to load invoice config", error);
-            state.levies = [];
+            state.levies = [
+                { name: "NHIL", rate: 0.025 },
+                { name: "GETFund Levy", rate: 0.025 },
+                { name: "COVID", rate: 0.01 },
+                { name: "VAT", rate: 0.15 },
+            ];
         }
         renderLevyPlaceholders();
         recalcTotals();

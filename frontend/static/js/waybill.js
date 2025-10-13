@@ -8,6 +8,13 @@
     // Fallback for parseNumber
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
     // Fallback for formatCurrency
+    const formatQuantity = typeof helpers.formatQuantity === "function"
+        ? helpers.formatQuantity
+        : (value) => {
+            const numeric = Number.parseFloat(value || 0);
+            if (!Number.isFinite(numeric)) return "0";
+            return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2);
+        };
 
     const moduleId = "waybill-module";
     // Module ID
@@ -27,18 +34,22 @@
         // DOM elements object
         itemsPayload: document.getElementById("waybill-items-payload"),
         itemsTableBody: document.querySelector("#waybill-items-table tbody"),
-        previewRows: document.getElementById("waybill-preview-rows"),
+        previewRowsContainers: document.querySelectorAll(".js-waybill-preview-rows"),
         previewToggleBtn: document.getElementById("waybill-preview-toggle"),
         submitBtn: document.getElementById("waybill-submit"),
         addItemBtn: document.getElementById("waybill-add-item"),
         toast: document.getElementById("waybill-toast"),
         number: document.getElementById("waybill-number"),
-        previewNumber: document.getElementById("waybill-preview-number"),
-        previewDate: document.getElementById("waybill-preview-date"),
-        previewCustomer: document.getElementById("waybill-preview-customer"),
-        previewDestination: document.getElementById("waybill-preview-destination"),
-        previewDriver: document.getElementById("waybill-preview-driver"),
-        previewReceiver: document.getElementById("waybill-preview-receiver"),
+        previewNumberEls: document.querySelectorAll(".js-waybill-preview-number"),
+        previewDateEls: document.querySelectorAll(".js-waybill-preview-date"),
+        previewCustomerEls: document.querySelectorAll(".js-waybill-preview-customer"),
+        previewDestinationEls: document.querySelectorAll(".js-waybill-preview-destination"),
+        previewDriverEls: document.querySelectorAll(".js-waybill-preview-driver"),
+        previewReceiverEls: document.querySelectorAll(".js-waybill-preview-receiver"),
+        previewNoteEls: document.querySelectorAll(".js-waybill-preview-note"),
+        previewDeliveryDateEls: document.querySelectorAll(".js-waybill-preview-delivery-date"),
+        previewReceivedDateEls: document.querySelectorAll(".js-waybill-preview-received-date"),
+        previewContactEls: document.querySelectorAll(".js-waybill-preview-contact"),
     };
 
     const inputs = {
@@ -48,6 +59,10 @@
         destination: document.getElementById("waybill-destination"),
         driver: document.getElementById("waybill-driver"),
         receiver: document.getElementById("waybill-receiver"),
+        note: document.getElementById("waybill-note"),
+        deliveryDate: document.getElementById("waybill-delivery-date"),
+        receivedDateText: document.getElementById("waybill-received-date"),
+        contact: document.getElementById("waybill-contact"),
     };
 
     const state = {
@@ -57,6 +72,36 @@
         waybillNumber: "WB-NEW",
         isSaving: false,
     };
+
+    function setText(target, text) {
+        if (!target) return;
+        if (typeof target.length === "number" && !target.nodeType) {
+            Array.from(target).forEach((node) => {
+                if (node) node.textContent = text;
+            });
+            return;
+        }
+        target.textContent = text;
+    }
+
+    function valueOrPlaceholder(field, fallback = "—") {
+        if (!field) return fallback;
+        const value = (field.value || "").trim();
+        if (value) return value;
+        if (field.placeholder) return field.placeholder.trim();
+        return fallback;
+    }
+
+    function formatDisplayDate(value) {
+        if (!value) return "—";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return new Intl.DateTimeFormat("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+        }).format(date);
+    }
 
     function showToast(message, tone = "success") {
         // Function to show toast
@@ -88,12 +133,35 @@
         return response.json();
     }
 
+    function updatePreviewItems() {
+        const previewBodies = elements.previewRowsContainers;
+        if (!previewBodies || !previewBodies.length) return;
+        previewBodies.forEach((container) => {
+            if (!container) return;
+            container.innerHTML = "";
+            if (!state.items.length) {
+                const placeholder = document.createElement("tr");
+                placeholder.innerHTML = `<td colspan="4" class="empty-state">No line items yet.</td>`;
+                container.appendChild(placeholder);
+                return;
+            }
+            state.items.forEach((item) => {
+                const previewRow = document.createElement("tr");
+                previewRow.innerHTML = `
+                    <td>${item.description || ""}</td>
+                    <td>${formatQuantity(item.quantity || 0)}</td>
+                    <td>${formatCurrency(item.unit_price || 0)}</td>
+                    <td>${formatCurrency(item.total || 0)}</td>
+                `;
+                container.appendChild(previewRow);
+            });
+        });
+    }
+
     function renderItems() {
         // Function to render items in table and preview
         const tableBody = elements.itemsTableBody;
-        const previewBody = elements.previewRows;
         tableBody && (tableBody.innerHTML = "");
-        previewBody && (previewBody.innerHTML = "");
 
         state.items.forEach((item, index) => {
             const row = document.createElement("tr");
@@ -105,15 +173,6 @@
                 <td><button type="button" class="button button-secondary" data-remove="${index}">Remove</button></td>
             `;
             tableBody?.appendChild(row);
-
-            const previewRow = document.createElement("tr");
-            previewRow.innerHTML = `
-                <td>${item.description || ""}</td>
-                <td>${formatCurrency(item.quantity || 0)}</td>
-                <td>${formatCurrency(item.unit_price || 0)}</td>
-                <td>${formatCurrency(item.total || 0)}</td>
-            `;
-            previewBody?.appendChild(previewRow);
         });
 
         if (state.items.length === 0) {
@@ -125,16 +184,29 @@
         if (elements.itemsPayload) {
             elements.itemsPayload.value = JSON.stringify(state.items);
         }
+
+        updatePreviewItems();
     }
 
     function syncPreview() {
         // Sync preview with form data
-        elements.previewNumber && (elements.previewNumber.textContent = state.waybillNumber);
-        elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
-        elements.previewCustomer && (elements.previewCustomer.textContent = inputs.customer?.value || "—");
-        elements.previewDestination && (elements.previewDestination.textContent = inputs.destination?.value || "—");
-        elements.previewDriver && (elements.previewDriver.textContent = inputs.driver?.value || "—");
-        elements.previewReceiver && (elements.previewReceiver.textContent = inputs.receiver?.value || "—");
+        setText(elements.previewNumberEls, state.waybillNumber);
+        const prettyDate = formatDisplayDate(inputs.issueDate?.value || "");
+        setText(elements.previewDateEls, prettyDate);
+        setText(elements.previewCustomerEls, valueOrPlaceholder(inputs.customer, "—"));
+        setText(elements.previewDestinationEls, valueOrPlaceholder(inputs.destination, "—"));
+        setText(elements.previewDriverEls, valueOrPlaceholder(inputs.driver, "—"));
+        setText(elements.previewReceiverEls, valueOrPlaceholder(inputs.receiver, "—"));
+        setText(elements.previewNoteEls, valueOrPlaceholder(inputs.note, "Please sign for acceptance"));
+        const deliveryTyped = (inputs.deliveryDate?.value || "").trim();
+        let deliveryDateText = deliveryTyped;
+        if (!deliveryDateText) {
+            deliveryDateText = prettyDate !== "—" ? prettyDate : valueOrPlaceholder(inputs.deliveryDate, "—");
+        }
+        setText(elements.previewDeliveryDateEls, deliveryDateText);
+        setText(elements.previewReceivedDateEls, valueOrPlaceholder(inputs.receivedDateText, "—"));
+    setText(elements.previewContactEls, valueOrPlaceholder(inputs.contact, "DELIVERED BY SPAQUELS \u2022 CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719"));
+        updatePreviewItems();
     }
 
     function buildPayload() {
@@ -171,7 +243,7 @@
             if (result?.waybill_number) {
                 state.waybillNumber = result.waybill_number;
                 elements.number && (elements.number.textContent = state.waybillNumber);
-                elements.previewNumber && (elements.previewNumber.textContent = state.waybillNumber);
+                setText(elements.previewNumberEls, state.waybillNumber);
             }
             if (result?.id) {
                 state.waybillId = result.id;
@@ -205,7 +277,7 @@
             state.waybillId = data.id;
             state.waybillNumber = data.waybill_number || state.waybillNumber;
             elements.number && (elements.number.textContent = state.waybillNumber);
-            elements.previewNumber && (elements.previewNumber.textContent = state.waybillNumber);
+            setText(elements.previewNumberEls, state.waybillNumber);
             if (inputs.issueDate && data.issue_date) inputs.issueDate.value = data.issue_date;
             if (inputs.customer) inputs.customer.value = data.customer_name || "";
             if (inputs.destination) inputs.destination.value = data.destination || "";
@@ -239,7 +311,13 @@
             }
             item.total = parseNumber(item.quantity) * parseNumber(item.unit_price);
             state.items[index] = item;
-            renderItems();
+            const rowEl = target.closest("tr");
+            const totalEl = rowEl ? rowEl.querySelector(".row-total") : null;
+            if (totalEl) totalEl.textContent = formatCurrency(item.total || 0);
+            if (elements.itemsPayload) {
+                elements.itemsPayload.value = JSON.stringify(state.items);
+            }
+            updatePreviewItems();
         });
 
         elements.itemsTableBody?.addEventListener("click", (event) => {

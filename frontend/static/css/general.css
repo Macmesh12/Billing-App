@@ -345,6 +345,11 @@ textarea {
     display: none;
 }
 
+/* Allow the header Back to Edit button to be visible in preview */
+.module.is-preview .module-actions #invoice-exit-preview {
+    display: inline-flex;
+}
+
 .module-toast {
     position: fixed;
     bottom: 2rem;

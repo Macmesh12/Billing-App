@@ -16,44 +16,47 @@
     height: 170px;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    position: relative;
+    position: absolute;
     margin-top: 50px;
-    margin-left: 100%;
+    margin-left: 15%;
+
 
    
 }
 
-.brand-details {
-    display: grid;
-    gap: 0.5rem;
-    min-width: 220px;
-}
-
-.brand-details input,
-.brand-details textarea {
-    font-weight: 600;
-    font-size: 1rem;
-    line-height: 1.4;
-}
-
-.brand-details textarea {
-    resize: vertical;
-    min-height: 72px;
-}
-
 .letterhead-meta {
     display: flex;
-    flex-direction: column;
-    gap: 0.7rem;
-    text-align: center;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 2rem;
     font-size: 0.9rem;
-    margin-top: 10%;
+    text-align: left;
+    margin-top: 5%;
+    width: 100%;
 }
 
-.letterhead-meta span,
+.letterhead-meta-left {
+    max-width: 340px;
+}
+
+.letterhead-meta-left .field-block {
+    position: relative;
+    margin-left: -10%;
+    margin-top: 90%;
+}
+
+.letterhead-meta-right {
+    display: grid;
+    gap: 0.6rem;
+    text-align: right;
+}
+
+.letterhead-meta-right .field-block {
+    justify-items: end;
+}
+
+.letterhead-meta p,
 .letterhead-meta input {
-    font-weight: 600;
     letter-spacing: 0.4px;
 }
 
@@ -64,58 +67,36 @@
     margin: 0;
 }
 
-.letterhead-meta .document-number span,
-.letterhead-meta .document-date span,
-.letterhead-meta .document-classification span {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.2rem 0.7rem;
-    border-radius: 999px;
-    background: rgba(31,111,235,0.12);
-    color: var(--text);
-}
-.invoice-contact{
-    position: relative;
-    margin-top: 10%;
-    margin-right: 0;
-}
-.invoice-contact-bar {
-    border-top: 2px solid rgba(16,24,40,0.06);
-    padding-top: 1rem;
-    margin-top: 2rem;
-    text-align: center;
-    color: var(--muted);
-    letter-spacing: 0.35px;
+
+.module.is-preview .preview-billed-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 2rem;
+    font-size: 0.9rem;
+    text-align: left;
+    margin-top: 100%;
+    width: 100%;
 }
 
-.invoice-contact-bar input,
-.invoice-contact-bar p {
-    text-align: center;
-    font-weight: 600;
-    color: inherit;
-}
 
 .invoice-title {
     text-align: center;
     margin: 2rem auto 1.5rem;
-    display: grid;
+    display: flex;
+    text-decoration: underline;
+    justify-content: center;
+    align-items: center;
     gap: 0.75rem;
     max-width: 640px;
 }
 
 .invoice-title h3 {
     margin: 0;
-    font-size: 1.35rem;
-    letter-spacing: 0.8px;
-}
-
-.invoice-title textarea {
-    min-height: 68px;
-}
-
-.invoice-contact {
-    margin: 1.5rem 0 2rem;
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-align: center;
+   
 }
 
 .document-items {
@@ -128,7 +109,7 @@
 }
 
 .document-items thead {
-    background: linear-gradient(120deg, rgba(31,111,235,0.12), rgba(255,255,255,0.9));
+    background: rgba(31,111,235,0.04);
 }
 
 .document-items th,
@@ -167,12 +148,16 @@
 .invoice-summary {
     display: grid;
     gap: 1rem;
-    margin: 2rem 0 2.5rem auto;
-    max-width: 420px;
-    padding: 1.2rem 1.5rem;
+    margin: 2rem 0 2.0rem auto;
+    max-width: 500px;
+    padding: 1.2rem 1.0rem;
     border-radius: 16px;
     background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(241,244,255,0.9));
     box-shadow: 0 16px 40px rgba(15,23,42,0.08);
+    -webkit-border-radius: 16px;
+    -moz-border-radius: 16px;
+    -ms-border-radius: 16px;
+    -o-border-radius: 16px;
 }
 
 .summary-table {
@@ -265,10 +250,80 @@
     margin: 0.25rem 0;
 }
 
+/* Signature block styles */
+.signature-block {
+    display: grid;
+    gap: 0.35rem;
+    align-items: center;
+    margin-top: 10%;
+    margin-left: 10%;
+}
+
+.signature-image {
+    width: 180px;
+    height: auto;
+    object-fit: contain;
+}
+
+.signature-meta p {
+    margin: 0;
+    text-align: left;
+}
+
+/* Preview-only layout: place signature beside the summary */
+.module.is-preview .invoice-summary,
+.module.is-preview .invoice-signature {
+    display: inline-block;
+    vertical-align: top;
+    width: 48%;
+}
+
+.module.is-preview .invoice-signature {
+    margin-top: 1.5rem;
+
+}
+
+.invoice-footer-details {
+    display: grid;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.invoice-brand-info {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.invoice-brand-info p {
+    margin: 0.25rem 0;
+}
+
+.invoice-contact-bar {
+    display: flex;
+    flex-direction: vertical;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    border-top: 2px solid rgba(16,24,40,0.06);
+    padding-top: 1rem;
+    margin-top: 2rem;
+    text-align: center;
+    color: var(--muted);
+    letter-spacing: 0.8px;
+}
+
+.invoice-contact-bar p {
+    text-align: center;
+    font-weight: 600;
+    color: inherit;
+}
+
 
 
 .module.is-preview .invoice-letterhead {
-    background: linear-gradient(120deg, rgba(31,111,235,0.12), rgba(255,255,255,0.95));
+    background: none;
 }
 
 @media (max-width: 900px) {
@@ -283,7 +338,17 @@
     }
 
     .letterhead-meta {
-        justify-items: center;
+        flex-direction: column;
+        align-items: stretch;
+        text-align: left;
+    }
+
+    .letterhead-meta-right {
+        text-align: left;
+    }
+
+    .letterhead-meta-right .field-block {
+        justify-items: start;
     }
 
     .invoice-summary {

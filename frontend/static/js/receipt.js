@@ -146,15 +146,15 @@
         setText(elements.previewLocationEls, valueOrPlaceholder(inputs.location, "Accra, Ghana"));
         setText(elements.previewReceivedFromEls, inputs.receivedFrom?.value || "—");
         setText(elements.previewDescriptionEls, valueOrPlaceholder(inputs.description, "—"));
-        const formattedAmount = `GH¢ ${formatCurrency(inputs.amount?.value || 0)}`;
+    const formattedAmount = `GH\u00A2 ${formatCurrency(inputs.amount?.value || 0)}`;
         setText(elements.previewAmountEls, formattedAmount);
         setText(elements.previewPaymentMethodEls, valueOrPlaceholder(inputs.paymentMethod, "—"));
         setText(elements.previewCompanyNameEls, valueOrPlaceholder(inputs.companyName, "MULTIMEDI@"));
         setText(elements.previewCompanyTaglineEls, valueOrPlaceholder(inputs.companyTagline, "Creative Digital Studio"));
         setText(elements.previewApprovedByEls, valueOrPlaceholder(inputs.approvedBy, "—"));
         setText(elements.previewContactEls, valueOrPlaceholder(inputs.contact, "CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719   WWW.SPAQUELSMULTIMEDIA.ORG   SPAQUELS@GMAIL.COM"));
-        setText(elements.previewTotalAmountEls, valueOrPlaceholder(inputs.totalAmount, "GH¢ 31,000"));
-        setText(elements.previewBalanceEls, valueOrPlaceholder(inputs.balance, "GH¢ 21,000"));
+    setText(elements.previewTotalAmountEls, valueOrPlaceholder(inputs.totalAmount, "GH\u00A2 31,000"));
+    setText(elements.previewBalanceEls, valueOrPlaceholder(inputs.balance, "GH\u00A2 21,000"));
     }
 
     async function handlePreview() {
