@@ -1,47 +1,59 @@
 (() => {
     document.addEventListener("DOMContentLoaded", () => {
-        const cards = document.querySelectorAll(".module-card");
-        cards.forEach((card) => {
+        // Setup action card hover effects
+        const actionCards = document.querySelectorAll(".action-card");
+        actionCards.forEach((card) => {
             const link = card.querySelector("a");
             if (!link) return;
-            card.addEventListener("mouseenter", () => card.classList.add("is-active"));
-            card.addEventListener("mouseleave", () => card.classList.remove("is-active"));
-            link.addEventListener("focus", () => card.classList.add("is-active"));
-            link.addEventListener("blur", () => card.classList.remove("is-active"));
+            link.addEventListener("focus", () => card.style.transform = "translateY(-4px)");
+            link.addEventListener("blur", () => card.style.transform = "");
         });
 
-        // Load counts into dashboard stats
+        // Load counts into dashboard counters
         const config = window.BILLING_APP_CONFIG || {};
         const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
 
-        async function callApi(path) {
+        const elements = {
+            invoicesCount: document.getElementById('invoice-count'),
+            receiptsCount: document.getElementById('receipt-count'),
+            waybillsCount: document.getElementById('waybill-count'),
+        };
+
+        async function loadCounts() {
             try {
-                const r = await fetch(`${API_BASE}${path}`, { headers: { 'Content-Type': 'application/json' } });
-                if (!r.ok) return null;
-                return r.json();
-            } catch (e) {
-                console.warn('Dashboard counts fetch failed', e);
-                return null;
+                const response = await fetch(`${API_BASE}/api/counter/counts/`);
+                if (response.ok) {
+                    const counts = await response.json();
+                    // Animate the count display
+                    animateCount(elements.invoicesCount, counts.invoices || 0);
+                    animateCount(elements.receiptsCount, counts.receipts || 0);
+                    animateCount(elements.waybillsCount, counts.waybills || 0);
+                }
+            } catch (error) {
+                console.warn('Failed to load document counts', error);
+                // Set to 0 if failed
+                if (elements.invoicesCount) elements.invoicesCount.textContent = '0';
+                if (elements.receiptsCount) elements.receiptsCount.textContent = '0';
+                if (elements.waybillsCount) elements.waybillsCount.textContent = '0';
             }
         }
 
-        async function loadCounts() {
-            // Try a single summary endpoint
-            const summary = await callApi('/dashboard/summary/');
-            if (summary) {
-                document.querySelectorAll('.module-card')[0].querySelector('.count').textContent = summary.invoices ?? 0;
-                document.querySelectorAll('.module-card')[1].querySelector('.count').textContent = summary.receipts ?? 0;
-                document.querySelectorAll('.module-card')[2].querySelector('.count').textContent = summary.waybills ?? 0;
-                return;
-            }
+        function animateCount(element, target) {
+            if (!element) return;
+            const duration = 800; // ms
+            const start = 0;
+            const increment = target / (duration / 16); // 60fps
+            let current = start;
 
-            // Fallback single endpoints
-            const inv = await callApi('/invoices/api/list-count/');
-            const rec = await callApi('/receipts/api/list-count/');
-            const wb = await callApi('/waybills/api/list-count/');
-            if (inv && inv.count != null) document.querySelectorAll('.module-card')[0].querySelector('.count').textContent = inv.count;
-            if (rec && rec.count != null) document.querySelectorAll('.module-card')[1].querySelector('.count').textContent = rec.count;
-            if (wb && wb.count != null) document.querySelectorAll('.module-card')[2].querySelector('.count').textContent = wb.count;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = target.toLocaleString();
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current).toLocaleString();
+                }
+            }, 16);
         }
 
         loadCounts();

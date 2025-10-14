@@ -41,6 +41,8 @@
         </div>
 
         <div class="module-body">
+            <!-- A4 Workspace Container -->
+            <div class="a4-workspace">
             <form id="receipt-form" class="document receipt-document document-editable" novalidate>
                 <div class="receipt-letterhead">
                     <div class="letterhead-left">
@@ -64,7 +66,6 @@
                                 <th>Qty</th>
                                 <th>Unit Price (GHC)</th>
                                 <th>Amount (GHC)</th>
-                                <th></th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -102,17 +103,17 @@
                 <section class="receipt-signature">
                     <div class="signature-left">
                         <label class="field-block">
-                            <span>Management Signature</span>
-                            <input type="text" id="receipt-approved-by" name="approved_by" placeholder="Approved by" required>
-                        </label>
-                        <div class="signature-line">Signature</div>
+                            <span>Creative Director</span>
                     </div>
                     <div class="signature-right">
                         <label class="field-block">
                             <span>Customer Name</span>
                             <input type="text" id="receipt-customer-name" name="customer_name" placeholder="Client name" required>
                         </label>
-                        <div class="signature-line">Signature</div>
+                         <label class="field-block">
+                            <span>Issued By: </span>
+                            <input type="text" id="receipt-issued-by" name="issued_by" placeholder="Issued by" required>
+                        </label>
                     </div>
                 </section>
             </form>
@@ -164,23 +165,33 @@
 
                 <section class="receipt-signature">
                     <div class="signature-left">
-                        <p><strong>Management:</strong> <span class="js-receipt-preview-approved-by">—</span></p>
+                        <p><strong>Creative Director:</strong> <span class="js-receipt-preview-approved-by">Raphael Quame Agbeshie</span></p>
                         <div class="signature-block">
-                            <img src="/assets/sign.png" alt="Management Signature" class="signature-image">
+                            <img src="/assets/sign.png" alt="Creative Director Signature" class="signature-image">
                         </div>
                     </div>
                     <div class="signature-right">
                         <p><strong>Customer Name:</strong> <span class="js-receipt-preview-customer-name">—</span></p>
-                        <div class="signature-line">Signature</div>
+                        <p style="margin-top: 1.5rem;"><strong>Issued By:</strong> <span class="js-receipt-preview-issued-by">—</span></p>
                     </div>
                 </section>
 
-                <section class="receipt-company-info">
-                    <h4>SPAQUELS MULTIMEDIA</h4>
-                    <p>Creative Digital Studio</p>
-                    <p class="company-contact">CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719   WWW.SPAQUELSMULTIMEDIA.ORG   SPAQUELS@GMAIL.COM</p>
+                <section id="receipt-preview-contact">
+                    <div class="contact-wrapper">
+                        <p class="email">
+                            <span>Email: spaquelsmultimedia@gmail.com</span>
+                            <span>Website: www.spaquelsmultimedia.org</span>
+                        </p>
+                        <p class="account">
+                            <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
+                            <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
+                            <span>0540673202</span>
+                            <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                        </p>
+                    </div>
                 </section>
             </div>
+            </div> <!-- End A4 workspace -->
         </div>
         <div class="module-toast" id="receipt-toast" role="status" aria-live="polite" hidden></div>
     </section>
@@ -190,8 +201,9 @@
     <p>&copy; <span id="receipt-current-year"></span> Billing App. All rights reserved.</p>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" referrerpolicy="no-referrer"></script>
 <script src="../static/js/main.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" referrerpolicy="no-referrer"></script>
 <script src="../static/js/receipt.js" defer></script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {

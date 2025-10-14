@@ -107,18 +107,6 @@
         }, 4000);
     }
 
-    function buildPayload() {
-        // Build payload from inputs
-        return {
-            received_from: inputs.receivedFrom?.value || "",
-            amount: inputs.amount?.value || "",
-            payment_method: inputs.paymentMethod?.value || "",
-            description: inputs.description?.value || "",
-            approved_by: inputs.approvedBy?.value || "",
-            issue_date: inputs.issueDate?.value || "",
-        };
-    }
-
     async function callApi(path, options = {}) {
         // API call function
         const url = `${API_BASE}${path}`;
@@ -256,7 +244,11 @@
 
     async function downloadReceiptPdf() {
         // Download receipt as PDF
-        if (typeof window.html2pdf !== "function") {
+        if (
+            typeof window.jspdf === "undefined" ||
+            typeof window.jspdf.jsPDF === "undefined" ||
+            typeof window.html2canvas !== "function"
+        ) {
             showToast("PDF generator not available", "error");
             return;
         }
@@ -269,15 +261,17 @@
             return;
         }
 
+        // Create a wrapper for PDF export with exact preview styling
         const exportWrapper = document.createElement("div");
         exportWrapper.className = "module is-preview pdf-export-wrapper";
         exportWrapper.setAttribute("aria-hidden", "true");
-        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0;";
+        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
         
-        const clone = previewEl.cloneNode(true);
-        clone.removeAttribute("hidden");
-        clone.id = "";
-        clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+    const clone = previewEl.cloneNode(true);
+    clone.removeAttribute("hidden");
+    clone.setAttribute("data-pdf-clone", "true");
+        
+        // The preview element itself is the document
         exportWrapper.appendChild(clone);
         document.body.appendChild(exportWrapper);
 
@@ -288,17 +282,47 @@
 
         try {
             showToast("Generating PDF...", "info");
-            await window.html2pdf()
-                .set({
-                    margin: [10, 10, 10, 10],
-                    filename,
-                    pagebreak: { mode: ["css", "legacy"] },
-                    image: { type: "jpeg", quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-                    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-                })
-                .from(clone)
-                .save();
+
+            const A4_PX_WIDTH = 794;
+            const A4_PX_HEIGHT = 1122;
+            clone.style.width = A4_PX_WIDTH + "px";
+            clone.style.maxWidth = A4_PX_WIDTH + "px";
+
+            const canvas = await window.html2canvas(clone, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: "#ffffff",
+                logging: false,
+                width: A4_PX_WIDTH,
+                height: Math.max(A4_PX_HEIGHT, clone.scrollHeight),
+            });
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
+                compress: true,
+            });
+
+            const imgData = canvas.toDataURL("image/png");
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            let renderWidth = pdfWidth;
+            let renderHeight = (canvas.height * renderWidth) / canvas.width;
+
+            if (renderHeight > pdfHeight) {
+                const ratio = pdfHeight / renderHeight;
+                renderHeight = pdfHeight;
+                renderWidth = renderWidth * ratio;
+            }
+
+            const offsetX = (pdfWidth - renderWidth) / 2;
+            const offsetY = (pdfHeight - renderHeight) / 2;
+
+            pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
+            pdf.save(filename);
             showToast("PDF downloaded successfully!");
         } catch (error) {
             console.error("PDF generation error:", error);
@@ -316,6 +340,8 @@
 
         try {
             await downloadReceiptPdf();
+            // Increment the counter after successful PDF download
+            await incrementReceiptNumber();
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
@@ -413,9 +439,40 @@
         });
     }
 
+    async function loadNextReceiptNumber() {
+        // Load the next receipt number from the counter API
+        try {
+            const response = await fetch(`${API_BASE}/api/counter/receipt/next/`);
+            if (response.ok) {
+                const data = await response.json();
+                state.receiptNumber = data.next_number;
+                elements.number && (elements.number.textContent = state.receiptNumber);
+                setText(elements.previewNumberEls, state.receiptNumber);
+            }
+        } catch (error) {
+            console.warn("Failed to load next receipt number", error);
+        }
+    }
+
+    async function incrementReceiptNumber() {
+        // Increment the receipt number counter after successful PDF download
+        try {
+            const response = await fetch(`${API_BASE}/api/counter/receipt/next/`, { method: "POST" });
+            if (response.ok) {
+                const data = await response.json();
+                state.receiptNumber = data.next_number;
+                elements.number && (elements.number.textContent = state.receiptNumber);
+                setText(elements.previewNumberEls, state.receiptNumber);
+            }
+        } catch (error) {
+            console.warn("Failed to increment receipt number", error);
+        }
+    }
+
     (async function init() {
         // Init function
         attachEventListeners();
+        await loadNextReceiptNumber();  // Load the next number on page load
         await loadExistingReceipt();
         syncPreview();
     })();

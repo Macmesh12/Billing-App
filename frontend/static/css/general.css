@@ -1,10 +1,10 @@
 :root {
-    --accent: #1f6feb;
-    --accent-2: #60a5fa;
-    --accent-dark: #144b9a;
-    --border: #e6eefc;
-    --bg: #f6f8fa;
-    --bg-2: linear-gradient(180deg, #f8fbff 0%, #f6f8fa 100%);
+    --accent: #eab308;
+    --accent-2: #fbbf24;
+    --accent-dark: #ca8a04;
+    --border: #fef3c7;
+    --bg: #fefce8;
+    --bg-2: linear-gradient(180deg, #fefce8 0%, #fef9e6 100%);
     --card-bg: #ffffff;
     --text: #0f1724;
     --muted: #556070;
@@ -15,6 +15,7 @@
     --radius: 12px;
     --shadow-soft: 0 8px 30px rgba(16,24,40,0.06);
     --shadow-strong: 0 20px 50px rgba(2,6,23,0.12);
+    --primary: #eab308;
 }
 
 * {
@@ -73,13 +74,14 @@ body.billing-app {
     padding: 2rem;
 }
 
+
+
 .module {
-    background: var(--card-bg);
-    border: 1px solid rgba(16,24,40,0.04);
-    border-radius: var(--radius);
-    padding: 1.5rem;
-    box-shadow: var(--shadow-soft);
-    transition: box-shadow 180ms ease, transform 180ms ease;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
 }
 
 .module-header {
@@ -87,6 +89,16 @@ body.billing-app {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
+    padding: 1rem 1.5rem;
+    background: rgba(255,255,255,0.9);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.module-body {
+    background: #f8f9fa;
+    min-height: calc(100vh - 180px);
+    padding: 2rem 0;
 }
 
 .module-header h2 {
@@ -179,6 +191,124 @@ textarea {
     width: 100%;
 }
 
+/* ============================================
+   UNIFIED TABLE STYLING - FIXED 10 ROWS SPACE
+   ============================================ */
+.document-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.6rem;
+    table-layout: fixed;
+}
+
+/* Reserve fixed space for 10 rows so content doesn't shift */
+.document-items tbody {
+    min-height: 400px;
+    display: table-row-group;
+}
+
+.is-preview .document-items tbody,
+.pdf-export-wrapper .document-items tbody {
+    min-height: 250px;
+}
+
+.document-items thead {
+    background: linear-gradient(180deg, rgba(234,179,8,0.08), rgba(254,243,199,0.9));
+}
+
+.document-items th,
+.document-items td {
+    padding: 0.5rem 0.7rem;
+    border: 1px solid rgba(16,24,40,0.12);
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.3;
+}
+
+.document-items th {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.3px;
+    color: var(--muted);
+}
+
+/* PREVIEW MODE: Black borders and centered text */
+.is-preview .document-items th,
+.is-preview .document-items td,
+.pdf-export-wrapper .document-items th,
+.pdf-export-wrapper .document-items td {
+    border: 2px solid #000000;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+.is-preview .document-items th,
+.pdf-export-wrapper .document-items th {
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* Column widths in preview/PDF - 4 columns layout */
+.is-preview .document-items th.description,
+.is-preview .document-items td.description,
+.pdf-export-wrapper .document-items th.description,
+.pdf-export-wrapper .document-items td.description {
+    width: 50%;
+}
+
+.is-preview .document-items th:nth-child(2),
+.is-preview .document-items td:nth-child(2),
+.pdf-export-wrapper .document-items th:nth-child(2),
+.pdf-export-wrapper .document-items td:nth-child(2) {
+    width: 15%;
+}
+
+.is-preview .document-items th:nth-child(3),
+.is-preview .document-items td:nth-child(3),
+.pdf-export-wrapper .document-items th:nth-child(3),
+.pdf-export-wrapper .document-items td:nth-child(3) {
+    width: 17.5%;
+}
+
+.is-preview .document-items th:nth-child(4),
+.is-preview .document-items td:nth-child(4),
+.pdf-export-wrapper .document-items th:nth-child(4),
+.pdf-export-wrapper .document-items td:nth-child(4) {
+    width: 17.5%;
+}
+
+/* Column widths - consistent across all documents */
+.document-items th.description,
+.document-items td.description {
+    width: 45%;
+}
+
+.document-items th:nth-child(2),
+.document-items td:nth-child(2) {
+    width: 12%;
+    text-align: center;
+}
+
+.document-items th:nth-child(3),
+.document-items td:nth-child(3) {
+    width: 18%;
+    text-align: right;
+}
+
+.document-items th:nth-child(4),
+.document-items td:nth-child(4) {
+    width: 25%;
+    text-align: right;
+}
+
+.document-items tbody tr:hover {
+    background: rgba(31,111,235,0.03);
+}
+
 .document-items input,
 .document-items select {
     width: 100%;
@@ -186,11 +316,51 @@ textarea {
     border: none;
     background: transparent;
     font: inherit;
+    padding: 0.15rem 0.3rem;
+    font-size: 0.85rem;
 }
 
 .document-items input:focus,
 .document-items select:focus {
     outline: none;
+    background: rgba(31,111,235,0.05);
+    border-radius: 3px;
+}
+
+/* Remove Row Button - Cross (×) Icon */
+.btn-remove-row {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+    font-weight: 700;
+}
+
+.btn-remove-row:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+.btn-remove-row:active {
+    transform: scale(0.95);
+}
+
+/* Add Item Button - EXACT same for all documents */
+.button-secondary[id$="-add-item"] {
+    margin-top: 0.4rem;
+    margin-bottom: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
 }
 
 .totals {
@@ -216,11 +386,101 @@ textarea {
     margin-top: 0.5rem;
 }
 
+/* EDIT MODE: A3 size (297mm × 420mm) - Large and readable */
 .document {
-    background: var(--card-bg);
-    border-radius: 10px;
-    padding: 2rem;
-    box-shadow: var(--shadow-soft);
+    width: 297mm;
+    min-height: 420mm;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 15mm 20mm;
+    box-sizing: border-box;
+    font-size: 1.1rem;
+    /* No borders, no shadows - pure white canvas like MS Word */
+}
+
+/* PREVIEW MODE: A4 size (210mm × 297mm) - Print ready */
+.is-preview .document,
+.pdf-export-wrapper .document {
+    width: 210mm;
+    height: 297mm;
+    max-height: 297mm;
+    padding: 8mm 10mm;
+    overflow: auto;
+    font-size: 0.9rem;
+}
+
+.is-preview .document h3,
+.pdf-export-wrapper .document h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.4rem;
+    margin-top: 0.4rem;
+}
+
+.is-preview .document h4,
+.pdf-export-wrapper .document h4 {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+    margin-top: 0.3rem;
+}
+
+.is-preview .document p,
+.pdf-export-wrapper .document p {
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+}
+
+/* Hide company contact info in EDIT mode, show only in PREVIEW */
+.invoice-contact-bar,
+.receipt-contact-bar,
+.waybill-contact-bar {
+    display: none;
+}
+
+.is-preview .invoice-contact-bar,
+.is-preview .receipt-contact-bar,
+.is-preview .waybill-contact-bar,
+.pdf-export-wrapper .invoice-contact-bar,
+.pdf-export-wrapper .receipt-contact-bar,
+.pdf-export-wrapper .waybill-contact-bar {
+    display: block;
+}
+
+/* Ensure content fits on A4 */
+.document * {
+    box-sizing: border-box;
+}
+
+/* Compact typography for A4 fit */
+.document h3 {
+    margin: 0 0 0.4rem 0;
+    font-size: 1.2rem;
+    line-height: 1.2;
+}
+
+.document h4 {
+    margin: 0 0 0.3rem 0;
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.document p {
+    margin: 0.2rem 0;
+    line-height: 1.3;
+    font-size: 0.9rem;
+}
+
+.document section {
+    margin-bottom: 0.8rem;
+}
+
+.document label {
+    font-size: 0.85rem;
+}
+
+.document input,
+.document select,
+.document textarea {
+    font-size: 0.9rem;
 }
 
 /* Letterhead-style header inside documents */
@@ -421,6 +681,62 @@ input:disabled, textarea:disabled, select:disabled {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+/* ============================================
+   PDF EXPORT OPTIMIZATIONS
+   ============================================
+   Ensures PDF output matches preview exactly
+   ============================================ */
+
+.pdf-export-wrapper {
+    background: white;
+    width: 210mm !important;
+}
+
+.pdf-export-wrapper .document {
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    padding: 8mm 10mm !important;
+    margin: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+}
+
+/* Ensure all text is crisp and black in PDF */
+.pdf-export-wrapper .document * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+}
+
+/* Preserve backgrounds in PDF */
+.pdf-export-wrapper .invoice-letterhead,
+.pdf-export-wrapper .receipt-letterhead,
+.pdf-export-wrapper .waybill-letterhead {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background: #eab308 !important;
+}
+
+/* Ensure borders are preserved */
+.pdf-export-wrapper .document-items th,
+.pdf-export-wrapper .document-items td {
+    border: 2px solid #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+/* Page break controls */
+.pdf-export-wrapper .document-items,
+.pdf-export-wrapper .invoice-letterhead,
+.pdf-export-wrapper .receipt-letterhead,
+.pdf-export-wrapper .waybill-letterhead {
+    page-break-inside: avoid;
+    break-inside: avoid;
 }
 
 /* Enhanced form field responsiveness and accessibility */

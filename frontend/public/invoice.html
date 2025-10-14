@@ -93,6 +93,8 @@ DEPENDENCIES:
              ============================================ -->
         <div class="module-body">
             
+            <!-- A4 Workspace Container - Centers document like Word page -->
+            <div class="a4-workspace">
             <!-- ============================================
                  EDIT MODE - Invoice Form
                  ============================================
@@ -143,7 +145,6 @@ DEPENDENCIES:
                             <th>Qty</th>
                             <th>Cost per Unit (GHC)</th>
                             <th>Total Cost (GHC)</th>
-                            <th></th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -160,6 +161,14 @@ DEPENDENCIES:
                         </tbody>
                     </table>
                     <div class="levies-table" id="invoice-levies"></div>
+                    <div class="levy-total-row">
+                        <span>Total Levies + Value</span>
+                        <span id="invoice-levy-total">0.00</span>
+                    </div>
+                    <div class="vat-row">
+                        <span>VAT (15%)</span>
+                        <span id="invoice-vat">0.00</span>
+                    </div>
                     <div class="grand-total">
                         <span>Grand Total</span>
                         <span id="invoice-grand-total">0.00</span>
@@ -197,8 +206,9 @@ DEPENDENCIES:
                     </div>
                     <div class="letterhead-meta">
                         <div class="letterhead-meta-left">
-                            <!-- Customer name display (no "Billed To" label) -->
-                            <strong><span id="invoice-preview-customer" class="invoice-preview-customer">—</span></strong>
+                            <!-- Customer name display -->
+                            <p><strong>Customer Name:</strong></p>
+                            <p><strong><span id="invoice-preview-customer" class="invoice-preview-customer">—</span></strong></p>
                         </div>
                         <div class="letterhead-meta-right">
                             <p class="document-number">Invoice No.: <span id="invoice-preview-number">INV-001</span></p>
@@ -244,6 +254,14 @@ DEPENDENCIES:
                         </tbody>
                     </table>
                     <div class="levies-table" id="invoice-preview-levies"></div>
+                    <div class="levy-total-row">
+                        <span>Total Levies + Value</span>
+                        <span id="invoice-preview-levy-total">0.00</span>
+                    </div>
+                    <div class="vat-row">
+                        <span>VAT (15%)</span>
+                        <span id="invoice-preview-vat">0.00</span>
+                    </div>
                     <div class="grand-total">
                         <span>Grand Total</span>
                         <span id="invoice-preview-grand">0.00</span>
@@ -254,16 +272,22 @@ DEPENDENCIES:
                     <ul id="invoice-preview-notes"></ul>
                 </section>
 
-                <section class="invoice-brand-info">
-                    <p id="invoice-preview-company-info">Creative Designs | Logo Creation | Branding | Printing</p>
-                </section>
-
-                <section class="invoice-contact-bar">
-                    <p id="invoice-preview-contact">Spaquelsenterprise@gmail.com <br>www.spaquelsmultimedia.org</p>
-                    <p>+233 (0)5 457 0325 <br> +233 (0)5 188 1934</p>
-                    <p><strong>Bankers:</strong> FIDELITY BANK</p>
+                <section id="invoice-preview-contact">
+                    <div class="contact-wrapper">
+                        <p class="email">
+                            <span>Email: spaquelsmultimedia@gmail.com</span>
+                            <span>Website: www.spaquelsmultimedia.org</span>
+                        </p>
+                        <p class="account">
+                            <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
+                            <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
+                            <span>0540673202</span>
+                            <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                        </p>
+                    </div>
                 </section>
             </div>
+            </div> <!-- End A4 workspace -->
         </div>
 
         <div class="module-toast" id="invoice-toast" role="status" aria-live="polite" hidden></div>
@@ -275,7 +299,8 @@ DEPENDENCIES:
 </footer>
 
 <script src="../static/js/main.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" referrerpolicy="no-referrer"></script>
 <script src="../static/js/invoice.js" defer></script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {

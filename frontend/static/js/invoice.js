@@ -127,8 +127,12 @@
         itemsTableBody: document.querySelector("#invoice-items-table tbody"),
         previewRows: document.getElementById("invoice-preview-rows"),
         subtotal: document.getElementById("invoice-subtotal"),
+        levyTotal: document.getElementById("invoice-levy-total"),
+        vat: document.getElementById("invoice-vat"),
         grandTotal: document.getElementById("invoice-grand-total"),
         previewSubtotal: document.getElementById("invoice-preview-subtotal"),
+        previewLevyTotal: document.getElementById("invoice-preview-levy-total"),
+        previewVat: document.getElementById("invoice-preview-vat"),
         previewGrand: document.getElementById("invoice-preview-grand"),
         levyContainer: document.getElementById("invoice-levies"),
         previewLevyContainer: document.getElementById("invoice-preview-levies"),
@@ -178,6 +182,24 @@
     // Map to store levy value elements for quick updates
     const previewLevyValueMap = new Map();
     // Map for preview levy elements
+
+    const DEFAULT_TAX_SETTINGS = [
+        { name: "NHIL", rate: 0.025, isVat: false },
+        { name: "GETFund Levy", rate: 0.025, isVat: false },
+        { name: "COVID", rate: 0.01, isVat: false },
+        { name: "VAT", rate: 0.15, isVat: true },
+    ];
+
+    function normalizeTaxSettings(taxSettings) {
+        if (!taxSettings || typeof taxSettings !== "object") {
+            return DEFAULT_TAX_SETTINGS.map((entry) => ({ ...entry }));
+        }
+        return Object.entries(taxSettings).map(([name, rate]) => ({
+            name,
+            rate: Number(rate) || 0,
+            isVat: name.trim().toUpperCase() === "VAT",
+        }));
+    }
 
     function showToast(message, tone = "success") {
         // Function to display toast notifications
@@ -259,7 +281,9 @@
         levyValueMap.clear();
         previewLevyValueMap.clear();
 
-        state.levies.forEach(({ name, rate }) => {
+        state.levies
+            .filter(({ isVat }) => !isVat)
+            .forEach(({ name, rate }) => {
             const line = document.createElement("p");
             line.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-levy="${name}">0.00</span>`;
             elements.levyContainer.appendChild(line);
@@ -271,7 +295,7 @@
             elements.previewLevyContainer.appendChild(previewLine);
             const previewVal = previewLine.querySelector("[data-preview-levy]");
             previewLevyValueMap.set(name, previewVal);
-        });
+            });
     }
 
     function renderItems() {
@@ -293,7 +317,7 @@
                     <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
                     <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
                     <td class="row-total">${formatCurrency(item.total || 0)}</td>
-                    <td><button type="button" class="button button-secondary" data-remove="${index}">Remove</button></td>
+                    <td><button type="button" class="btn-remove-row" data-remove="${index}" aria-label="Remove row" title="Remove this item">×</button></td>
                 `;
             } else {
                 row.innerHTML = `
@@ -342,8 +366,14 @@
         elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(subtotal));
 
         let levyTotal = 0;
-        state.levies.forEach(({ name, rate }) => {
+        let vatAmount = 0;
+
+        state.levies.forEach(({ name, rate, isVat }) => {
             const amount = subtotal * rate;
+            if (isVat) {
+                vatAmount = amount;
+                return;
+            }
             const levyEl = levyValueMap.get(name);
             if (levyEl) {
                 levyEl.textContent = formatCurrency(amount);
@@ -355,7 +385,13 @@
             levyTotal += amount;
         });
 
-        const grandTotal = subtotal + levyTotal;
+    const totalLeviesAndValue = subtotal + levyTotal;
+    elements.levyTotal && (elements.levyTotal.textContent = formatCurrency(totalLeviesAndValue));
+    elements.previewLevyTotal && (elements.previewLevyTotal.textContent = formatCurrency(totalLeviesAndValue));
+        elements.vat && (elements.vat.textContent = formatCurrency(vatAmount));
+        elements.previewVat && (elements.previewVat.textContent = formatCurrency(vatAmount));
+
+        const grandTotal = subtotal + levyTotal + vatAmount;
         elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(grandTotal));
         elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(grandTotal));
     }
@@ -384,18 +420,39 @@
             if (!result) return;
             elements.subtotal && (elements.subtotal.textContent = formatCurrency(result.subtotal));
             elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(result.subtotal));
+
+            let levySum = 0;
+            let vatAmount = 0;
             Object.entries(result.levies || {}).forEach(([name, amount]) => {
+                const formattedAmount = formatCurrency(amount);
+                if (name.trim().toUpperCase() === "VAT") {
+                    vatAmount = amount;
+                    elements.vat && (elements.vat.textContent = formattedAmount);
+                    elements.previewVat && (elements.previewVat.textContent = formattedAmount);
+                    return;
+                }
+                levySum += amount;
                 const levyEl = levyValueMap.get(name);
                 if (levyEl) {
-                    levyEl.textContent = formatCurrency(amount);
+                    levyEl.textContent = formattedAmount;
                 }
                 const previewEl = previewLevyValueMap.get(name);
                 if (previewEl) {
-                    previewEl.textContent = formatCurrency(amount);
+                    previewEl.textContent = formattedAmount;
                 }
             });
-            elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(result.grand_total));
-            elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(result.grand_total));
+            // Ensure VAT fields are refreshed even if the server omits the entry
+            const vatFormatted = formatCurrency(vatAmount);
+            elements.vat && (elements.vat.textContent = vatFormatted);
+            elements.previewVat && (elements.previewVat.textContent = vatFormatted);
+            const subtotalNumber = Number(result.subtotal || 0);
+            const totalLeviesAndValue = subtotalNumber + levySum;
+            elements.levyTotal && (elements.levyTotal.textContent = formatCurrency(totalLeviesAndValue));
+            elements.previewLevyTotal && (elements.previewLevyTotal.textContent = formatCurrency(totalLeviesAndValue));
+
+            const grandTotal = Number(result.grand_total ?? (subtotalNumber + levySum + vatAmount));
+            elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(grandTotal));
+            elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(grandTotal));
         } catch (error) {
             console.warn("Failed to calculate preview totals", error);
         }
@@ -428,7 +485,11 @@
     }
 
     async function downloadInvoicePdf() {
-        if (typeof window.html2pdf !== "function") {
+        if (
+            typeof window.jspdf === "undefined" ||
+            typeof window.jspdf.jsPDF === "undefined" ||
+            typeof window.html2canvas !== "function"
+        ) {
             showToast("PDF generator not available", "error");
             return;
         }
@@ -441,17 +502,19 @@
             return;
         }
 
-    const exportWrapper = document.createElement("div");
-    exportWrapper.className = "module is-preview pdf-export-wrapper";
-    exportWrapper.setAttribute("aria-hidden", "true");
-    exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0;";
+        // Create a wrapper for PDF export with exact preview styling
+        const exportWrapper = document.createElement("div");
+        exportWrapper.className = "module is-preview pdf-export-wrapper";
+        exportWrapper.setAttribute("aria-hidden", "true");
+        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
         
     const clone = previewEl.cloneNode(true);
     clone.removeAttribute("hidden");
-    clone.id = "";
-    clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
-    exportWrapper.appendChild(clone);
-    document.body.appendChild(exportWrapper);
+    clone.setAttribute("data-pdf-clone", "true");
+        
+        // The preview element itself is the document
+        exportWrapper.appendChild(clone);
+        document.body.appendChild(exportWrapper);
 
         let filename = state.invoiceNumber || "invoice";
         if (!filename.toLowerCase().endsWith(".pdf")) {
@@ -460,17 +523,47 @@
 
         try {
             showToast("Generating PDF...", "info");
-            await window.html2pdf()
-                .set({
-                    margin: [10, 10, 10, 10],
-                    filename,
-                    pagebreak: { mode: ["css", "legacy"] },
-                    image: { type: "jpeg", quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-                    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-                })
-                .from(clone)
-                .save();
+
+            const A4_PX_WIDTH = 794; // 210mm at ~96 DPI
+            const A4_PX_HEIGHT = 1122; // 297mm at ~96 DPI
+            clone.style.width = A4_PX_WIDTH + "px";
+            clone.style.maxWidth = A4_PX_WIDTH + "px";
+
+            const canvas = await window.html2canvas(clone, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: "#ffffff",
+                logging: false,
+                width: A4_PX_WIDTH,
+                height: Math.max(A4_PX_HEIGHT, clone.scrollHeight),
+            });
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
+                compress: true,
+            });
+
+            const imgData = canvas.toDataURL("image/png");
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            let renderWidth = pdfWidth;
+            let renderHeight = (canvas.height * renderWidth) / canvas.width;
+
+            if (renderHeight > pdfHeight) {
+                const ratio = pdfHeight / renderHeight;
+                renderHeight = pdfHeight;
+                renderWidth = renderWidth * ratio;
+            }
+
+            const offsetX = (pdfWidth - renderWidth) / 2;
+            const offsetY = (pdfHeight - renderHeight) / 2;
+
+            pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
+            pdf.save(filename);
             showToast("PDF downloaded successfully!");
         } catch (error) {
             console.error("PDF generation error:", error);
@@ -488,6 +581,8 @@
 
         try {
             await downloadInvoicePdf();
+            // Increment the counter after successful PDF download
+            await incrementInvoiceNumber();
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
@@ -504,27 +599,13 @@
         // Function to load tax configuration from API
         try {
             const data = await callApi("/invoices/api/config/");
-            const taxSettings = data?.tax_settings || {};
-            state.levies = Object.entries(taxSettings).map(([name, rate]) => ({
-                name,
-                rate: Number(rate) || 0,
-            }));
+            state.levies = normalizeTaxSettings(data?.tax_settings);
             if (!state.levies.length) {
-                state.levies = [
-                    { name: "NHIL", rate: 0.025 },
-                    { name: "GETFund Levy", rate: 0.025 },
-                    { name: "COVID", rate: 0.01 },
-                    { name: "VAT", rate: 0.15 },
-                ];
+                state.levies = normalizeTaxSettings();
             }
         } catch (error) {
             console.warn("Failed to load invoice config", error);
-            state.levies = [
-                { name: "NHIL", rate: 0.025 },
-                { name: "GETFund Levy", rate: 0.025 },
-                { name: "COVID", rate: 0.01 },
-                { name: "VAT", rate: 0.15 },
-            ];
+            state.levies = normalizeTaxSettings();
         }
         renderLevyPlaceholders();
         recalcTotals();
@@ -633,10 +714,41 @@
         inputs.issueDate?.addEventListener("change", syncPreviewFromForm);
     }
 
+    async function loadNextInvoiceNumber() {
+        // Load the next invoice number from the counter API
+        try {
+            const response = await fetch(`${API_BASE}/api/counter/invoice/next/`);
+            if (response.ok) {
+                const data = await response.json();
+                state.invoiceNumber = data.next_number;
+                elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
+                elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+            }
+        } catch (error) {
+            console.warn("Failed to load next invoice number", error);
+        }
+    }
+
+    async function incrementInvoiceNumber() {
+        // Increment the invoice number counter after successful PDF download
+        try {
+            const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: "POST" });
+            if (response.ok) {
+                const data = await response.json();
+                state.invoiceNumber = data.next_number;
+                elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
+                elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+            }
+        } catch (error) {
+            console.warn("Failed to increment invoice number", error);
+        }
+    }
+
     (async function init() {
         // Initialization function, runs on load
         attachEventListeners();
         await loadConfig();
+        await loadNextInvoiceNumber();  // Load the next number on page load
         await loadExistingInvoice();
         syncPreviewFromForm();
         debouncedServerTotals();

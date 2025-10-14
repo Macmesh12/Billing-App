@@ -5,17 +5,27 @@
    Preview mode: A5 Landscape (210mm x 148mm)
    ============================================ */
 
-/* Main receipt document container - A4 portrait for edit */
+/* EDIT MODE: A3 size - Large and readable */
 .receipt-document {
+    width: 297mm;
+    min-height: 420mm;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 15mm 20mm;
+    box-sizing: border-box;
+    font-size: 1.1rem;
+    /* No borders, no shadows - clean white canvas */
+}
+
+/* PREVIEW MODE: A4 size - Print ready */
+.is-preview .receipt-document,
+.pdf-export-wrapper .receipt-document {
     width: 210mm;
     height: 297mm;
-    margin: 0 auto;
-    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,255,0.94));
-    border-radius: 12px;
-    padding: 10mm 15mm;
-    box-shadow: 0 24px 60px rgba(15,23,42,0.08);
-    overflow: auto;
-    box-sizing: border-box;
+    max-height: 297mm;
+    padding: 8mm 10mm;
+    overflow: hidden;
+    font-size: 0.9rem;
 }
 
 /* ============================================
@@ -24,16 +34,24 @@
    Two-column layout: logo (left) | title, number, date (right)
    ============================================ */
 
-/* Letterhead container with two-column flexbox */
+/* Letterhead container with YELLOW theme */
 .receipt-letterhead {
-    display: flex; /* Flexbox for left-right layout */
-    justify-content: space-between; /* Push left and right columns apart */
-    align-items: center; /* Vertically center content */
-    gap: 2rem; /* Space between columns */
-    padding: 0.8rem 1rem; /* Reduced padding for A5 landscape */
-    border-radius: 10px; /* Smaller rounded corners */
-    background: rgb(236, 236, 12); /* Solid background */
-    margin-bottom: 1rem; /* Reduced space below letterhead for A5 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+    border: 1px solid rgba(234,179,8,0.25);
+    background: #eab308;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+    margin-bottom: 1rem;
+}
+
+.is-preview .receipt-letterhead,
+.pdf-export-wrapper .receipt-letterhead {
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.6rem;
 }
 
 /* Left column - Receipt title, number, and date */
@@ -45,13 +63,14 @@
     gap: 0.3rem;
 }
 
-/* Receipt title heading */
+/* Receipt title heading - COMPACT */
 .letterhead-left h3 {
-    margin: 0; /* No margins */
-    letter-spacing: 2px; /* Wide letter spacing for emphasis */
-    font-size: 1.4rem; /* Prominent title size */
+    margin: 0;
+    letter-spacing: 1.5px;
+    font-size: 2rem;
+    line-height: 1.2;
     font-weight: 800; /* Extra bold */
-    color: var(--primary); /* Use primary color for emphasis */
+    color: black; /* Full black for prominence */
 }
 
 
@@ -161,35 +180,41 @@
     padding: 0;
 }
 
-/* Payment section styling */
+/* Payment section - COMPACT */
 .receipt-payment-section {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    margin-top: 1rem;
-    margin-bottom: 1rem;
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+    margin-bottom: 0.6rem;
 }
 
 .receipt-payment-section .field-block {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.3rem;
 }
 
 .receipt-payment-section select {
-    padding: 0.5rem;
-    border-radius: 8px;
+    padding: 0.4rem;
+    border-radius: 6px;
     border: 1px solid rgba(16,24,40,0.12);
-    font-size: 0.95rem;
+    font-size: 0.85rem;
 }
 
-/* Totals section styling */
+/* Totals section with YELLOW theme */
 .receipt-totals {
-    margin-top: 1.5rem;
+    margin-top: 1rem;
     padding: 1rem;
-    background: linear-gradient(135deg, rgba(239,246,255,0.95), rgba(219,234,254,0.9));
+    background: linear-gradient(135deg, rgba(254,243,199,0.95), rgba(254,249,195,0.9));
     border-radius: 10px;
-    border: 1px solid rgba(31,111,235,0.18);
+    border: 1px solid rgba(234,179,8,0.25);
+}
+
+.is-preview .receipt-totals,
+.pdf-export-wrapper .receipt-totals {
+    margin-top: 0.8rem;
+    padding: 0.6rem 0.8rem;
 }
 
 .total-row {
@@ -269,56 +294,122 @@
 .receipt-signature {
     display: flex;
     justify-content: space-between;
-    margin-top: 1.5rem;
-    margin-bottom: 1rem;
+    margin-top: 0.8rem;
+    margin-bottom: 0.6rem;
 }
 
 .signature-left,
 .signature-right {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.3rem;
+    margin-top: auto;
+}
+.signature-right {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-top: 30px;
+}
+
+/* Bold customer and issued by names */
+.js-receipt-preview-customer-name,
+.js-receipt-preview-issued-by {
+    font-weight: 800 !important;
+    font-size: 1.1rem !important;
 }
 
 .signature-block {
     display: inline-block;
-    margin-top: 0.5rem;
+    margin-top: 0.3rem;
 }
 
 .signature-image {
-    width: 120px;
+    width: 100px;
     height: auto;
     display: block;
 }
 
-/* Signature line styling */
+/* Signature line - COMPACT */
 .signature-line {
-    margin-top: 0.5rem; /* Space above line */
-    padding-top: 0.5rem; /* Space for actual signature */
-    border-top: 1px solid var(--text); /* Signature line */
-    font-size: 0.75rem; /* Small text */
-    color: var(--muted); /* Muted color */
-    text-align: center; /* Center the word "Signature" */
-}
-
-.receipt-contact-bar {
-    border-top: 1px solid rgba(16,24,40,0.08);
-    padding-top: 0.6rem; /* Reduced padding for A5 */
-    margin-top: 0.6rem; /* Reduced margin for A5 */
-    text-align: center;
+    margin-top: 0.3rem;
+    padding-top: 0.3rem;
+    border-top: 1px solid var(--text);
+    font-size: 0.7rem;
     color: var(--muted);
-    letter-spacing: 0.3px; /* Reduced letter spacing */
-    font-size: 0.85rem; /* Smaller font for A5 */
+    text-align: center;
 }
 
-.receipt-contact-bar input,
-.receipt-contact-bar p {
-    border: none;
-    background: transparent;
-    font: inherit;
-    font-weight: 600;
+/* ============================================
+   PREVIEW CONTACT SECTION
+   ============================================
+   Contact information styling for preview mode
+   ============================================ */
+
+/* Contact wrapper - full width centered container */
+#receipt-preview-contact {
+    margin-top: 2rem;
     text-align: center;
-    color: inherit;
+}
+
+#receipt-preview-contact .contact-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+/* Email section - gray background, inline elements */
+#receipt-preview-contact .email {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: #d1d5db; /* Gray background */
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f2937; /* Dark gray text */
+    margin: 0;
+}
+
+#receipt-preview-contact .email span {
+    display: inline;
+    white-space: nowrap;
+}
+
+/* Account section - yellow background, inline elements with icon placeholders */
+#receipt-preview-contact .account {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: #fbbf24; /* Yellow background */
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f2937; /* Dark text for readability */
+    margin: 0;
+}
+
+#receipt-preview-contact .account span {
+    display: inline;
+    white-space: nowrap;
+}
+
+/* Icon placeholders for WhatsApp and Mobile Money */
+#receipt-preview-contact .icon-placeholder {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.1rem 0.3rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+    margin-left: 0.25rem;
 }
 
 .receipt-document textarea {

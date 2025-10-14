@@ -5,18 +5,28 @@
    Document size: A5 Landscape (210mm x 148mm)
    ============================================ */
 
-/* Main waybill document container - A4 portrait format */
+/* EDIT MODE: A3 size - Large and readable */
 .waybill-document {
-    width: 210mm; /* A4 portrait width */
-    height: 297mm; /* A4 portrait height */
-    margin: 0 auto; /* Center horizontally */
-    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,249,255,0.9)); /* Subtle gradient background */
-    border-radius: 12px; /* Rounded corners */
-    padding: 10mm 15mm; /* A4 portrait padding (top/bottom: 10mm, left/right: 15mm) */
-    box-shadow: 0 24px 60px rgba(15,23,42,0.08); /* Soft shadow */
-    overflow: hidden; /* Prevent extra internal scroll that can create second page in PDF */
-    box-sizing: border-box; /* Include padding in dimensions */
-    page-break-inside: avoid; /* Keep as single page */
+    width: 297mm;
+    min-height: 420mm;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 15mm 20mm;
+    box-sizing: border-box;
+    font-size: 1.1rem;
+    /* No borders, no shadows - clean white canvas */
+}
+
+/* PREVIEW MODE: A4 size - Print ready */
+.is-preview .waybill-document,
+.pdf-export-wrapper .waybill-document {
+    width: 210mm;
+    height: 297mm;
+    max-height: 297mm;
+    padding: 8mm 10mm;
+    overflow: hidden;
+    page-break-inside: avoid;
+    font-size: 0.9rem;
 }
 
 /* ============================================
@@ -25,32 +35,43 @@
    Two-column layout: title/number/date on left, logo on right (matches receipt)
    ============================================ */
 
-/* Letterhead container with flexbox */
+/* Letterhead container with YELLOW theme */
 .waybill-letterhead {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 2rem;
+    gap: 1.5rem;
     padding: 1rem 1.5rem;
     border-radius: 10px;
-    border: 1px solid rgba(31,111,235,0.16);
-    background: rgb(236, 236, 12);
+    border: 1px solid rgba(234,179,8,0.25);
+    background: #eab308;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
     margin-bottom: 1rem;
 }
 
+.is-preview .waybill-letterhead,
+.pdf-export-wrapper .waybill-letterhead {
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.6rem;
+}
+
 /* Left column - title, number, date */
 .letterhead-left {
-    flex: 1;
+    margin-top: auto;
+   display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .letterhead-left h3 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.8rem;
-    letter-spacing: 2px;
+    margin: 20px 0 0.7rem 0;
+    font-size: 2rem;
+    letter-spacing: 1.5px;
     font-weight: 800;
-    color: var(--primary);
+    color: black;
+    line-height: 1.2;
 }
+
 
 .letterhead-left p {
     margin: 0.3rem 0;
@@ -113,9 +134,9 @@
 .waybill-note textarea {
     width: 100%;
     border-radius: 8px; /* Smaller radius for A5 */
-    padding: 0.6rem 0.8rem; /* Reduced padding for A5 */
+    padding: 1rem 0.8rem; /* Reduced padding for A5 */
     border: 1px solid rgba(31,111,235,0.16);
-    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(241,245,255,0.9));
+    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(226, 213, 33, 0.9));
     font-weight: 600;
     letter-spacing: 0.3px; /* Reduced letter spacing */
     font-size: 0.85rem; /* Smaller font for A5 */
@@ -142,68 +163,46 @@
     font-size: 0.95rem; /* Smaller font for A5 */
 }
 
-.waybill-document .document-items {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.waybill-document .document-items th,
-.waybill-document .document-items td {
-    padding: 0.5rem 0.4rem; /* Reduced padding for A5 */
-    border-bottom: 1px solid rgba(16,24,40,0.05);
-    font-size: 0.8rem; /* Smaller font for A5 */
-}
-
-.waybill-document .document-items thead th {
-    text-transform: uppercase;
-    font-size: 0.7rem; /* Smaller font for A5 */
-    font-weight: 700;
-    letter-spacing: 0.4px; /* Reduced letter spacing */
-    color: var(--muted);
-    background: linear-gradient(180deg, rgba(31,111,235,0.08), rgba(255,255,255,0.9));
-}
-
-.waybill-document .document-items tbody tr:hover {
-    background: rgba(31,111,235,0.05);
-}
+/* Table styling removed - using unified styles from general.css */
 
 .waybill-signature-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Fixed 2 columns for A5 landscape */
-    gap: 0.8rem; /* Reduced gap for A5 */
-    margin-bottom: 1rem; /* Reduced margin for A5 */
+    flex-direction: space-between;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18rem;
+    margin-bottom: 0.6rem;
+    margin-top: 0.6rem;
 }
 
 .signature-card {
     display: grid;
-    gap: 0.4rem; /* Reduced gap for A5 */
-    padding: 0.8rem 1rem; /* Reduced padding for A5 */
-    border-radius: 10px; /* Smaller radius for A5 */
-    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(238,242,255,0.9));
+    gap: 2rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: 6px;
     box-shadow: inset 0 0 0 1px rgba(31,111,235,0.08);
 }
 
 .signature-title {
     font-weight: 700;
-    letter-spacing: 0.3px; /* Reduced letter spacing */
-    color: var(--text); /* Full text color for emphasis */
-    font-size: 0.85rem; /* Smaller font for A5 */
-    text-transform: uppercase; /* Uppercase for distinction */
+    letter-spacing: 0.3px;
+    color: var(--text);
+    font-size: 0.75rem;
+    text-transform: uppercase;
 }
 
 .signature-text {
     margin: 0;
     font-weight: 600;
-    letter-spacing: 0.3px; /* Reduced letter spacing */
-    font-size: 0.85rem; /* Smaller font for A5 */
+    letter-spacing: 0.3px;
+    font-size: 0.8rem;
 }
 
-/* Signature line styling */
+/* Signature line - COMPACT */
 .signature-line {
-    margin-top: 0.5rem; /* Space above line */
-    padding-top: 0.5rem; /* Space for actual signature */
-    border-top: 1px solid var(--text); /* Signature line */
-    font-size: 0.75rem; /* Small text */
+    margin-top: 0.3rem;
+    padding-top: 0.3rem;
+    border-top: 1px solid var(--text);
+    font-size: 0.7rem;
     color: var(--muted); /* Muted color */
     text-align: center; /* Center the word "Signature" */
 }
@@ -215,12 +214,22 @@
 }
 
 .waybill-contact-bar {
-    border-top: 1px solid rgba(16,24,40,0.08);
-    padding-top: 0.6rem; /* Reduced padding for A5 */
+    border-top: 2px solid rgba(234,179,8,0.3);
+    background: linear-gradient(180deg, transparent, rgba(234,179,8,0.08));
+    padding: 0.8rem 1rem;
+    margin-top: 1rem;
+    border-radius: 8px;
     text-align: center;
-    color: var(--muted);
-    letter-spacing: 0.3px; /* Reduced letter spacing */
-    font-size: 0.85rem; /* Smaller font for A5 */
+    color: var(--text);
+    letter-spacing: 0.4px;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.is-preview .waybill-contact-bar,
+.pdf-export-wrapper .waybill-contact-bar {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
 }
 
 .waybill-contact-bar input,
@@ -231,7 +240,6 @@
     font-weight: 600;
     color: inherit;
     text-align: center;
-    font-size: 0.85rem; /* Smaller font for A5 */
 }
 
 .waybill-sheet {
@@ -257,37 +265,91 @@
     margin-top: 1rem;
 }
 
-/* Ensure tables don’t cause page breaks and match invoice column sizing */
-.waybill-document .document-items {
+/* Table styling removed - using unified styles from general.css for consistency across all documents */
+
+/* ============================================
+   PREVIEW CONTACT SECTION
+   ============================================
+   Contact information styling for preview mode
+   ============================================ */
+
+#waybill-preview-waybill-signature-grid {
+    gap: 1rem;
+}
+
+#waybill-preview-contact .contact-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
     width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed; /* Stable widths to avoid overflow */
-    page-break-inside: avoid;
 }
 
-.waybill-document .document-items th.description,
-.waybill-document .document-items td.description {
-    width: 52%;
-}
-
-.waybill-document .document-items th:nth-child(2),
-.waybill-document .document-items td:nth-child(2) {
-    width: 12%;
+/* Contact wrapper - full width centered container */
+#waybill-preview-contact {
+    margin-top: 2rem;
     text-align: center;
-}
-
-.waybill-document .document-items th:nth-child(3),
-.waybill-document .document-items td:nth-child(3),
-.waybill-document .document-items th:nth-child(4),
-.waybill-document .document-items td:nth-child(4) {
-    width: 18%;
-    text-align: right;
-}
-
-/* Keep preview contact bar attached */
-.waybill-contact-bar {
     page-break-inside: avoid;
     page-break-after: avoid;
+}
+
+#waybill-preview-contact .contact-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+/* Email section - gray background, inline elements */
+#waybill-preview-contact .email {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: #d1d5db; /* Gray background */
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f2937; /* Dark gray text */
+    margin: 0;
+}
+
+#waybill-preview-contact .email span {
+    display: inline;
+    white-space: nowrap;
+}
+
+/* Account section - yellow background, inline elements with icon placeholders */
+#waybill-preview-contact .account {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: #fbbf24; /* Yellow background */
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f2937; /* Dark text for readability */
+    margin: 0;
+}
+
+#waybill-preview-contact .account span {
+    display: inline;
+    white-space: nowrap;
+}
+
+/* Icon placeholders for WhatsApp and Mobile Money */
+#waybill-preview-contact .icon-placeholder {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.1rem 0.3rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+    margin-left: 0.25rem;
 }
 
 @media (max-width: 860px) {

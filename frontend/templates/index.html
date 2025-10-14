@@ -11,37 +11,53 @@
 {% block content %}
 <section class="dashboard-hero">
     <h2>Track invoices, receipts, and logistics from one workspace.</h2>
-    <p>Use the quick actions below to jump straight into the document editor you need. Data stays in sync with previews and PDF exports automatically.</p>
+    <p>View document counts and access editors below.</p>
 </section>
 
-<section class="dashboard-grid" aria-label="Billing modules">
-    <article class="module-card">
-        <h3>Invoices</h3>
-        <p>Capture line items, compute levies, and export client-ready documents instantly.</p>
+<!-- Document Counters Section -->
+<section class="dashboard-counters" aria-label="Document counters">
+    <article class="counter-card">
+        <span class="counter-value" id="invoices-count">0</span>
+        <span class="counter-label">Invoices</span>
+    </article>
+    
+    <article class="counter-card">
+        <span class="counter-value" id="receipts-count">0</span>
+        <span class="counter-label">Receipts</span>
+    </article>
+    
+    <article class="counter-card">
+        <span class="counter-value" id="waybills-count">0</span>
+        <span class="counter-label">Waybills</span>
+    </article>
+</section>
+
+<!-- Quick Actions Section -->
+<section class="dashboard-actions" aria-label="Quick actions">
+    <article class="action-card">
+        <span class="action-label">Invoice</span>
         <a class="button" href="{% url 'invoice-form' %}">
-            Open Invoice
+            Open Editor
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
         </a>
     </article>
 
-    <article class="module-card">
-        <h3>Receipts</h3>
-        <p>Produce official receipt slips with payment method tracking and sign-off sections.</p>
+    <article class="action-card">
+        <span class="action-label">Receipt</span>
         <a class="button" href="{% url 'receipt-form' %}">
-            Open Receipt
+            Open Editor
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
         </a>
     </article>
 
-    <article class="module-card">
-        <h3>Waybills</h3>
-        <p>Log delivery manifests, calculate totals, and prepare printable documents for drivers.</p>
+    <article class="action-card">
+        <span class="action-label">Waybill</span>
         <a class="button" href="{% url 'waybill-form' %}">
-            Open Waybill
+            Open Editor
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>

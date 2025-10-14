@@ -5,20 +5,44 @@
    including edit form, preview, and PDF export layouts.
    ============================================ */
 
-/* Invoice letterhead container - holds logo and metadata */
+/* Invoice letterhead container with YELLOW theme */
 .invoice-letterhead {
-    position: relative; /* Allows absolute positioning of logo */
-    align-items: flex-start; /* Align items to top */
-    gap: 2rem; /* Space between elements */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem 1.5rem;
+    min-height: 180px;
+    border-radius: 10px;
+    border: 1px solid rgba(234,179,8,0.25);
+    background: #eab308;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+    margin-bottom: 1rem;
 }
 
-/* Company logo image - centered horizontally on the sheet */
+/* Logo centered in letterhead - middle of all sides */
 .logo-placeholder {
-    display: block; /* Make it a block element for centering */
-    width: 260px; /* Fixed width for logo */
-    height: 170px; /* Fixed height for logo */
-    margin: 40px auto 0 auto; /* Top margin 10px, centered horizontally, no bottom margin */
-    object-fit: contain; /* Scale image to fit without distortion */
+    display: block;
+    width: 300px;
+    height:  270px;
+    margin: auto;
+    object-fit: contain;
+}
+
+/* Preview mode compact letterhead */
+.is-preview .invoice-letterhead,
+.pdf-export-wrapper .invoice-letterhead {
+    padding: 0.5rem 0.8rem;
+    margin-bottom: 0.4rem;
+    min-height: 120px;
+    gap: 0.8rem;
+}
+
+.is-preview .logo-placeholder,
+.pdf-export-wrapper .logo-placeholder {
+    width: 200px;
+    height: 140px;
 }
 
 /* Letterhead metadata container - holds customer info and invoice details */
@@ -41,15 +65,24 @@
 /* Position customer input below logo */
 .letterhead-meta-left .field-block {
     margin-left: 10%; /* Slight left adjustment */
-    margin-top: 50%; /* Push down to position below logo */
+    margin-top: 10%; /* Push down to position below logo */
+    margin-bottom: 10%; /* Space below input */
     font-size: larger; /* Larger text for prominence */
     font-weight: 700; /* Bold weight */
 }
 
 /* Customer name in preview - bold and prominent */
 .invoice-preview-customer {
-    font-size: 1.1rem; /* Larger font for emphasis */
-    font-weight: 700; /* Bold weight */
+    font-size: 1.2rem; /* Larger font for emphasis */
+    font-weight: 800; /* Extra bold weight */
+    color: var(--text); /* Full text color */
+    letter-spacing: 0.3px; /* Slight letter spacing */
+}
+
+/* Issued by name in preview - bold and prominent */
+.invoice-preview-issued-by {
+    font-size: 1.2rem; /* Larger font for emphasis */
+    font-weight: 800; /* Extra bold weight */
     color: var(--text); /* Full text color */
     letter-spacing: 0.3px; /* Slight letter spacing */
 }
@@ -58,6 +91,11 @@
 .module.is-preview .letterhead-meta-left {
     margin-left: 10%; /* Align with input position */
     margin-top: 50%; /* Same position as input */
+}
+
+/* Preview mode: Add spacing in letterhead left section */
+.module.is-preview .letterhead-meta-left p {
+    margin: 0.25rem 0;
 }
 
 /* Right section - invoice number and date */
@@ -120,6 +158,10 @@
 .module.is-preview .letterhead-meta-left {
     margin-left: 10%; /* Align with input position */
     margin-top: 10%; /* Same position as input */
+    margin-bottom: 10%; /* Space below input */
+}
+.module.is-preview .letterhead-meta-right {
+    margin-bottom: 10%; /* Remove individual field margins */
 }
 
 /* Preview: Customer name in bold */
@@ -155,63 +197,8 @@
 /* ============================================
    INVOICE ITEMS TABLE
    ============================================
-   Table for displaying line items with descriptions,
-   quantities, unit prices, and totals
+   Table styling removed - using unified styles from general.css
    ============================================ */
-
-/* Items table container */
-.document-items {
-    width: 100%; /* Full width */
-    border-collapse: collapse; /* Merge borders */
-    margin-bottom: 1.5rem; /* Space below table */
-    box-shadow: inset 0 0 0 1px rgba(16,24,40,0.05); /* Subtle inner border */
-    border-radius: 14px; /* Rounded corners */
-    overflow: hidden; /* Clip content to rounded corners */
-}
-
-/* Table header background */
-.document-items thead {
-    background: rgba(31,111,235,0.04); /* Light blue tint */
-}
-
-/* Table cell styling (both header and data cells) */
-.document-items th,
-.document-items td {
-    padding: 0.85rem 0.75rem; /* Cell padding */
-    text-align: center; /* Left-aligned text */
-    border-bottom: 1px solid rgba(16,24,40,0.05); /* Row separator */
-    font-size: 0.92rem; /* Slightly smaller text */
-}
-
-/* Table header cell styling */
-.document-items th {
-    text-transform: uppercase; /* Uppercase text */
-    font-weight: 700; /* Bold weight */
-    letter-spacing: 0.6px; /* Spaced letters */
-    color: var(--muted-2); /* Muted color */
-    font-size: 0.75rem; /* Small text */
-}
-
-/* Last column (Remove button) width */
-.document-items td:last-child {
-    width: 80px; /* Fixed width for action buttons */
-}
-
-/* Hover effect on table rows */
-.document-items tbody tr:hover {
-    background: rgba(31,111,235,0.04); /* Light blue highlight */
-}
-
-/* Input fields inside table cells */
-.document-items input {
-    border-bottom: 1px dashed rgba(16,24,40,0.12); /* Dashed underline */
-    padding: 0.25rem 0.35rem; /* Input padding */
-}
-
-/* Input focus state */
-.document-items input:focus {
-    border-bottom-color: var(--accent); /* Accent color underline on focus */
-}
 
 /* ============================================
    INVOICE SUMMARY SECTION
@@ -283,15 +270,40 @@
     color: var(--text); /* Full text color */
 }
 
+/* Total Levies row */
+.levy-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    border-top: 1px solid rgba(16,24,40,0.08);
+    margin-top: 0.5rem;
+}
+
+/* VAT row */
+.vat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
 /* Grand total row */
 .grand-total {
     display: flex; /* Flexbox layout */
     justify-content: space-between; /* Space between label and value */
     align-items: center; /* Vertically center */
     padding-top: 0.75rem; /* Space above */
-    border-top: 1px dashed rgba(16,24,40,0.08); /* Top border separator */
+    border-top: 2px solid rgba(16,24,40,0.15); /* Stronger top border separator */
     font-size: 1.125rem; /* Larger text */
     font-weight: 800; /* Extra bold */
+    margin-top: 0.5rem;
 }
 
 /* ============================================
@@ -390,7 +402,45 @@
 
 /* Signature spacing in preview */
 .module.is-preview .invoice-signature {
-    margin-top: 1.5rem; /* Space from top */
+    margin-top: 1rem; /* Space from top */
+}
+
+/* Compact summary in preview */
+.is-preview .invoice-summary .summary-table th,
+.is-preview .invoice-summary .summary-table td {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.is-preview .levies-table {
+    font-size: 0.8rem;
+}
+
+.is-preview .levies-table .levy-line {
+    padding: 0.25rem 0;
+}
+
+.is-preview .levy-total-row,
+.is-preview .vat-row {
+    padding: 0.3rem 0;
+    font-size: 0.85rem;
+}
+
+.is-preview .grand-total {
+    padding-top: 0.4rem;
+    margin-top: 0.3rem;
+    font-size: 1rem;
+}
+
+/* Compact invoice notes in preview */
+.is-preview .invoice-notes {
+    margin: 1rem 0;
+    font-size: 9px;
+}
+
+.is-preview .invoice-notes h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
 }
 
 /* ============================================
@@ -445,10 +495,87 @@
    PREVIEW MODE OVERRIDES
    ============================================ */
 
-/* Remove background from letterhead in preview */
+/* Keep yellow background in preview mode */
 .module.is-preview .invoice-letterhead {
-    background: none; /* No background */
+    background: #eab308; /* Yellow theme maintained */
 }
+.module.is-preview .logo-placeholder {
+    width: 200px; /* Smaller logo in preview */
+    height: 170px; /* Maintain aspect ratio */
+}
+
+/* ============================================
+   PREVIEW CONTACT SECTION
+   ============================================
+   Contact information styling for preview mode
+   ============================================ */
+
+/* Contact wrapper - full width centered container */
+#invoice-preview-contact {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+#invoice-preview-contact .contact-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+/* Email section - gray background, inline elements */
+#invoice-preview-contact .email {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: #d1d5db; /* Gray background */
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f2937; /* Dark gray text */
+    margin: 0;
+}
+
+#invoice-preview-contact .email span {
+    display: inline;
+    white-space: nowrap;
+}
+
+/* Account section - yellow background, inline elements with icon placeholders */
+#invoice-preview-contact .account {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: #fbbf24; /* Yellow background */
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f2937; /* Dark text for readability */
+    margin: 0;
+}
+
+#invoice-preview-contact .account span {
+    display: inline;
+    white-space: nowrap;
+}
+
+/* Icon placeholders for WhatsApp and Mobile Money */
+.icon-placeholder {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.1rem 0.3rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+    margin-left: 0.25rem;
+}
+
 
 /* ============================================
    RESPONSIVE DESIGN

@@ -30,46 +30,20 @@
     </header>
 
     <main class="app-main">
-        <section class="dashboard-hero">
-            <h2>Track invoices, receipts, and logistics from one workspace.</h2>
-            <p>Use the quick actions below to jump straight into the document editor you need. Data stays in sync with previews and PDF exports automatically.</p>
-        </section>
-
-        <section class="dashboard-grid" aria-label="Billing modules">
-            <article class="module-card">
-                <h3>Invoices</h3>
-                <p>Capture line items, compute levies, and export client-ready documents instantly.</p>
-                <p class="stat"><strong class="count">0</strong> <span class="stat-label">invoices</span></p>
-                <a class="button" href="invoice.html">
-                    Open Invoice
-                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
-                    </svg>
-                </a>
+        <section class="dashboard-counters">
+            <article class="counter-card" onclick="window.location.href='invoice.html'" style="cursor: pointer;">
+                <span class="counter-value" id="invoice-count">0</span>
+                <span class="counter-label">Invoices</span>
             </article>
 
-            <article class="module-card">
-                <h3>Receipts</h3>
-                <p>Produce official receipt slips with payment method tracking and sign-off sections.</p>
-                <p class="stat"><strong class="count">0</strong> <span class="stat-label">receipts</span></p>
-                <a class="button" href="receipt.html">
-                    Open Receipt
-                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
-                    </svg>
-                </a>
+            <article class="counter-card" onclick="window.location.href='receipt.html'" style="cursor: pointer;">
+                <span class="counter-value" id="receipt-count">0</span>
+                <span class="counter-label">Receipts</span>
             </article>
 
-            <article class="module-card">
-                <h3>Waybills</h3>
-                <p>Log delivery manifests, calculate totals, and prepare printable documents for drivers.</p>
-                <p class="stat"><strong class="count">0</strong> <span class="stat-label">waybills</span></p>
-                <a class="button" href="waybill.html">
-                    Open Waybill
-                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
-                    </svg>
-                </a>
+            <article class="counter-card" onclick="window.location.href='waybill.html'" style="cursor: pointer;">
+                <span class="counter-value" id="waybill-count">0</span>
+                <span class="counter-label">Waybills</span>
             </article>
         </section>
     </main>
