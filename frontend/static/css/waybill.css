@@ -1,60 +1,82 @@
+/* ============================================
+   WAYBILL DOCUMENT STYLES - A5 LANDSCAPE
+   ============================================
+   This file contains all styling for the waybill module.
+   Document size: A5 Landscape (210mm x 148mm)
+   ============================================ */
+
+/* Main waybill document container - A5 landscape format */
 .waybill-document {
-    max-width: 860px;
-    margin: 0 auto;
-    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,249,255,0.9));
-    border-radius: 18px;
-    padding: 2rem;
-    box-shadow: 0 24px 60px rgba(15,23,42,0.08);
+    max-width: 210mm; /* A5 landscape width */
+    max-height: 148mm; /* A5 landscape height */
+    margin: 0 auto; /* Center horizontally */
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,249,255,0.9)); /* Subtle gradient background */
+    border-radius: 18px; /* Rounded corners */
+    padding: 2rem; /* Inner padding */
+    box-shadow: 0 24px 60px rgba(15,23,42,0.08); /* Soft shadow */
 }
 
+/* ============================================
+   WAYBILL LETTERHEAD SECTION
+   ============================================
+   Three-column layout: attention | title | destination/date
+   ============================================ */
+
+/* Letterhead container with three-column grid */
 .waybill-letterhead {
-    display: grid;
-    grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);
-    align-items: center;
-    gap: 1.25rem;
-    padding: 1.4rem 1.8rem;
-    border-radius: 18px;
-    border: 1px solid rgba(31,111,235,0.16);
-    background: linear-gradient(115deg, rgba(31,111,235,0.1), rgba(255,255,255,0.92));
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
-    margin-bottom: 1.75rem;
+    display: grid; /* Grid layout */
+    grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); /* Left wider | center auto | right */
+    align-items: center; /* Center items vertically */
+    gap: 1.25rem; /* Space between columns */
+    padding: 1.4rem 1.8rem; /* Inner padding */
+    border-radius: 18px; /* Rounded corners */
+    border: 1px solid rgba(31,111,235,0.16); /* Blue border */
+    background: linear-gradient(115deg, rgba(31,111,235,0.1), rgba(255,255,255,0.92)); /* Gradient background */
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35); /* Inner highlight */
+    margin-bottom: 1.75rem; /* Space below letterhead */
 }
 
+/* Left column - "ATTN" label and customer input */
 .waybill-attention {
-    display: grid;
-    align-items: center;
-    gap: 0.4rem;
-    font-weight: 700;
-    letter-spacing: 0.6px;
+    display: grid; /* Grid layout for vertical stacking */
+    align-items: center; /* Center items */
+    gap: 0.4rem; /* Small space between label and input */
+    font-weight: 700; /* Bold text */
+    letter-spacing: 0.6px; /* Letter spacing */
 }
 
+/* "ATTN" label */
 .waybill-attention span {
-    font-size: 0.85rem;
-    color: var(--muted);
-    text-transform: uppercase;
+    font-size: 0.85rem; /* Smaller text */
+    color: var(--muted); /* Muted color */
+    text-transform: uppercase; /* Uppercase text */
 }
 
+/* Center column - waybill title and number */
 .waybill-title {
-    text-align: center;
+    text-align: center; /* Center-aligned text */
 }
 
+/* Waybill title heading */
 .waybill-title h3 {
-    margin: 0;
-    font-size: 1.6rem;
-    letter-spacing: 1px;
+    margin: 0; /* No margins */
+    font-size: 1.6rem; /* Large text */
+    letter-spacing: 1px; /* Letter spacing */
 }
 
+/* Waybill number paragraph */
 .waybill-title p {
-    margin: 0.3rem 0 0;
-    font-weight: 700;
-    color: var(--muted);
-    letter-spacing: 0.45px;
+    margin: 0.3rem 0 0; /* Small top margin */
+    font-weight: 700; /* Bold */
+    color: var(--muted); /* Muted color */
+    letter-spacing: 0.45px; /* Letter spacing */
 }
 
+/* Right column - destination and delivery date */
 .waybill-meta {
-    display: grid;
-    gap: 0.6rem;
-    justify-items: end;
+    display: grid; /* Grid layout for vertical stacking */
+    gap: 0.6rem; /* Space between items */
+    justify-items: end; /* Right-align items */
 }
 
 .waybill-note {

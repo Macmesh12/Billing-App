@@ -1,20 +1,58 @@
+/* ============================================
+   INVOICE MODULE - MAIN JAVASCRIPT
+   ============================================
+   This file handles all invoice functionality including:
+   - Line item management (add, edit, remove)
+   - Real-time calculations (subtotal, taxes, total)
+   - Preview mode toggling
+   - Form validation and submission
+   - PDF export functionality
+   - API integration for saving invoices
+   ============================================ */
+
+// IIFE (Immediately Invoked Function Expression) to encapsulate module logic
+// This prevents polluting the global namespace
 (function () {
-    // IIFE to encapsulate the invoice module logic
+    /**
+     * DOM Ready Helper Function
+     * Ensures code runs only after the DOM is fully loaded
+     * @param {Function} callback - Function to execute when DOM is ready
+     */
     function onReady(callback) {
-        // Ensure script runs when DOM is fully parsed
         if (document.readyState === "loading") {
+            // DOM still loading, wait for DOMContentLoaded event
             document.addEventListener("DOMContentLoaded", callback, { once: true });
         } else {
+            // DOM already loaded, execute immediately
             callback();
         }
     }
 
+    // Execute when DOM is ready
     onReady(() => {
+        // ============================================
+        // HELPER FUNCTIONS AND UTILITIES
+        // ============================================
+        
+        // Get helper functions from global BillingApp object (defined in main.js)
         const helpers = window.BillingApp || {};
-        // Get helper functions from global BillingApp object, with fallbacks
+        
+        /**
+         * Format Currency Helper
+         * Converts numbers to currency strings (e.g., 1234.5 -> "1234.50")
+         * @param {number} value - Number to format
+         * @returns {string} Formatted currency string
+         */
         const formatCurrency = typeof helpers.formatCurrency === "function"
             ? helpers.formatCurrency
             : (value) => Number(value || 0).toFixed(2);
+        
+        /**
+         * Format Quantity Helper
+         * Formats quantities, showing decimals only when needed
+         * @param {number} value - Quantity to format
+         * @returns {string} Formatted quantity string
+         */
         const formatQuantity = typeof helpers.formatQuantity === "function"
             ? helpers.formatQuantity
             : (value) => {
@@ -22,20 +60,27 @@
                 if (!Number.isFinite(numeric)) return "0";
                 return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2);
             };
-        // Function to format numbers as currency strings
+        
+        /**
+         * Parse Number Helper
+         * Safely converts strings to numbers, defaulting to 0 on failure
+         * @param {string|number} value - Value to parse
+         * @returns {number} Parsed number
+         */
         const parseNumber = typeof helpers.parseNumber === "function"
             ? helpers.parseNumber
             : (value) => Number.parseFloat(value || 0) || 0;
-        // Function to parse strings to numbers safely
 
-        const moduleId = "invoice-module";
-        // ID of the invoice module element
-    const moduleEl = document.getElementById(moduleId);
-        // Reference to the module DOM element
-        const form = document.getElementById("invoice-form");
-        // Reference to the invoice form element
+        // ============================================
+        // MODULE INITIALIZATION
+        // ============================================
+        
+        const moduleId = "invoice-module"; // ID of the invoice module element
+        const moduleEl = document.getElementById(moduleId); // Reference to module DOM element
+        const form = document.getElementById("invoice-form"); // Reference to invoice form
+        
+        // Exit early if required elements are not found
         if (!moduleEl || !form) return;
-        // Exit if required elements are not found
 
         function toggleModulePreview(isPreview) {
             // Local fallback toggle for preview mode
@@ -360,14 +405,69 @@
         togglePreview(moduleId, true);
     }
 
+    async function preparePreviewSnapshot() {
+        renderItems();
+        syncPreviewFromForm();
+        await calculateServerTotals();
+    }
+
+    async function downloadInvoicePdf(prepared = false) {
+        if (typeof window.html2pdf !== "function") {
+            throw new Error("PDF generator unavailable");
+        }
+        if (!prepared) {
+            await preparePreviewSnapshot();
+        }
+        const previewEl = document.getElementById("invoice-preview");
+        if (!previewEl) {
+            throw new Error("Preview element not found");
+        }
+
+        const exportWrapper = document.createElement("div");
+        exportWrapper.className = "module is-preview pdf-export-wrapper";
+        exportWrapper.setAttribute("aria-hidden", "true");
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.id = "";
+        clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+        exportWrapper.appendChild(clone);
+        document.body.appendChild(exportWrapper);
+
+        let filename = state.invoiceNumber || "invoice";
+        if (!filename.toLowerCase().endsWith(".pdf")) {
+            filename = `${filename}.pdf`;
+        }
+
+        try {
+            await window.html2pdf()
+                .set({
+                    margin: [10, 10, 10, 10],
+                    filename,
+                    pagebreak: { mode: ["css", "legacy"] },
+                    image: { type: "jpeg", quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                })
+                .from(exportWrapper)
+                .save();
+        } finally {
+            document.body.removeChild(exportWrapper);
+        }
+    }
+
     async function handleSave() {
         // Function to handle save/submit button click
         if (state.isSaving) return;
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
-        const payload = buildPayload();
+        showToast("Saving invoice...", "info");
+
+        let saveSucceeded = false;
+        let pdfError = null;
 
         try {
+            await preparePreviewSnapshot();
+            const payload = buildPayload();
             const method = state.invoiceId ? "PUT" : "POST";
             const path = state.invoiceId
                 ? `/invoices/api/${state.invoiceId}/`
@@ -384,13 +484,24 @@
             if (result && result.id) {
                 state.invoiceId = result.id;
             }
-            showToast("Invoice saved successfully.");
+            saveSucceeded = true;
+            try {
+                showToast("Preparing PDF download...", "info");
+                await downloadInvoicePdf(true);
+                showToast("Invoice saved and downloaded.");
+            } catch (error) {
+                pdfError = error;
+                console.error("Failed to generate PDF", error);
+            }
         } catch (error) {
             console.error(error);
             showToast(`Failed to save invoice: ${error.message}`, "error");
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
+            if (saveSucceeded && pdfError) {
+                showToast(`Invoice saved but PDF failed: ${pdfError.message}`, "error");
+            }
         }
     }
 

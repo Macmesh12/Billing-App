@@ -1,58 +1,80 @@
+/* ============================================
+   RECEIPT DOCUMENT STYLES - A5 LANDSCAPE
+   ============================================
+   This file contains all styling for the receipt module.
+   Document size: A5 Landscape (210mm x 148mm)
+   ============================================ */
+
+/* Main receipt document container - A5 landscape format */
 .receipt-document {
-    max-width: 800px;
-    margin: 0 auto;
-    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,255,0.94));
-    border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 24px 60px rgba(15,23,42,0.08);
+    max-width: 210mm; /* A5 landscape width */
+    max-height: 148mm; /* A5 landscape height */
+    margin: 0 auto; /* Center horizontally */
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,255,0.94)); /* Subtle gradient background */
+    border-radius: 20px; /* Rounded corners */
+    padding: 2rem; /* Inner padding */
+    box-shadow: 0 24px 60px rgba(15,23,42,0.08); /* Soft shadow */
 }
 
+/* ============================================
+   RECEIPT LETTERHEAD SECTION
+   ============================================
+   Three-column layout: date/location | title | company info
+   ============================================ */
+
+/* Letterhead container with three-column grid */
 .receipt-letterhead {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    align-items: stretch;
-    gap: 1.5rem;
-    padding: 1.4rem 1.75rem;
-    border-radius: 18px;
-    border: 1px solid rgba(31,111,235,0.18);
-    background: linear-gradient(115deg, rgba(31,111,235,0.12), rgba(255,255,255,0.9));
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
-    margin-bottom: 2rem;
+    display: grid; /* Grid layout */
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); /* Left flex | center auto | right flex */
+    align-items: stretch; /* Stretch items vertically */
+    gap: 1.5rem; /* Space between columns */
+    padding: 1.4rem 1.75rem; /* Inner padding */
+    border-radius: 18px; /* Rounded corners */
+    border: 1px solid rgba(31,111,235,0.18); /* Blue border */
+    background: linear-gradient(115deg, rgba(31,111,235,0.12), rgba(255,255,255,0.9)); /* Gradient background */
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4); /* Inner highlight */
+    margin-bottom: 2rem; /* Space below letterhead */
 }
 
+/* Left and right columns (date/location and company info) */
 .letterhead-left,
 .letterhead-right {
-    display: grid;
-    gap: 0.6rem;
+    display: grid; /* Grid layout for vertical stacking */
+    gap: 0.6rem; /* Space between items */
 }
 
+/* Center column (receipt title and number) */
 .letterhead-center {
-    text-align: center;
+    text-align: center; /* Center-aligned text */
 }
 
+/* Receipt title heading */
 .letterhead-center h3 {
-    margin: 0;
-    letter-spacing: 1.2px;
-    font-size: 1.65rem;
+    margin: 0; /* No margins */
+    letter-spacing: 1.2px; /* Wide letter spacing */
+    font-size: 1.65rem; /* Large text */
 }
 
+/* Receipt number paragraph */
 .letterhead-center p {
-    margin: 0.35rem 0 0;
-    font-weight: 700;
-    color: var(--muted);
-    letter-spacing: 0.4px;
+    margin: 0.35rem 0 0; /* Small top margin */
+    font-weight: 700; /* Bold */
+    color: var(--muted); /* Muted color */
+    letter-spacing: 0.4px; /* Slight letter spacing */
 }
 
+/* Right column inputs (company name and tagline) */
 .letterhead-right input,
 .letterhead-right textarea {
-    text-align: right;
-    font-weight: 700;
-    font-size: 1rem;
+    text-align: right; /* Right-aligned text */
+    font-weight: 700; /* Bold */
+    font-size: 1rem; /* Standard text size */
 }
 
+/* Company tagline textarea */
 .letterhead-right textarea {
-    resize: vertical;
-    min-height: 60px;
+    resize: vertical; /* Allow vertical resizing only */
+    min-height: 60px; /* Minimum height */
 }
 
 .receipt-body {

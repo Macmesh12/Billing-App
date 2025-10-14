@@ -1,3 +1,33 @@
+<!--
+============================================
+INVOICE PAGE - BILLING APP
+============================================
+This HTML file contains the structure for the invoice module.
+It has two modes:
+1. EDIT MODE - Form for entering invoice data
+2. PREVIEW MODE - Read-only view for reviewing before save
+
+KEY FEATURES:
+- Dynamic line item management (add/remove rows)
+- Real-time calculation of subtotals, taxes, and totals
+- Client-side PDF generation (A4 size)
+- Server API integration for saving invoices
+- Preview mode with signature display
+
+STRUCTURE:
+- App Header: Navigation bar
+- Module Header: Title and action buttons (Preview/Save/Back)
+- Module Body:
+  * Edit Form: Editable invoice with inputs and tables
+  * Preview Document: Read-only view matching PDF output
+
+DEPENDENCIES:
+- general.css: Global app styles
+- invoice.css: Invoice-specific styles
+- invoice.js: All invoice logic and interactions
+- html2pdf.js: PDF generation library (CDN)
+============================================
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,56 +35,94 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice | Billing App</title>
+    
+    <!-- Google Fonts: Inter font family -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../static/css/general.css">
-    <link rel="stylesheet" href="../static/css/invoice.css">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../static/css/general.css"> <!-- Global styles -->
+    <link rel="stylesheet" href="../static/css/invoice.css"> <!-- Invoice-specific styles -->
+    
+    <!-- Global Configuration: API base URL for backend calls -->
     <script>
         window.BILLING_APP_CONFIG = {
-            apiBaseUrl: "http://127.0.0.1:8765"
+            apiBaseUrl: "http://127.0.0.1:8765" // Django server address
         };
     </script>
 </head>
 <body class="billing-app">
+<!-- ============================================
+     APP HEADER - NAVIGATION BAR
+     ============================================ -->
 <header class="app-header">
     <div class="app-brand">
         <h1>Billing App</h1>
     </div>
+    <!-- Primary navigation links -->
     <nav class="app-nav" aria-label="Primary">
         <a class="nav-link" href="index.html">Dashboard</a>
-        <a class="nav-link active" href="invoice.html">Invoice</a>
+        <a class="nav-link active" href="invoice.html">Invoice</a> <!-- Current page -->
         <a class="nav-link" href="receipt.html">Receipt</a>
         <a class="nav-link" href="waybill.html">Waybill</a>
     </nav>
 </header>
 
+<!-- ============================================
+     MAIN CONTENT AREA
+     ============================================ -->
 <main class="app-main">
+    <!-- Invoice module container -->
     <section id="invoice-module" class="module" data-document-type="invoice">
+        
+        <!-- ============================================
+             MODULE HEADER - Title and Action Buttons
+             ============================================ -->
         <div class="module-header">
             <h2>Invoice</h2>
             <div class="module-actions">
+                <!-- Toggle between edit and preview mode -->
                 <button id="invoice-preview-toggle" class="button button-secondary" type="button">Preview</button>
+                <!-- Save invoice to server and download PDF -->
                 <button id="invoice-submit" class="button" type="button">Save Invoice</button>
+                <!-- Return to edit mode (only visible in preview) -->
                 <button id="invoice-exit-preview" class="button button-secondary" type="button" data-exit-preview hidden>Back to Edit</button>
             </div>
         </div>
 
+        <!-- ============================================
+             MODULE BODY - Edit Form and Preview
+             ============================================ -->
         <div class="module-body">
+            
+            <!-- ============================================
+                 EDIT MODE - Invoice Form
+                 ============================================
+                 This form is visible by default and allows
+                 the user to enter invoice data
+                 ============================================ -->
             <form id="invoice-form" class="document document-editable" novalidate>
+                
+                <!-- Letterhead: Logo and metadata (customer, number, date) -->
                 <div class="invoice-letterhead">
                     <div class="letterhead-brand">
+                        <!-- Company logo (centered via CSS) -->
                         <img src="/assets/logo.png" alt="Logo placeholder" class="logo-placeholder">
                     </div>
 
+                    <!-- Metadata: Customer name, invoice number, and date -->
                     <div class="letterhead-meta">
                         <div class="letterhead-meta-left">
+                            <!-- Customer name input -->
                             <label class="field-block">
-                                <span>Billed To: <input type="text" id="invoice-customer" name="customer_name" placeholder="Client name" required></span>
+                                <input type="text" id="invoice-customer" name="customer_name" placeholder="Client name" required>
                             </label>
                         </div>
                         <div class="letterhead-meta-right">
+                            <!-- Invoice number (generated by server) -->
                             <p class="document-number">Invoice No.: <span id="invoice-number">INV-001</span></p>
+                            <!-- Issue date input -->
                             <label class="field-block">
                                 <span>Date:  <input type="date" id="invoice-issue-date" name="issue_date" required></span>
                             </label>
@@ -62,6 +130,7 @@
                     </div>
                 </div>
 
+                <!-- Invoice title -->
                 <div class="invoice-title">
                     <h3>PRO-FORMA INVOICE</h3>
                 </div>
@@ -127,7 +196,7 @@
 
                 <div class="invoice-letterhead">
                     <div class="letterhead-brand">
-                        <img src="/assets/logo.png" alt="Company Logo   Placeholder" class="logo-placeholder">
+                        <img src="/assets/logo.png" alt="Company Logo Placeholder" class="logo-placeholder">
                     </div>
                     <div class="letterhead-meta">
                         <div class="letterhead-meta-left">
@@ -210,6 +279,7 @@
 </footer>
 
 <script src="../static/js/main.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" referrerpolicy="no-referrer"></script>
 <script src="../static/js/invoice.js" defer></script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {
