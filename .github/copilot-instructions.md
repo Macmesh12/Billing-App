@@ -46,11 +46,7 @@
 - Frontend: `frontend/templates/*` and `frontend/static/*` (JS uses global `BillingApp` in `frontend/static/js/main.js`).
 - Electron wiring: `electron/main.js` shows how Django is spawned and the dev workflow uses `wait-on` + `concurrently`.
 
-## Conventions & gotchas (explicit)
-- Always use Django `{% load static %}` + `{% static 'css/xyz.css' %}` in templates. `STATIC_URL` is `/static/` and `STATICFILES_DIRS` points to `frontend/static/`.
-- When adding frontend endpoints, prefer JSON APIs consumed by the Electron-bundled UI (Option B). Keep server-side validation in forms.
-- PDF rendering uses WeasyPrint if present. When WeasyPrint is missing, views return rendered HTML and set `X-WeasyPrint-Disabled: 1`.
-- The initial API helpers use `@csrf_exempt` for desktop convenience. If you expose beyond local desktop, add CSRF/auth and remove exemptions.
+
 
 ## Packaging & distribution notes
 - Packaging approaches:

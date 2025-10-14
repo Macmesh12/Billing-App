@@ -82,12 +82,9 @@ DEPENDENCIES:
         <div class="module-header">
             <h2>Invoice</h2>
             <div class="module-actions">
-                <!-- Toggle between edit and preview mode -->
+                <button id="invoice-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
                 <button id="invoice-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <!-- Save invoice to server and download PDF -->
-                <button id="invoice-submit" class="button" type="button">Save Invoice</button>
-                <!-- Return to edit mode (only visible in preview) -->
-                <button id="invoice-exit-preview" class="button button-secondary" type="button" data-exit-preview hidden>Back to Edit</button>
+                <button id="invoice-submit" class="button" type="button">Download PDF</button>
             </div>
         </div>
 

@@ -5,77 +5,98 @@
    Document size: A5 Landscape (210mm x 148mm)
    ============================================ */
 
-/* Main waybill document container - A5 landscape format */
+/* Main waybill document container - A4 portrait format */
 .waybill-document {
-    width: 210mm; /* A5 landscape width (exact, not max) */
-    height: 148mm; /* A5 landscape height (exact, not max) */
+    width: 210mm; /* A4 portrait width */
+    height: 297mm; /* A4 portrait height */
     margin: 0 auto; /* Center horizontally */
     background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,249,255,0.9)); /* Subtle gradient background */
-    border-radius: 12px; /* Smaller rounded corners for compact layout */
-    padding: 8mm 10mm; /* Reduced padding to fit A5 landscape (top/bottom: 8mm, left/right: 10mm) */
+    border-radius: 12px; /* Rounded corners */
+    padding: 10mm 15mm; /* A4 portrait padding (top/bottom: 10mm, left/right: 15mm) */
     box-shadow: 0 24px 60px rgba(15,23,42,0.08); /* Soft shadow */
-    overflow: hidden; /* Prevent content overflow */
+    overflow: hidden; /* Prevent extra internal scroll that can create second page in PDF */
     box-sizing: border-box; /* Include padding in dimensions */
+    page-break-inside: avoid; /* Keep as single page */
 }
 
 /* ============================================
    WAYBILL LETTERHEAD SECTION
    ============================================
-   Three-column layout: attention | title | destination/date
+   Two-column layout: title/number/date on left, logo on right (matches receipt)
    ============================================ */
 
-/* Letterhead container with three-column grid */
+/* Letterhead container with flexbox */
 .waybill-letterhead {
-    display: grid; /* Grid layout */
-    grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); /* Left wider | center auto | right */
-    align-items: center; /* Center items vertically */
-    gap: 1rem; /* Reduced space between columns for A5 */
-    padding: 0.8rem 1rem; /* Reduced padding for A5 landscape */
-    border-radius: 10px; /* Smaller rounded corners */
-    border: 1px solid rgba(31,111,235,0.16); /* Blue border */
-    background: linear-gradient(115deg, rgba(31,111,235,0.1), rgba(255,255,255,0.92)); /* Gradient background */
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35); /* Inner highlight */
-    margin-bottom: 0.8rem; /* Reduced space below letterhead for A5 */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+    border: 1px solid rgba(31,111,235,0.16);
+    background: rgb(236, 236, 12);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+    margin-bottom: 1rem;
 }
 
-/* Left column - "ATTN" label and customer input */
-.waybill-attention {
-    display: grid; /* Grid layout for vertical stacking */
-    align-items: center; /* Center items */
-    gap: 0.3rem; /* Reduced space for A5 */
-    font-weight: 700; /* Bold text */
-    letter-spacing: 0.5px; /* Reduced letter spacing */
+/* Left column - title, number, date */
+.letterhead-left {
+    flex: 1;
 }
 
-/* "ATTN" label */
-.waybill-attention span {
-    font-size: 0.8rem; /* Slightly larger for emphasis */
-    color: var(--text); /* Full text color */
-    text-transform: uppercase; /* Uppercase text */
-    font-weight: 800; /* Extra bold */
+.letterhead-left h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    font-weight: 800;
+    color: var(--primary);
 }
 
-/* Center column - waybill title and number */
-.waybill-title {
-    text-align: center; /* Center-aligned text */
+.letterhead-left p {
+    margin: 0.3rem 0;
+    font-weight: 600;
+    color: var(--text);
+    font-size: 1rem;
 }
 
-/* Waybill title heading */
-.waybill-title h3 {
-    margin: 0; /* No margins */
-    font-size: 1.4rem; /* Prominent title size */
-    letter-spacing: 2px; /* Wide letter spacing for emphasis */
-    font-weight: 800; /* Extra bold */
-    color: var(--primary); /* Use primary color for emphasis */
+.letterhead-left .waybill-date {
+    font-size: 0.95rem;
+    color: var(--muted);
 }
 
-/* Waybill number paragraph */
-.waybill-title p {
-    margin: 0.3rem 0 0; /* Small top margin */
-    font-weight: 700; /* Bold */
-    color: var(--text); /* Full text color */
-    letter-spacing: 0.3px; /* Reduced letter spacing */
-    font-size: 0.9rem; /* Smaller font for A5 */
+/* Right column - logo */
+.letterhead-right {
+    flex-shrink: 0;
+}
+
+.logo-placeholder {
+    display: block;
+    width: 220px; /* Match invoice/receipt logo scale to save space */
+    height: 140px;
+    object-fit: contain;
+}
+
+/* Customer information section below letterhead */
+.waybill-customer-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: rgba(239,246,255,0.5);
+    border-radius: 8px;
+}
+
+.waybill-customer-info {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: rgba(239,246,255,0.5);
+    border-radius: 8px;
+}
+
+.waybill-customer-info p {
+    margin: 0.5rem 0;
+    font-size: 1rem;
 }
 
 /* Right column - destination and delivery date */
@@ -214,14 +235,13 @@
 }
 
 .waybill-sheet {
-    display: grid;
-    gap: 2rem;
+    display: block; /* Single copy per page */
 }
 
 .waybill-copy {
     background: rgba(255,255,255,0.9);
-    border-radius: 18px;
-    padding: 1.8rem;
+    border-radius: 12px;
+    padding: 1rem; /* Reduce padding to fit on one page */
     box-shadow: inset 0 0 0 1px rgba(31,111,235,0.08);
 }
 
@@ -234,7 +254,40 @@
 }
 
 .waybill-copy .waybill-signature-grid {
-    margin-top: 1.5rem;
+    margin-top: 1rem;
+}
+
+/* Ensure tables don’t cause page breaks and match invoice column sizing */
+.waybill-document .document-items {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Stable widths to avoid overflow */
+    page-break-inside: avoid;
+}
+
+.waybill-document .document-items th.description,
+.waybill-document .document-items td.description {
+    width: 52%;
+}
+
+.waybill-document .document-items th:nth-child(2),
+.waybill-document .document-items td:nth-child(2) {
+    width: 12%;
+    text-align: center;
+}
+
+.waybill-document .document-items th:nth-child(3),
+.waybill-document .document-items td:nth-child(3),
+.waybill-document .document-items th:nth-child(4),
+.waybill-document .document-items td:nth-child(4) {
+    width: 18%;
+    text-align: right;
+}
+
+/* Keep preview contact bar attached */
+.waybill-contact-bar {
+    page-break-inside: avoid;
+    page-break-after: avoid;
 }
 
 @media (max-width: 860px) {

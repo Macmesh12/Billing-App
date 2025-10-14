@@ -117,7 +117,10 @@
    ============================================ */
 
 /* Preview: Billed To section wrapper */
-
+.module.is-preview .letterhead-meta-left {
+    margin-left: 10%; /* Align with input position */
+    margin-top: 10%; /* Same position as input */
+}
 
 /* Preview: Customer name in bold */
 .invoice-preview-customer {

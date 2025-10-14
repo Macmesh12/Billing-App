@@ -36,6 +36,7 @@
         itemsTableBody: document.querySelector("#waybill-items-table tbody"),
         previewRowsContainers: document.querySelectorAll(".js-waybill-preview-rows"),
         previewToggleBtn: document.getElementById("waybill-preview-toggle"),
+        exitPreviewBtn: document.getElementById("waybill-exit-preview"),
         submitBtn: document.getElementById("waybill-submit"),
         addItemBtn: document.getElementById("waybill-add-item"),
         toast: document.getElementById("waybill-toast"),
@@ -139,46 +140,62 @@
         previewBodies.forEach((container) => {
             if (!container) return;
             container.innerHTML = "";
-            if (!state.items.length) {
-                const placeholder = document.createElement("tr");
-                placeholder.innerHTML = `<td colspan="4" class="empty-state">No line items yet.</td>`;
-                container.appendChild(placeholder);
-                return;
-            }
-            state.items.forEach((item) => {
+            
+            // Always render 10 rows
+            for (let index = 0; index < 10; index++) {
+                const item = state.items[index];
                 const previewRow = document.createElement("tr");
-                previewRow.innerHTML = `
-                    <td>${item.description || ""}</td>
-                    <td>${formatQuantity(item.quantity || 0)}</td>
-                    <td>${formatCurrency(item.unit_price || 0)}</td>
-                    <td>${formatCurrency(item.total || 0)}</td>
-                `;
+                
+                if (item) {
+                    previewRow.innerHTML = `
+                        <td>${item.description || ""}</td>
+                        <td>${formatQuantity(item.quantity || 0)}</td>
+                        <td>${formatCurrency(item.unit_price || 0)}</td>
+                        <td>${formatCurrency(item.total || 0)}</td>
+                    `;
+                } else {
+                    previewRow.innerHTML = `
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    `;
+                    previewRow.classList.add("empty-row");
+                }
                 container.appendChild(previewRow);
-            });
+            }
         });
     }
 
     function renderItems() {
-        // Function to render items in table and preview
+        // Function to render items in table and preview - always show 10 rows
         const tableBody = elements.itemsTableBody;
         tableBody && (tableBody.innerHTML = "");
 
-        state.items.forEach((item, index) => {
+        // Render exactly 10 rows
+        for (let index = 0; index < 10; index++) {
+            const item = state.items[index];
             const row = document.createElement("tr");
-            row.innerHTML = `
-                <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
-                <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
-                <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
-                <td class="row-total">${formatCurrency(item.total || 0)}</td>
-                <td><button type="button" class="button button-secondary" data-remove="${index}">Remove</button></td>
-            `;
+            
+            if (item) {
+                row.innerHTML = `
+                    <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
+                    <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
+                    <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
+                    <td class="row-total">${formatCurrency(item.total || 0)}</td>
+                    <td><button type="button" class="button button-secondary" data-remove="${index}">Remove</button></td>
+                `;
+            } else {
+                row.innerHTML = `
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                `;
+                row.classList.add("empty-row");
+            }
             tableBody?.appendChild(row);
-        });
-
-        if (state.items.length === 0) {
-            const placeholder = document.createElement("tr");
-            placeholder.innerHTML = `<td colspan="5" class="empty-state">No line items yet. Add one to begin.</td>`;
-            tableBody?.appendChild(placeholder);
         }
 
         if (elements.itemsPayload) {
@@ -227,31 +244,68 @@
         togglePreview(moduleId, true);
     }
 
+    async function downloadWaybillPdf() {
+        // Download waybill as PDF
+        if (typeof window.html2pdf !== "function") {
+            showToast("PDF generator not available", "error");
+            return;
+        }
+        
+        syncPreview();
+        
+        const previewEl = document.getElementById("waybill-preview");
+        if (!previewEl) {
+            showToast("Preview element not found", "error");
+            return;
+        }
+
+        const exportWrapper = document.createElement("div");
+        exportWrapper.className = "module is-preview pdf-export-wrapper";
+        exportWrapper.setAttribute("aria-hidden", "true");
+        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0;";
+        
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.id = "";
+        clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+        exportWrapper.appendChild(clone);
+        document.body.appendChild(exportWrapper);
+
+        let filename = state.waybillNumber || "waybill";
+        if (!filename.toLowerCase().endsWith(".pdf")) {
+            filename = `${filename}.pdf`;
+        }
+
+        try {
+            showToast("Generating PDF...", "info");
+            await window.html2pdf()
+                .set({
+                    margin: [10, 10, 10, 10],
+                    filename,
+                    pagebreak: { mode: ["css", "legacy"] },
+                    image: { type: "jpeg", quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                })
+                .from(clone)
+                .save();
+            showToast("PDF downloaded successfully!");
+        } catch (error) {
+            console.error("PDF generation error:", error);
+            showToast("Failed to generate PDF: " + error.message, "error");
+        } finally {
+            document.body.removeChild(exportWrapper);
+        }
+    }
+
     async function handleSave() {
-        // Handle save/submit
+        // Handle PDF download
         if (state.isSaving) return;
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
+
         try {
-            const payload = buildPayload();
-            const method = state.waybillId ? "PUT" : "POST";
-            const path = state.waybillId ? `/waybills/api/${state.waybillId}/` : `/waybills/api/create/`;
-            const result = await callApi(path, {
-                method,
-                body: JSON.stringify(payload),
-            });
-            if (result?.waybill_number) {
-                state.waybillNumber = result.waybill_number;
-                elements.number && (elements.number.textContent = state.waybillNumber);
-                setText(elements.previewNumberEls, state.waybillNumber);
-            }
-            if (result?.id) {
-                state.waybillId = result.id;
-            }
-            showToast("Waybill saved successfully.");
-        } catch (error) {
-            console.error(error);
-            showToast(`Failed to save waybill: ${error.message}`, "error");
+            await downloadWaybillPdf();
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
@@ -329,6 +383,10 @@
         });
 
         elements.addItemBtn?.addEventListener("click", () => {
+            if (state.items.length >= 10) {
+                showToast("Maximum 10 items allowed", "error");
+                return;
+            }
             state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
             renderItems();
         });
@@ -341,11 +399,8 @@
             handleSave();
         });
 
-        moduleEl.addEventListener("click", (event) => {
-            if (event.target.matches("[data-exit-preview]")) {
-                event.preventDefault();
-                togglePreview(moduleId, false);
-            }
+        elements.exitPreviewBtn?.addEventListener("click", () => {
+            togglePreview(moduleId, false);
         });
 
         // Live preview sync on form input

@@ -51,6 +51,22 @@
             // Convert to boolean
             moduleEl.classList.toggle("is-preview", showPreview);
             // Toggle CSS class
+            
+            // Toggle action buttons visibility
+            const previewToggleBtn = moduleEl.querySelector('[id$="-preview-toggle"]');
+            const exitPreviewBtn = moduleEl.querySelector('[id$="-exit-preview"]');
+            const submitBtn = moduleEl.querySelector('[id$="-submit"]');
+            
+            if (showPreview) {
+                previewToggleBtn?.setAttribute("hidden", "hidden");
+                submitBtn?.removeAttribute("hidden");
+                exitPreviewBtn?.removeAttribute("hidden");
+            } else {
+                previewToggleBtn?.removeAttribute("hidden");
+                submitBtn?.removeAttribute("hidden");
+                exitPreviewBtn?.setAttribute("hidden", "hidden");
+            }
+            
             const form = moduleEl.querySelector("form.document-editable");
             // Find editable form
             if (form) {

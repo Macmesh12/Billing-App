@@ -34,33 +34,35 @@
         <div class="module-header">
             <h2>Waybill</h2>
             <div class="module-actions">
+                <button id="waybill-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
                 <button id="waybill-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="waybill-submit" class="button" type="button">Save Waybill</button>
+                <button id="waybill-submit" class="button" type="button">Download PDF</button>
             </div>
         </div>
 
         <div class="module-body">
             <form id="waybill-form" class="document waybill-document document-editable" novalidate>
                 <div class="waybill-letterhead">
-                    <div class="waybill-attention">
-                        <span>ATTN</span>
-                        <input type="text" id="waybill-customer" name="customer_name" placeholder="Client / Department" required>
-                    </div>
-                    <div class="waybill-title">
+                    <div class="letterhead-left">
                         <h3>WAYBILL</h3>
                         <p>No.: <span id="waybill-number">WB-NEW</span></p>
+                        <p class="waybill-date">Date: <input type="date" id="waybill-issue-date" name="issue_date" required style="display: inline; width: auto; border: none; background: transparent;"></p>
                     </div>
-                    <div class="waybill-meta">
-                        <label class="field-block">
-                            <span>Destination</span>
-                            <input type="text" id="waybill-destination" name="destination" placeholder="Delivery location" required>
-                        </label>
-                        <label class="field-block">
-                            <span>Delivery Date</span>
-                            <input type="date" id="waybill-issue-date" name="issue_date" required>
-                        </label>
+                    <div class="letterhead-right">
+                        <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
                     </div>
                 </div>
+
+                <section class="waybill-customer-section">
+                    <label class="field-block">
+                        <span>ATTN (Client / Department):</span>
+                        <input type="text" id="waybill-customer" name="customer_name" placeholder="Client / Department" required>
+                    </label>
+                    <label class="field-block">
+                        <span>Destination:</span>
+                        <input type="text" id="waybill-destination" name="destination" placeholder="Delivery location" required>
+                    </label>
+                </section>
 
                 <section class="waybill-note">
                     <textarea id="waybill-note" rows="2" placeholder="Please sign for acceptance" aria-label="Acknowledgement note"></textarea>
@@ -68,24 +70,19 @@
 
                 <input type="hidden" id="waybill-items-payload" name="items_payload" value="[]">
 
-                <section class="waybill-items">
-                    <header class="waybill-items-header">
-                        <h4>Items Dispatched</h4>
-                        <button type="button" id="waybill-add-item" class="button button-secondary">Add Item</button>
-                    </header>
-                    <table class="document-items" id="waybill-items-table">
-                        <thead>
-                            <tr>
-                                <th>Description of Goods</th>
-                                <th>Quantity</th>
-                                <th>Unit Price</th>
-                                <th>Total</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </section>
+                <table class="document-items" id="waybill-items-table">
+                    <thead>
+                        <tr>
+                            <th class="description">Description</th>
+                            <th>Qty</th>
+                            <th>Unit Price (GHC)</th>
+                            <th>Amount (GHC)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <button type="button" id="waybill-add-item" class="button button-secondary">Add Item</button>
 
                 <div class="waybill-signature-grid">
                     <div class="signature-card">
@@ -120,34 +117,32 @@
             </form>
 
             <article id="waybill-preview" class="document waybill-document" hidden>
-                <div class="preview-actions">
-                    <button class="button button-secondary" data-exit-preview>Back to Edit</button>
-                </div>
-
                 <div class="waybill-sheet">
                     <div class="waybill-copy" data-copy="customer">
                         <div class="waybill-letterhead">
-                            <div class="waybill-attention">
-                                <span>ATTN</span>
-                                <p class="js-waybill-preview-customer">—</p>
-                            </div>
-                            <div class="waybill-title">
+                            <div class="letterhead-left">
                                 <h3>WAYBILL</h3>
                                 <p>No.: <span class="js-waybill-preview-number">WB-NEW</span></p>
+                                <p class="waybill-date">Date: <span class="js-waybill-preview-date">—</span></p>
                             </div>
-                            <div class="waybill-meta">
-                                <p><strong>Destination:</strong> <span class="js-waybill-preview-destination">—</span></p>
-                                <p><strong>Delivery Date:</strong> <span class="js-waybill-preview-date">—</span></p>
+                            <div class="letterhead-right">
+                                <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
                             </div>
                         </div>
+                        
+                        <section class="waybill-customer-info">
+                            <p><strong>ATTN (Client / Department):</strong> <span class="js-waybill-preview-customer">—</span></p>
+                            <p><strong>Destination:</strong> <span class="js-waybill-preview-destination">—</span></p>
+                        </section>
+                        
                         <p class="waybill-note-text js-waybill-preview-note">Please sign for acceptance</p>
                         <table class="document-items">
                             <thead>
                                 <tr>
-                                    <th>Description</th>
+                                    <th class="description">Description</th>
                                     <th>Qty</th>
-                                    <th>Unit Price</th>
-                                    <th>Total</th>
+                                    <th>Unit Price (GHC)</th>
+                                    <th>Amount (GHC)</th>
                                 </tr>
                             </thead>
                             <tbody class="js-waybill-preview-rows"></tbody>
@@ -168,48 +163,7 @@
                         </div>
                     </div>
 
-                    <div class="waybill-copy" data-copy="office">
-                        <div class="waybill-letterhead">
-                            <div class="waybill-attention">
-                                <span>ATTN</span>
-                                <p class="js-waybill-preview-customer">—</p>
-                            </div>
-                            <div class="waybill-title">
-                                <h3>WAYBILL</h3>
-                                <p>No.: <span class="js-waybill-preview-number">WB-NEW</span></p>
-                            </div>
-                            <div class="waybill-meta">
-                                <p><strong>Destination:</strong> <span class="js-waybill-preview-destination">—</span></p>
-                                <p><strong>Delivery Date:</strong> <span class="js-waybill-preview-date">—</span></p>
-                            </div>
-                        </div>
-                        <p class="waybill-note-text js-waybill-preview-note">Please sign for acceptance</p>
-                        <table class="document-items">
-                            <thead>
-                                <tr>
-                                    <th>Description</th>
-                                    <th>Qty</th>
-                                    <th>Unit Price</th>
-                                    <th>Total</th>
-                                </tr>
-                            </thead>
-                            <tbody class="js-waybill-preview-rows"></tbody>
-                        </table>
-                        <div class="waybill-signature-grid">
-                            <div class="signature-card">
-                                <span class="signature-title">Delivered By</span>
-                                <p class="signature-text js-waybill-preview-driver">—</p>
-                                <p class="signature-text"><span class="label">Date:</span> <span class="js-waybill-preview-delivery-date">—</span></p>
-                                <div class="signature-line">Signature</div>
-                            </div>
-                            <div class="signature-card">
-                                <span class="signature-title">Received By</span>
-                                <p class="signature-text js-waybill-preview-receiver">—</p>
-                                <p class="signature-text"><span class="label">Date:</span> <span class="js-waybill-preview-received-date">—</span></p>
-                                <div class="signature-line">Signature</div>
-                            </div>
-                        </div>
-                    </div>
+                    
                 </div>
 
                 <section class="waybill-contact-bar">
@@ -225,6 +179,7 @@
     <p>&copy; <span id="waybill-current-year"></span> Billing App. All rights reserved.</p>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" referrerpolicy="no-referrer"></script>
 <script src="../static/js/main.js" defer></script>
 <script src="../static/js/waybill.js" defer></script>
 <script>

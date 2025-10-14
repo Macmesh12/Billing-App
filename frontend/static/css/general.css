@@ -341,13 +341,9 @@ textarea {
     display: none;
 }
 
-.module.is-preview .module-actions button {
+/* In preview, hide only the Preview toggle; keep Back to Edit and Download visible */
+.module.is-preview .module-actions [id$="-preview-toggle"] {
     display: none;
-}
-
-/* Allow the header Back to Edit button to be visible in preview */
-.module.is-preview .module-actions #invoice-exit-preview {
-    display: inline-flex;
 }
 
 .module-toast {

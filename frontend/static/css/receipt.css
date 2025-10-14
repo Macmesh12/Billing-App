@@ -1,57 +1,52 @@
 /* ============================================
-   RECEIPT DOCUMENT STYLES - A5 LANDSCAPE
+   RECEIPT DOCUMENT STYLES
    ============================================
-   This file contains all styling for the receipt module.
-   Document size: A5 Landscape (210mm x 148mm)
+   Edit mode: Normal portrait
+   Preview mode: A5 Landscape (210mm x 148mm)
    ============================================ */
 
-/* Main receipt document container - A5 landscape format */
+/* Main receipt document container - A4 portrait for edit */
 .receipt-document {
-    width: 210mm; /* A5 landscape width (exact, not max) */
-    height: 148mm; /* A5 landscape height (exact, not max) */
-    margin: 0 auto; /* Center horizontally */
-    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,255,0.94)); /* Subtle gradient background */
-    border-radius: 12px; /* Smaller rounded corners for compact layout */
-    padding: 8mm 10mm; /* Reduced padding to fit A5 landscape (top/bottom: 8mm, left/right: 10mm) */
-    box-shadow: 0 24px 60px rgba(15,23,42,0.08); /* Soft shadow */
-    overflow: hidden; /* Prevent content overflow */
-    box-sizing: border-box; /* Include padding in dimensions */
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto;
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,255,0.94));
+    border-radius: 12px;
+    padding: 10mm 15mm;
+    box-shadow: 0 24px 60px rgba(15,23,42,0.08);
+    overflow: auto;
+    box-sizing: border-box;
 }
 
 /* ============================================
    RECEIPT LETTERHEAD SECTION
    ============================================
-   Three-column layout: date/location | title | company info
+   Two-column layout: logo (left) | title, number, date (right)
    ============================================ */
 
-/* Letterhead container with three-column grid */
+/* Letterhead container with two-column flexbox */
 .receipt-letterhead {
-    display: grid; /* Grid layout */
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); /* Left flex | center auto | right flex */
-    align-items: stretch; /* Stretch items vertically */
-    gap: 1rem; /* Reduced space between columns for A5 */
+    display: flex; /* Flexbox for left-right layout */
+    justify-content: space-between; /* Push left and right columns apart */
+    align-items: center; /* Vertically center content */
+    gap: 2rem; /* Space between columns */
     padding: 0.8rem 1rem; /* Reduced padding for A5 landscape */
     border-radius: 10px; /* Smaller rounded corners */
-    border: 1px solid rgba(31,111,235,0.18); /* Blue border */
-    background: linear-gradient(115deg, rgba(31,111,235,0.12), rgba(255,255,255,0.9)); /* Gradient background */
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4); /* Inner highlight */
+    background: rgb(236, 236, 12); /* Solid background */
     margin-bottom: 1rem; /* Reduced space below letterhead for A5 */
 }
 
-/* Left and right columns (date/location and company info) */
-.letterhead-left,
-.letterhead-right {
-    display: grid; /* Grid layout for vertical stacking */
-    gap: 0.4rem; /* Reduced space between items for A5 */
-}
-
-/* Center column (receipt title and number) */
-.letterhead-center {
-    text-align: center; /* Center-aligned text */
+/* Left column - Receipt title, number, and date */
+.letterhead-left {
+    flex: 1; /* Take remaining space */
+    text-align: left; /* Left-align all content */
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
 }
 
 /* Receipt title heading */
-.letterhead-center h3 {
+.letterhead-left h3 {
     margin: 0; /* No margins */
     letter-spacing: 2px; /* Wide letter spacing for emphasis */
     font-size: 1.4rem; /* Prominent title size */
@@ -59,37 +54,48 @@
     color: var(--primary); /* Use primary color for emphasis */
 }
 
-/* Receipt number paragraph */
-.letterhead-center p {
-    margin: 0.3rem 0 0; /* Small top margin */
+
+
+/* Receipt number and date paragraphs */
+.letterhead-left p {
+    margin: 0; /* No margins */
     font-weight: 700; /* Bold */
     color: var(--text); /* Full text color */
     letter-spacing: 0.3px; /* Reduced letter spacing */
     font-size: 0.9rem; /* Smaller font for A5 */
 }
 
-/* Right column inputs (company name and tagline) */
-.letterhead-right input,
-.letterhead-right textarea {
-    text-align: right; /* Right-aligned text */
-    font-weight: 700; /* Bold */
-    font-size: 0.9rem; /* Slightly larger for readability */
-    color: var(--text); /* Full text color */
+/* Date field block in edit mode */
+.letterhead-left .field-block {
+    text-align: left; /* Left-align the field */
+    margin-top: 0.3rem;
+    max-width: 180px; /* Reduce width of date input container */
 }
 
-/* Company name in preview (right column heading) */
-.letterhead-right h4 {
-    margin: 0; /* No margins */
-    font-size: 1rem; /* Prominent company name */
-    font-weight: 800; /* Extra bold */
-    letter-spacing: 0.5px; /* Slight spacing */
-    color: var(--text); /* Full text color */
+.letterhead-left .field-block span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
 }
 
-/* Company tagline textarea */
-.letterhead-right textarea {
-    resize: vertical; /* Allow vertical resizing only */
-    min-height: 40px; /* Reduced minimum height for A5 */
+.letterhead-left .field-block input {
+    text-align: left; /* Left-align date input */
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.5rem;
+    max-width: 150px; /* Compact date input width */
+}
+
+/* Right column - Logo */
+.letterhead-right {
+    flex-shrink: 0; /* Prevent logo from shrinking */
+}
+
+.logo-placeholder {
+    display: block; /* Make it a block element */
+    width: 300px; /* Fixed width for logo */
+    height: 170px; /* Fixed height for logo */
+    object-fit: contain; /* Scale image to fit without distortion */
 }
 
 .receipt-body {
@@ -155,10 +161,134 @@
     padding: 0;
 }
 
-.receipt-signature {
+/* Payment section styling */
+.receipt-payment-section {
     display: grid;
-    gap: 0.5rem; /* Reduced gap for A5 */
-    margin-bottom: 1rem; /* Reduced margin for A5 */
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.receipt-payment-section .field-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.receipt-payment-section select {
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid rgba(16,24,40,0.12);
+    font-size: 0.95rem;
+}
+
+/* Totals section styling */
+.receipt-totals {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(239,246,255,0.95), rgba(219,234,254,0.9));
+    border-radius: 10px;
+    border: 1px solid rgba(31,111,235,0.18);
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.balance-row {
+    border-top: 2px solid var(--primary);
+    margin-top: 0.5rem;
+    padding-top: 0.8rem;
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+/* Company info in preview only */
+.receipt-company-info {
+    text-align: center;
+    margin-bottom: 1rem;
+    padding: 0.8rem;
+    background: linear-gradient(135deg, rgba(239,246,255,0.95), rgba(219,234,254,0.9));
+    border-radius: 8px;
+}
+
+.receipt-company-info h4 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 1px;
+}
+
+.receipt-company-info p {
+    margin: 0.3rem 0 0;
+    font-size: 0.9rem;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.receipt-company-info .company-contact {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+}
+
+/* Summary section with payment and totals side by side */
+.receipt-summary-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+/* Payment info in preview */
+.receipt-payment-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.8rem;
+    background: rgba(239,246,255,0.5);
+    border-radius: 8px;
+    flex: 0 0 auto;
+}
+
+.receipt-payment-info p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.receipt-signature {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.signature-left,
+.signature-right {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.signature-block {
+    display: inline-block;
+    margin-top: 0.5rem;
+}
+
+.signature-image {
+    width: 120px;
+    height: auto;
+    display: block;
 }
 
 /* Signature line styling */

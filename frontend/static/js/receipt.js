@@ -24,20 +24,20 @@
     const elements = {
         // DOM elements object
         previewToggleBtn: document.getElementById("receipt-preview-toggle"),
+        exitPreviewBtn: document.getElementById("receipt-exit-preview"),
         submitBtn: document.getElementById("receipt-submit"),
         toast: document.getElementById("receipt-toast"),
         number: document.getElementById("receipt-number"),
+        addItemBtn: document.getElementById("receipt-add-item"),
+        itemsTable: document.getElementById("receipt-items-table"),
+        previewRows: document.getElementById("receipt-preview-rows"),
         previewNumberEls: document.querySelectorAll(".js-receipt-preview-number"),
         previewDateEls: document.querySelectorAll(".js-receipt-preview-date"),
-        previewLocationEls: document.querySelectorAll(".js-receipt-preview-location"),
-        previewCompanyNameEls: document.querySelectorAll(".js-receipt-preview-company-name"),
-        previewCompanyTaglineEls: document.querySelectorAll(".js-receipt-preview-company-tagline"),
         previewReceivedFromEls: document.querySelectorAll(".js-receipt-preview-received-from"),
-        previewAmountEls: document.querySelectorAll(".js-receipt-preview-amount"),
+        previewAmountEls: document.querySelectorAll(".js-receipt-preview-amount-paid"),
         previewPaymentMethodEls: document.querySelectorAll(".js-receipt-preview-payment-method"),
-        previewDescriptionEls: document.querySelectorAll(".js-receipt-preview-description"),
+        previewCustomerNameEls: document.querySelectorAll(".js-receipt-preview-customer-name"),
         previewApprovedByEls: document.querySelectorAll(".js-receipt-preview-approved-by"),
-        previewContactEls: document.querySelectorAll(".js-receipt-preview-contact"),
         previewTotalAmountEls: document.querySelectorAll(".js-receipt-preview-total-amount"),
         previewBalanceEls: document.querySelectorAll(".js-receipt-preview-balance"),
     };
@@ -45,17 +45,16 @@
     const inputs = {
         // Input elements object
         receivedFrom: document.getElementById("receipt-received-from"),
-        amount: document.getElementById("receipt-amount"),
-        paymentMethod: document.getElementById("receipt-payment-method"),
-        description: document.getElementById("receipt-description"),
+        customerName: document.getElementById("receipt-customer-name"),
         approvedBy: document.getElementById("receipt-approved-by"),
         issueDate: document.getElementById("receipt-issue-date"),
-        companyName: document.getElementById("receipt-company-name"),
-        companyTagline: document.getElementById("receipt-company-tagline"),
-        location: document.getElementById("receipt-location"),
-        totalAmount: document.getElementById("receipt-total-amount"),
-        balance: document.getElementById("receipt-balance"),
-        contact: document.getElementById("receipt-contact"),
+        amountPaid: document.getElementById("receipt-amount-paid"),
+        paymentMethod: document.getElementById("receipt-payment-method"),
+    };
+
+    const displays = {
+        totalDisplay: document.getElementById("receipt-total-display"),
+        balanceDisplay: document.getElementById("receipt-balance-display"),
     };
 
     const state = {
@@ -63,6 +62,7 @@
         receiptId: null,
         receiptNumber: "REC-NEW",
         isSaving: false,
+        items: [],
     };
 
     function setText(target, text) {
@@ -138,23 +138,114 @@
         return response.json();
     }
 
+    function calculateTotals() {
+        // Calculate total amount from items
+        const total = state.items.reduce((sum, item) => sum + (item.total || 0), 0);
+        const amountPaid = Number(inputs.amountPaid?.value) || 0;
+        const balance = total - amountPaid;
+        
+        // Update displays
+        if (displays.totalDisplay) {
+            displays.totalDisplay.textContent = `GH₵ ${formatCurrency(total)}`;
+        }
+        if (displays.balanceDisplay) {
+            displays.balanceDisplay.textContent = `GH₵ ${formatCurrency(balance)}`;
+        }
+        
+        return { total, amountPaid, balance };
+    }
+
+    function renderItems() {
+        // Render items in the table - always show 10 rows
+        const tbody = elements.itemsTable?.querySelector("tbody");
+        if (!tbody) return;
+        
+        tbody.innerHTML = "";
+        
+        // Render up to 10 rows
+        for (let index = 0; index < 10; index++) {
+            const item = state.items[index] || {};
+            const row = document.createElement("tr");
+            
+            if (index < state.items.length) {
+                // Row with data and inputs
+                row.innerHTML = `
+                    <td><input type="text" value="${item.description || ""}" data-index="${index}" data-field="description" placeholder="Item description"></td>
+                    <td><input type="number" value="${item.quantity || 0}" data-index="${index}" data-field="quantity" min="0" step="1"></td>
+                    <td><input type="number" value="${item.unit_price || 0}" data-index="${index}" data-field="unit_price" min="0" step="0.01"></td>
+                    <td class="total-cell">${formatCurrency(item.total || 0)}</td>
+                    <td><button type="button" class="button-icon" data-remove="${index}" title="Remove item">×</button></td>
+                `;
+            } else {
+                // Empty row for visual spacing
+                row.innerHTML = `
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                `;
+                row.classList.add("empty-row");
+            }
+            tbody.appendChild(row);
+        }
+        
+        calculateTotals();
+        renderPreviewItems();
+    }
+
+    function renderPreviewItems() {
+        // Render items in preview mode - always show 10 rows
+        if (!elements.previewRows) return;
+        
+        elements.previewRows.innerHTML = "";
+        
+        // Render up to 10 rows
+        for (let index = 0; index < 10; index++) {
+            const item = state.items[index];
+            const row = document.createElement("tr");
+            
+            if (item) {
+                // Row with actual data
+                row.innerHTML = `
+                    <td>${item.description || "—"}</td>
+                    <td>${item.quantity || 0}</td>
+                    <td>${formatCurrency(item.unit_price || 0)}</td>
+                    <td>${formatCurrency(item.total || 0)}</td>
+                `;
+            } else {
+                // Empty row for visual spacing
+                row.innerHTML = `
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                `;
+                row.classList.add("empty-row");
+            }
+            elements.previewRows.appendChild(row);
+        }
+    }
+
     function syncPreview() {
         // Sync preview with form data
         setText(elements.previewNumberEls, state.receiptNumber);
         const prettyDate = formatDisplayDate(inputs.issueDate?.value || "");
         setText(elements.previewDateEls, prettyDate);
-        setText(elements.previewLocationEls, valueOrPlaceholder(inputs.location, "Accra, Ghana"));
         setText(elements.previewReceivedFromEls, inputs.receivedFrom?.value || "—");
-        setText(elements.previewDescriptionEls, valueOrPlaceholder(inputs.description, "—"));
-    const formattedAmount = `GH\u00A2 ${formatCurrency(inputs.amount?.value || 0)}`;
-        setText(elements.previewAmountEls, formattedAmount);
-        setText(elements.previewPaymentMethodEls, valueOrPlaceholder(inputs.paymentMethod, "—"));
-        setText(elements.previewCompanyNameEls, valueOrPlaceholder(inputs.companyName, "MULTIMEDI@"));
-        setText(elements.previewCompanyTaglineEls, valueOrPlaceholder(inputs.companyTagline, "Creative Digital Studio"));
-        setText(elements.previewApprovedByEls, valueOrPlaceholder(inputs.approvedBy, "—"));
-        setText(elements.previewContactEls, valueOrPlaceholder(inputs.contact, "CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719   WWW.SPAQUELSMULTIMEDIA.ORG   SPAQUELS@GMAIL.COM"));
-    setText(elements.previewTotalAmountEls, valueOrPlaceholder(inputs.totalAmount, "GH\u00A2 31,000"));
-    setText(elements.previewBalanceEls, valueOrPlaceholder(inputs.balance, "GH\u00A2 21,000"));
+        setText(elements.previewCustomerNameEls, inputs.customerName?.value || "—");
+        setText(elements.previewApprovedByEls, inputs.approvedBy?.value || "—");
+        
+        const amountPaid = Number(inputs.amountPaid?.value) || 0;
+        const paymentMethod = inputs.paymentMethod?.value || "—";
+        setText(elements.previewAmountEls, `GH₵ ${formatCurrency(amountPaid)}`);
+        setText(elements.previewPaymentMethodEls, paymentMethod);
+        
+        const totals = calculateTotals();
+        setText(elements.previewTotalAmountEls, `GH₵ ${formatCurrency(totals.total)}`);
+        setText(elements.previewBalanceEls, `GH₵ ${formatCurrency(totals.balance)}`);
+        
+        renderPreviewItems();
     }
 
     async function handlePreview() {
@@ -163,31 +254,68 @@
         togglePreview(moduleId, true);
     }
 
+    async function downloadReceiptPdf() {
+        // Download receipt as PDF
+        if (typeof window.html2pdf !== "function") {
+            showToast("PDF generator not available", "error");
+            return;
+        }
+        
+        syncPreview();
+        
+        const previewEl = document.getElementById("receipt-preview");
+        if (!previewEl) {
+            showToast("Preview element not found", "error");
+            return;
+        }
+
+        const exportWrapper = document.createElement("div");
+        exportWrapper.className = "module is-preview pdf-export-wrapper";
+        exportWrapper.setAttribute("aria-hidden", "true");
+        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0;";
+        
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.id = "";
+        clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+        exportWrapper.appendChild(clone);
+        document.body.appendChild(exportWrapper);
+
+        let filename = state.receiptNumber || "receipt";
+        if (!filename.toLowerCase().endsWith(".pdf")) {
+            filename = `${filename}.pdf`;
+        }
+
+        try {
+            showToast("Generating PDF...", "info");
+            await window.html2pdf()
+                .set({
+                    margin: [10, 10, 10, 10],
+                    filename,
+                    pagebreak: { mode: ["css", "legacy"] },
+                    image: { type: "jpeg", quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                })
+                .from(clone)
+                .save();
+            showToast("PDF downloaded successfully!");
+        } catch (error) {
+            console.error("PDF generation error:", error);
+            showToast("Failed to generate PDF: " + error.message, "error");
+        } finally {
+            document.body.removeChild(exportWrapper);
+        }
+    }
+
     async function handleSave() {
-        // Handle save/submit
+        // Handle PDF download
         if (state.isSaving) return;
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
+
         try {
-            const payload = buildPayload();
-            const method = state.receiptId ? "PUT" : "POST";
-            const path = state.receiptId ? `/receipts/api/${state.receiptId}/` : `/receipts/api/create/`;
-            const result = await callApi(path, {
-                method,
-                body: JSON.stringify(payload),
-            });
-            if (result?.receipt_number) {
-                state.receiptNumber = result.receipt_number;
-                elements.number && (elements.number.textContent = state.receiptNumber);
-                setText(elements.previewNumberEls, state.receiptNumber);
-            }
-            if (result?.id) {
-                state.receiptId = result.id;
-            }
-            showToast("Receipt saved successfully.");
-        } catch (error) {
-            console.error(error);
-            showToast(`Failed to save receipt: ${error.message}`, "error");
+            await downloadReceiptPdf();
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
@@ -232,11 +360,51 @@
             handleSave();
         });
 
-        moduleEl.addEventListener("click", (event) => {
-            if (event.target.matches("[data-exit-preview]")) {
-                event.preventDefault();
-                togglePreview(moduleId, false);
+        elements.addItemBtn?.addEventListener("click", () => {
+            if (state.items.length >= 10) {
+                showToast("Maximum 10 items allowed", "error");
+                return;
             }
+            state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
+            renderItems();
+        });
+
+        elements.itemsTable?.addEventListener("input", (event) => {
+            const input = event.target;
+            if (!input.matches("[data-index]")) return;
+            
+            const index = Number(input.getAttribute("data-index"));
+            const field = input.getAttribute("data-field");
+            const value = input.value;
+            
+            if (state.items[index]) {
+                state.items[index][field] = value;
+                
+                // Calculate total
+                const qty = Number(state.items[index].quantity) || 0;
+                const price = Number(state.items[index].unit_price) || 0;
+                state.items[index].total = qty * price;
+                
+                renderItems();
+            }
+        });
+
+        elements.itemsTable?.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-remove]");
+            if (!button) return;
+            const index = Number(button.getAttribute("data-remove"));
+            state.items.splice(index, 1);
+            renderItems();
+        });
+
+        elements.exitPreviewBtn?.addEventListener("click", () => {
+            togglePreview(moduleId, false);
+        });
+
+        // Recalculate totals when amount paid changes
+        inputs.amountPaid?.addEventListener("input", () => {
+            calculateTotals();
+            syncPreview();
         });
 
         // Live preview sync for a responsive feel

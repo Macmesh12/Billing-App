@@ -134,6 +134,7 @@
         previewLevyContainer: document.getElementById("invoice-preview-levies"),
         addItemBtn: document.getElementById("invoice-add-item"),
         previewToggleBtn: document.getElementById("invoice-preview-toggle"),
+        exitPreviewBtn: document.getElementById("invoice-exit-preview"),
         submitBtn: document.getElementById("invoice-submit"),
         toast: document.getElementById("invoice-toast"),
         invoiceNumber: document.getElementById("invoice-number"),
@@ -274,42 +275,57 @@
     }
 
     function renderItems() {
-        // Function to render invoice items in table and preview
+        // Function to render invoice items in table and preview - always show 10 rows
         const tableBody = elements.itemsTableBody;
         const previewBody = elements.previewRows;
         if (tableBody) tableBody.innerHTML = "";
         if (previewBody) previewBody.innerHTML = "";
 
-        state.items.forEach((item, index) => {
+        // Render exactly 10 rows
+        for (let index = 0; index < 10; index++) {
+            const item = state.items[index];
+            
+            // Edit mode row
             const row = document.createElement("tr");
-            row.innerHTML = `
-                <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
-                <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
-                <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
-                <td class="row-total">${formatCurrency(item.total || 0)}</td>
-                <td><button type="button" class="button button-secondary" data-remove="${index}">Remove</button></td>
-            `;
+            if (item) {
+                row.innerHTML = `
+                    <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
+                    <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
+                    <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
+                    <td class="row-total">${formatCurrency(item.total || 0)}</td>
+                    <td><button type="button" class="button button-secondary" data-remove="${index}">Remove</button></td>
+                `;
+            } else {
+                row.innerHTML = `
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                `;
+                row.classList.add("empty-row");
+            }
             tableBody?.appendChild(row);
 
+            // Preview mode row
             const previewRow = document.createElement("tr");
-            previewRow.innerHTML = `
-                <td>${item.description || ""}</td>
-                <td>${formatQuantity(item.quantity || 0)}</td>
-                <td>${formatCurrency(item.unit_price || 0)}</td>
-                <td>${formatCurrency(item.total || 0)}</td>
-            `;
-            previewBody?.appendChild(previewRow);
-        });
-
-        if (state.items.length === 0) {
-            const placeholderRow = document.createElement("tr");
-            placeholderRow.innerHTML = `<td colspan="5" class="empty-state">No line items yet. Add one to begin.</td>`;
-            tableBody?.appendChild(placeholderRow);
-            if (previewBody) {
-                const previewPlaceholder = document.createElement("tr");
-                previewPlaceholder.innerHTML = `<td colspan="4" class="empty-state">No line items yet.</td>`;
-                previewBody.appendChild(previewPlaceholder);
+            if (item) {
+                previewRow.innerHTML = `
+                    <td>${item.description || ""}</td>
+                    <td>${formatQuantity(item.quantity || 0)}</td>
+                    <td>${formatCurrency(item.unit_price || 0)}</td>
+                    <td>${formatCurrency(item.total || 0)}</td>
+                `;
+            } else {
+                previewRow.innerHTML = `
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                `;
+                previewRow.classList.add("empty-row");
             }
+            previewBody?.appendChild(previewRow);
         }
 
         if (elements.itemsPayload) {
@@ -411,27 +427,31 @@
         await calculateServerTotals();
     }
 
-    async function downloadInvoicePdf(prepared = false) {
+    async function downloadInvoicePdf() {
         if (typeof window.html2pdf !== "function") {
-            throw new Error("PDF generator unavailable");
+            showToast("PDF generator not available", "error");
+            return;
         }
-        if (!prepared) {
-            await preparePreviewSnapshot();
-        }
+        
+        await preparePreviewSnapshot();
+        
         const previewEl = document.getElementById("invoice-preview");
         if (!previewEl) {
-            throw new Error("Preview element not found");
+            showToast("Preview element not found", "error");
+            return;
         }
 
-        const exportWrapper = document.createElement("div");
-        exportWrapper.className = "module is-preview pdf-export-wrapper";
-        exportWrapper.setAttribute("aria-hidden", "true");
-        const clone = previewEl.cloneNode(true);
-        clone.removeAttribute("hidden");
-        clone.id = "";
-        clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
-        exportWrapper.appendChild(clone);
-        document.body.appendChild(exportWrapper);
+    const exportWrapper = document.createElement("div");
+    exportWrapper.className = "module is-preview pdf-export-wrapper";
+    exportWrapper.setAttribute("aria-hidden", "true");
+    exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0;";
+        
+    const clone = previewEl.cloneNode(true);
+    clone.removeAttribute("hidden");
+    clone.id = "";
+    clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+    exportWrapper.appendChild(clone);
+    document.body.appendChild(exportWrapper);
 
         let filename = state.invoiceNumber || "invoice";
         if (!filename.toLowerCase().endsWith(".pdf")) {
@@ -439,6 +459,7 @@
         }
 
         try {
+            showToast("Generating PDF...", "info");
             await window.html2pdf()
                 .set({
                     margin: [10, 10, 10, 10],
@@ -448,60 +469,28 @@
                     html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
                     jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
                 })
-                .from(exportWrapper)
+                .from(clone)
                 .save();
+            showToast("PDF downloaded successfully!");
+        } catch (error) {
+            console.error("PDF generation error:", error);
+            showToast("Failed to generate PDF: " + error.message, "error");
         } finally {
             document.body.removeChild(exportWrapper);
         }
     }
 
     async function handleSave() {
-        // Function to handle save/submit button click
+        // Handle PDF download
         if (state.isSaving) return;
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
-        showToast("Saving invoice...", "info");
-
-        let saveSucceeded = false;
-        let pdfError = null;
 
         try {
-            await preparePreviewSnapshot();
-            const payload = buildPayload();
-            const method = state.invoiceId ? "PUT" : "POST";
-            const path = state.invoiceId
-                ? `/invoices/api/${state.invoiceId}/`
-                : `/invoices/api/create/`;
-            const result = await callApi(path, {
-                method,
-                body: JSON.stringify(payload),
-            });
-            if (result && result.invoice_number) {
-                state.invoiceNumber = result.invoice_number;
-                elements.invoiceNumber && (elements.invoiceNumber.textContent = result.invoice_number);
-                elements.previewNumber && (elements.previewNumber.textContent = result.invoice_number);
-            }
-            if (result && result.id) {
-                state.invoiceId = result.id;
-            }
-            saveSucceeded = true;
-            try {
-                showToast("Preparing PDF download...", "info");
-                await downloadInvoicePdf(true);
-                showToast("Invoice saved and downloaded.");
-            } catch (error) {
-                pdfError = error;
-                console.error("Failed to generate PDF", error);
-            }
-        } catch (error) {
-            console.error(error);
-            showToast(`Failed to save invoice: ${error.message}`, "error");
+            await downloadInvoicePdf();
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
-            if (saveSucceeded && pdfError) {
-                showToast(`Invoice saved but PDF failed: ${pdfError.message}`, "error");
-            }
         }
     }
 
@@ -604,6 +593,10 @@
         });
 
         elements.addItemBtn?.addEventListener("click", () => {
+            if (state.items.length >= 10) {
+                showToast("Maximum 10 items allowed", "error");
+                return;
+            }
             state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
             renderItems();
             debouncedServerTotals();
@@ -617,11 +610,8 @@
             handleSave();
         });
 
-        moduleEl.addEventListener("click", (event) => {
-            if (event.target.matches("[data-exit-preview]")) {
-                event.preventDefault();
-                togglePreview(moduleId, false);
-            }
+        elements.exitPreviewBtn?.addEventListener("click", () => {
+            togglePreview(moduleId, false);
         });
 
         const liveSyncFields = [
