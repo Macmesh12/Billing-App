@@ -40,8 +40,24 @@
 
 /* Position customer input below logo */
 .letterhead-meta-left .field-block {
-    margin-left: 0; /* Slight left adjustment */
+    margin-left: 10%; /* Slight left adjustment */
     margin-top: 50%; /* Push down to position below logo */
+    font-size: larger; /* Larger text for prominence */
+    font-weight: 700; /* Bold weight */
+}
+
+/* Customer name in preview - bold and prominent */
+.invoice-preview-customer {
+    font-size: 1.1rem; /* Larger font for emphasis */
+    font-weight: 700; /* Bold weight */
+    color: var(--text); /* Full text color */
+    letter-spacing: 0.3px; /* Slight letter spacing */
+}
+
+/* Preview mode: Position customer name below logo */
+.module.is-preview .letterhead-meta-left {
+    margin-left: 10%; /* Align with input position */
+    margin-top: 50%; /* Same position as input */
 }
 
 /* Right section - invoice number and date */
@@ -101,19 +117,11 @@
    ============================================ */
 
 /* Preview: Billed To section wrapper */
-.module.is-preview .preview-billed-wrapper {
-    display: flex; /* Flexbox layout */
-    justify-content: space-between; /* Space between items */
-    align-items: flex-end; /* Align to bottom */
-    gap: 0.5rem; /* Small gap between items */
-    font-size: 0.9rem; /* Slightly smaller text */
-    text-align: left; /* Left-aligned text */
-     /* Push down from top */
-    width: 100%; /* Full width */
-}
+
 
 /* Preview: Customer name in bold */
 .invoice-preview-customer {
+    font-size: larger;
     font-weight: 700; /* Bold weight */
 }
 

@@ -7,13 +7,15 @@
 
 /* Main receipt document container - A5 landscape format */
 .receipt-document {
-    max-width: 210mm; /* A5 landscape width */
-    max-height: 148mm; /* A5 landscape height */
+    width: 210mm; /* A5 landscape width (exact, not max) */
+    height: 148mm; /* A5 landscape height (exact, not max) */
     margin: 0 auto; /* Center horizontally */
     background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,255,0.94)); /* Subtle gradient background */
-    border-radius: 20px; /* Rounded corners */
-    padding: 2rem; /* Inner padding */
+    border-radius: 12px; /* Smaller rounded corners for compact layout */
+    padding: 8mm 10mm; /* Reduced padding to fit A5 landscape (top/bottom: 8mm, left/right: 10mm) */
     box-shadow: 0 24px 60px rgba(15,23,42,0.08); /* Soft shadow */
+    overflow: hidden; /* Prevent content overflow */
+    box-sizing: border-box; /* Include padding in dimensions */
 }
 
 /* ============================================
@@ -27,20 +29,20 @@
     display: grid; /* Grid layout */
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); /* Left flex | center auto | right flex */
     align-items: stretch; /* Stretch items vertically */
-    gap: 1.5rem; /* Space between columns */
-    padding: 1.4rem 1.75rem; /* Inner padding */
-    border-radius: 18px; /* Rounded corners */
+    gap: 1rem; /* Reduced space between columns for A5 */
+    padding: 0.8rem 1rem; /* Reduced padding for A5 landscape */
+    border-radius: 10px; /* Smaller rounded corners */
     border: 1px solid rgba(31,111,235,0.18); /* Blue border */
     background: linear-gradient(115deg, rgba(31,111,235,0.12), rgba(255,255,255,0.9)); /* Gradient background */
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4); /* Inner highlight */
-    margin-bottom: 2rem; /* Space below letterhead */
+    margin-bottom: 1rem; /* Reduced space below letterhead for A5 */
 }
 
 /* Left and right columns (date/location and company info) */
 .letterhead-left,
 .letterhead-right {
     display: grid; /* Grid layout for vertical stacking */
-    gap: 0.6rem; /* Space between items */
+    gap: 0.4rem; /* Reduced space between items for A5 */
 }
 
 /* Center column (receipt title and number) */
@@ -51,16 +53,19 @@
 /* Receipt title heading */
 .letterhead-center h3 {
     margin: 0; /* No margins */
-    letter-spacing: 1.2px; /* Wide letter spacing */
-    font-size: 1.65rem; /* Large text */
+    letter-spacing: 2px; /* Wide letter spacing for emphasis */
+    font-size: 1.4rem; /* Prominent title size */
+    font-weight: 800; /* Extra bold */
+    color: var(--primary); /* Use primary color for emphasis */
 }
 
 /* Receipt number paragraph */
 .letterhead-center p {
-    margin: 0.35rem 0 0; /* Small top margin */
+    margin: 0.3rem 0 0; /* Small top margin */
     font-weight: 700; /* Bold */
-    color: var(--muted); /* Muted color */
-    letter-spacing: 0.4px; /* Slight letter spacing */
+    color: var(--text); /* Full text color */
+    letter-spacing: 0.3px; /* Reduced letter spacing */
+    font-size: 0.9rem; /* Smaller font for A5 */
 }
 
 /* Right column inputs (company name and tagline) */
@@ -68,67 +73,79 @@
 .letterhead-right textarea {
     text-align: right; /* Right-aligned text */
     font-weight: 700; /* Bold */
-    font-size: 1rem; /* Standard text size */
+    font-size: 0.9rem; /* Slightly larger for readability */
+    color: var(--text); /* Full text color */
+}
+
+/* Company name in preview (right column heading) */
+.letterhead-right h4 {
+    margin: 0; /* No margins */
+    font-size: 1rem; /* Prominent company name */
+    font-weight: 800; /* Extra bold */
+    letter-spacing: 0.5px; /* Slight spacing */
+    color: var(--text); /* Full text color */
 }
 
 /* Company tagline textarea */
 .letterhead-right textarea {
     resize: vertical; /* Allow vertical resizing only */
-    min-height: 60px; /* Minimum height */
+    min-height: 40px; /* Reduced minimum height for A5 */
 }
 
 .receipt-body {
     display: grid;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    gap: 0.8rem; /* Reduced gap for A5 landscape */
+    margin-bottom: 1rem; /* Reduced margin for A5 */
 }
 
 .receipt-body p {
-    margin: 0;
-    font-size: 1rem;
+    margin: 0 0 0.5rem 0; /* Small bottom margin for spacing */
+    font-size: 0.9rem; /* Reduced font size for A5 */
     color: var(--text);
+    line-height: 1.5; /* Better readability */
 }
 
 .receipt-body p strong {
-    color: var(--muted);
-    font-weight: 600;
-    letter-spacing: 0.45px;
+    color: var(--text); /* Use full text color for labels */
+    font-weight: 700; /* Bolder labels */
+    letter-spacing: 0.3px; /* Reduced letter spacing */
 }
 
 .receipt-amount-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(2, 1fr); /* Fixed 2 columns for A5 landscape */
+    gap: 0.8rem; /* Reduced gap for A5 */
 }
 
 .receipt-amount-card {
     display: grid;
-    gap: 0.4rem;
-    padding: 1.1rem;
-    border-radius: 14px;
+    gap: 0.3rem; /* Reduced gap */
+    padding: 0.8rem; /* Reduced padding for A5 */
+    border-radius: 10px; /* Smaller radius */
     background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(238,242,255,0.9));
     box-shadow: inset 0 0 0 1px rgba(31,111,235,0.1);
     font-weight: 700;
-    font-size: 1.05rem;
-    letter-spacing: 0.4px;
+    font-size: 0.95rem; /* Reduced font size for A5 */
+    letter-spacing: 0.3px;
 }
 
 .receipt-highlight-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(2, 1fr); /* Fixed 2 columns for A5 landscape */
+    gap: 0.8rem; /* Reduced gap for A5 */
 }
 
 .receipt-highlight {
     display: grid;
-    gap: 0.35rem;
-    padding: 1.2rem 1.4rem;
-    border-radius: 16px;
+    gap: 0.25rem; /* Reduced gap */
+    padding: 0.8rem 1rem; /* Reduced padding for A5 */
+    border-radius: 10px; /* Smaller radius */
     background: linear-gradient(120deg, rgba(31,111,235,0.18), rgba(255,255,255,0.95));
     box-shadow: inset 0 0 0 1px rgba(31,111,235,0.18);
     color: var(--text);
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
+    font-size: 0.9rem; /* Reduced font size for A5 */
 }
 
 .receipt-highlight input {
@@ -140,17 +157,28 @@
 
 .receipt-signature {
     display: grid;
-    gap: 0.8rem;
-    margin-bottom: 2rem;
+    gap: 0.5rem; /* Reduced gap for A5 */
+    margin-bottom: 1rem; /* Reduced margin for A5 */
+}
+
+/* Signature line styling */
+.signature-line {
+    margin-top: 0.5rem; /* Space above line */
+    padding-top: 0.5rem; /* Space for actual signature */
+    border-top: 1px solid var(--text); /* Signature line */
+    font-size: 0.75rem; /* Small text */
+    color: var(--muted); /* Muted color */
+    text-align: center; /* Center the word "Signature" */
 }
 
 .receipt-contact-bar {
     border-top: 1px solid rgba(16,24,40,0.08);
-    padding-top: 1rem;
-    margin-top: 1rem;
+    padding-top: 0.6rem; /* Reduced padding for A5 */
+    margin-top: 0.6rem; /* Reduced margin for A5 */
     text-align: center;
     color: var(--muted);
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px; /* Reduced letter spacing */
+    font-size: 0.85rem; /* Smaller font for A5 */
 }
 
 .receipt-contact-bar input,
