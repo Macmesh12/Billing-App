@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "invoices",
+    "billing_app.invoices",
     "receipts",
     "waybills",
 ]
@@ -114,3 +114,19 @@ TAX_SETTINGS = {
     "COVID": 0.01,
     "VAT": 0.15,
 }
+
+# Firebase configuration for global counters / integrations
+FIREBASE_CONFIG = {
+    "apiKey": "AIzaSyDJU7jyiMSYoAwFUfUKvgB0ACaB7uYqDmA",
+    "authDomain": "billing-app-689e2.firebaseapp.com",
+    "projectId": "billing-app-689e2",
+    "storageBucket": "billing-app-689e2.firebasestorage.app",
+    "messagingSenderId": "746898948349",
+    "appId": "1:746898948349:web:d8d7748a1905757ea8fe94",
+    "measurementId": "G-2HG3ED32Y1",
+}
+
+FIREBASE_PROJECT_ID = FIREBASE_CONFIG.get("projectId")
+FIREBASE_COUNTER_COLLECTION = os.environ.get("FIREBASE_COUNTER_COLLECTION", "documentCounters")
+FIREBASE_COUNTER_DOCUMENT = os.environ.get("FIREBASE_COUNTER_DOCUMENT", "global")
+FIREBASE_COUNTER_PAD = int(os.environ.get("FIREBASE_COUNTER_PAD", "3"))

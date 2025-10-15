@@ -1,138 +1,311 @@
-{#
-Invoice template (frontend/templates/invoice.html)
-Expected context variables:
- - form: Django form or fields for editable inputs (form.customer_name, form.issue_date, etc.)
- - invoice: Optional invoice object used for preview and PDF rendering on the server
- - tax_rows: List of tax rows (name, rate_percent, rate, amount) built by the view
+<!--
+============================================
+INVOICE PAGE - BILLING APP
+============================================
+This HTML file contains the structure for the invoice module.
+It has two modes:
+1. EDIT MODE - Form for entering invoice data
+2. PREVIEW MODE - Read-only view for reviewing before save
 
-This template is intended to be editable in the browser (document-editable class).
-The same template can be rendered server-side for PDF export when 'preview' context is true.
-#}
-{% extends 'base.html' %}
+KEY FEATURES:
+- Dynamic line item management (add/remove rows)
+- Real-time calculation of subtotals, taxes, and totals
+- Client-side PDF generation (A4 size)
+- Server API integration for saving invoices
+- Preview mode with signature display
+
+STRUCTURE:
+- App Header: Navigation bar
+- Module Header: Title and action buttons (Preview/Save/Back)
+- Module Body:
+  * Edit Form: Editable invoice with inputs and tables
+  * Preview Document: Read-only view matching PDF output
+
+DEPENDENCIES:
+- general.css: Global app styles
+- invoice.css: Invoice-specific styles
+- invoice.js: All invoice logic and interactions
+- html2pdf.js: PDF generation library (CDN)
+============================================
+-->
 {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice | Billing App</title>
+    
+    <!-- Google Fonts: Inter font family -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{% static 'css/general.css' %}"> <!-- Global styles -->
+    <link rel="stylesheet" href="{% static 'css/invoice.css' %}"> <!-- Invoice-specific styles -->
+    
+    <!-- Global Configuration: API base URL for backend calls -->
+    <script>
+        window.BILLING_APP_CONFIG = {
+            apiBaseUrl: window.location.origin // Use current origin
+        };
+    </script>
+</head>
+<body class="billing-app">
+<!-- ============================================
+     APP HEADER - NAVIGATION BAR
+     ============================================ -->
+<header class="app-header">
+    <div class="app-brand">
+        <h1>Billing App</h1>
+    </div>
+    <!-- Primary navigation links -->
+    <nav class="app-nav" aria-label="Primary">
+        <a class="nav-link" href="/">Dashboard</a>
+        <a class="nav-link active" href="/invoice.html">Invoice</a> <!-- Current page -->
+        <a class="nav-link" href="/receipt.html">Receipt</a>
+        <a class="nav-link" href="/waybill.html">Waybill</a>
+    </nav>
+</header>
 
-{% block title %}Invoice | Billing App{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/invoice.css' %}">
-{% endblock %}
-
-{% block content %}
-<section id="invoice-module" class="module{% if preview %} is-preview{% endif %}">
-    <div class="module-header">
-        <h2>Invoice</h2>
-        <div class="module-actions">
-            {% if invoice %}
-                <a href="{% url 'invoice-pdf' invoice.pk %}" class="button" target="_blank" rel="noopener">Download PDF</a>
-            {% endif %}
-            {% if not preview %}
+<!-- ============================================
+     MAIN CONTENT AREA
+     ============================================ -->
+<main class="app-main">
+    <!-- Invoice module container -->
+    <section id="invoice-module" class="module" data-document-type="invoice">
+        
+        <!-- ============================================
+             MODULE HEADER - Title and Action Buttons
+             ============================================ -->
+        <div class="module-header">
+            <h2>Invoice</h2>
+            <div class="module-actions">
+                <button id="invoice-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
                 <button id="invoice-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="invoice-submit" class="button" type="button">Save Invoice</button>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="module-body">
-    <form id="invoice-form" class="document document-editable" method="post" action="{% url 'invoice-form' %}" {% if preview %}hidden{% endif %}>
-            {% csrf_token %}
-
-            <header class="document-header">
-                <div>
-                    <h3>INVOICE</h3>
-                    <p class="document-number">Invoice No.: {{ invoice.invoice_number|default:"INV-NEW" }}</p>
-                </div>
-                <div class="document-meta">
-                    <p><strong>Date:</strong> {{ form.issue_date }}</p>
-                    <p><strong>Classification:</strong> {{ form.classification }}</p>
-                </div>
-            </header>
-
-            <section class="document-meta">
-                <p><strong>Billed To:</strong> {{ form.customer_name }}</p>
-            </section>
-
-            <input type="hidden" id="invoice-items-payload" name="items_payload" value='{{ form.items_payload.value|default:"[]" }}'>
-
-            <table class="document-items" id="invoice-items-table">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Quantity</th>
-                        <th>Unit Price</th>
-                        <th>Total</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-            <button type="button" id="invoice-add-item" class="button button-secondary">Add Item</button>
-
-            <section class="document-totals">
-                <p><span>Subtotal:</span> <span id="invoice-subtotal">0.00</span></p>
-                {% for row in tax_rows %}
-                    <p><span>{{ row.name|upper }} ({{ row.rate_percent|floatformat:2 }}%):</span> <span data-levy="{{ row.name }}" data-rate="{{ row.rate }}">{{ row.amount|default:"0.00" }}</span></p>
-                {% endfor %}
-                <p class="grand"><span>Grand Total:</span> <span id="invoice-grand-total">0.00</span></p>
-            </section>
-
-        </form>
-
-        <div id="invoice-preview" class="document" {% if not preview %}hidden{% endif %}>
-            <header class="document-header">
-                <h3>INVOICE</h3>
-                <p class="document-number">Invoice No.: {{ invoice.invoice_number|default:"INV-NEW" }}</p>
-                <p class="document-date">Date: {{ invoice.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
-            </header>
-            {% if not preview %}
-            <div class="preview-actions">
-                <button class="button button-secondary" data-exit-preview>Back to Edit</button>
+                <button id="invoice-submit" class="button" type="button">Download PDF</button>
             </div>
-            {% endif %}
-
-            <section class="document-meta">
-                <p><strong>Billed To:</strong> {{ invoice.customer_name|default:form.customer_name.value }}</p>
-                <p><strong>Classification:</strong> {{ invoice.classification|default:form.classification.value }}</p>
-            </section>
-
-            <table class="document-items">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Quantity</th>
-                        <th>Unit Price</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody id="invoice-preview-rows">
-                    {% if invoice %}
-                        {% for item in invoice.items %}
-                            <tr>
-                                <td>{{ item.description }}</td>
-                                <td>{{ item.quantity|floatformat:2 }}</td>
-                                <td>{{ item.unit_price|floatformat:2 }}</td>
-                                <td>{{ item.total|floatformat:2 }}</td>
-                            </tr>
-                        {% endfor %}
-                    {% endif %}
-                </tbody>
-            </table>
-
-            <section class="document-totals">
-                <p><span>Subtotal:</span> <span id="invoice-preview-subtotal">{{ invoice.subtotal|default:"0.00"|floatformat:2 }}</span></p>
-                {% for row in tax_rows %}
-                    <p><span>{{ row.name|upper }}:</span> <span data-preview-levy="{{ row.name }}">{{ row.amount|default:"0.00" }}</span></p>
-                {% endfor %}
-                <p class="grand"><span>Grand Total:</span> <span id="invoice-preview-grand">{{ invoice.grand_total|default:"0.00"|floatformat:2 }}</span></p>
-            </section>
-
-            <footer class="document-footer">
-                <p>Thank you for your business.</p>
-            </footer>
         </div>
-    </div>
-</section>
-{% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/invoice.js' %}"></script>
-{% endblock %}
+        <!-- ============================================
+             MODULE BODY - Edit Form and Preview
+             ============================================ -->
+        <div class="module-body">
+            
+            <!-- A4 Workspace Container - Centers document like Word page -->
+            <div class="a4-workspace">
+            <!-- ============================================
+                 EDIT MODE - Invoice Form
+                 ============================================
+                 This form is visible by default and allows
+                 the user to enter invoice data
+                 ============================================ -->
+            <form id="invoice-form" class="document document-editable" novalidate>
+                <input type="hidden" id="invoice-document-number" name="document_number">
+
+                <!-- Letterhead: Logo and metadata (customer, number, date) -->
+                <div class="invoice-letterhead">
+                    <div class="letterhead-brand">
+                        <!-- Company logo (centered via CSS) -->
+                        <img src="/assets/logo.png" alt="Logo placeholder" class="logo-placeholder">
+                    </div>
+
+                    <!-- Metadata: Customer name, invoice number, and date -->
+                    <div class="letterhead-meta">
+                        <div class="letterhead-meta-left">
+                            <!-- Customer name input -->
+                            <label class="field-block">
+                                <input type="text" id="invoice-customer" name="customer_name" placeholder="Client name" required>
+                            </label>
+                        </div>
+                        <div class="letterhead-meta-right">
+                            <!-- Invoice number (generated by server) -->
+                            <p class="document-number">Invoice No.: <span id="invoice-number">INV000</span></p>
+                            <!-- Issue date input -->
+                            <label class="field-block">
+                                <span>Date:  <input type="date" id="invoice-issue-date" name="issue_date" required></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice title -->
+                <div class="invoice-title">
+                    <h3>PRO-FORMA INVOICE</h3>
+                </div>
+
+               
+
+                <input type="hidden" id="invoice-items-payload" name="items_payload" value="[]">
+
+                <table class="document-items" id="invoice-items-table">
+                    <thead>
+                        <tr>
+                            <th class="description">Description / Classification</th>
+                            <th>Qty</th>
+                            <th>Cost per Unit (GHC)</th>
+                            <th>Total Cost (GHC)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <button type="button" id="invoice-add-item" class="button button-secondary">Add Item</button>
+
+                <div class="invoice-summary">
+                    <table class="summary-table">
+                        <tbody>
+                            <tr>
+                                <th>Sub Total (Without VAT)</th>
+                                <td id="invoice-subtotal">0.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="levies-table" id="invoice-levies"></div>
+                    <div class="levy-total-row">
+                        <span>Total Levies + Value</span>
+                        <span id="invoice-levy-total">0.00</span>
+                    </div>
+                    <div class="vat-row">
+                        <span>VAT (15%)</span>
+                        <span id="invoice-vat">0.00</span>
+                    </div>
+                    <div class="grand-total">
+                        <span>Grand Total</span>
+                        <span id="invoice-grand-total">0.00</span>
+                    </div>
+                </div>
+
+                <section class="invoice-notes">
+                    <h4>Notes</h4>
+                    <textarea id="invoice-notes" rows="6" aria-label="Invoice notes list">• Invoices we submit in respect of our services (any other payable charges) will be paid in full or a deposit of 70% made either by cash, bank or mobile money.
+• Work is guaranteed once a deposit or a full payment is paid. NOTE!!: full payment should be made 3 days after delivery or on delivery.
+• Job completion date is communicated once payment is received.
+• Money paid is not refundable.
+• All items brought for service must be checked well before leaving the premises, we will not be held liable in the event that a mistake occurred.
+• Delivery options available at a fee.</textarea>
+                </section>
+
+        
+
+                <section class="invoice-footer-details">
+                    <label class="field-block">
+                    </label>
+                    <label class="field-block">
+                    </label>
+                </section>
+
+                <section class="invoice-contact-bar">
+                </section>
+            </form>
+
+            <div id="invoice-preview" class="document" hidden>
+
+                <div class="invoice-letterhead">
+                    <div class="letterhead-brand">
+                        <img src="/assets/logo.png" alt="Company Logo Placeholder" class="logo-placeholder">
+                    </div>
+                    <div class="letterhead-meta">
+                        <div class="letterhead-meta-left">
+                            <!-- Customer name display -->
+                            <p><strong>Customer Name:</strong></p>
+                            <p><strong><span id="invoice-preview-customer" class="invoice-preview-customer">—</span></strong></p>
+                        </div>
+                        <div class="letterhead-meta-right">
+                            <p class="document-number">Invoice No.: <span id="invoice-preview-number">INV000</span></p>
+                            <p>Date:&nbsp;&nbsp;<span id="invoice-preview-date">—</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="invoice-title">
+                    <h3>PRO-FORMA INVOICE</h3>
+                </div>
+
+                <table class="document-items">
+                    <thead>
+                        <tr>
+                            <th class="description">Description / Classification</th>
+                            <th>Qty</th>
+                            <th>Cost per Unit (GHC)</th>
+                            <th>Total Cost (GHC)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-preview-rows"></tbody>
+                </table>
+
+                <section class="invoice-signature">
+                    <div class="signature-block">
+                        <img src="/assets/sign.png" alt="Signature" class="signature-image">
+                        <div class="signature-line">Signature</div>
+                        <div class="signature-meta">
+                            <p>Raphael Quame Agbeshie</p>
+                            <p>(Creative Director)</p>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="invoice-summary">
+                    <table class="summary-table">
+                        <tbody>
+                            <tr>
+                                <th>Sub Total (Without VAT)</th>
+                                <td id="invoice-preview-subtotal">0.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="levies-table" id="invoice-preview-levies"></div>
+                    <div class="levy-total-row">
+                        <span>Total Levies + Value</span>
+                        <span id="invoice-preview-levy-total">0.00</span>
+                    </div>
+                    <div class="vat-row">
+                        <span>VAT (15%)</span>
+                        <span id="invoice-preview-vat">0.00</span>
+                    </div>
+                    <div class="grand-total">
+                        <span>Grand Total</span>
+                        <span id="invoice-preview-grand">0.00</span>
+                    </div>
+                </div>
+
+                <section class="invoice-notes">
+                    <ul id="invoice-preview-notes"></ul>
+                </section>
+
+                <section id="invoice-preview-contact">
+                    <div class="contact-wrapper">
+                        <p class="email">
+                            <span>Email: spaquelsmultimedia@gmail.com</span>
+                            <span>Website: www.spaquelsmultimedia.org</span>
+                        </p>
+                        <p class="account">
+                            <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
+                            <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
+                            <span>0540673202</span>
+                            <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                        </p>
+                    </div>
+                </section>
+            </div>
+            </div> <!-- End A4 workspace -->
+        </div>
+
+        <div class="module-toast" id="invoice-toast" role="status" aria-live="polite" hidden></div>
+    </section>
+</main>
+
+<footer class="app-footer">
+    <p>&copy; <span id="invoice-current-year"></span> Billing App. All rights reserved.</p>
+</footer>
+
+<script src="{% static 'js/main.js' %}" defer></script>
+<script src="{% static 'js/invoice.js' %}" defer></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("invoice-current-year").textContent = new Date().getFullYear();
+    });
+</script>
+</body>
+</html>

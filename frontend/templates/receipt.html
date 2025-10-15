@@ -1,92 +1,213 @@
-{#
-Receipt template (frontend/templates/receipt.html)
-Context:
- - form: form fields for editable receipt
- - receipt: optional model instance for preview/PDF
-
-Editable layout matches the preview layout so users can type directly into the document.
-#}
-{% extends 'base.html' %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt | Billing App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/general.css' %}">
+    <link rel="stylesheet" href="{% static 'css/receipt.css' %}">
+    <script>
+        window.BILLING_APP_CONFIG = {
+            apiBaseUrl: window.location.origin
+        };
+    </script>
+</head>
+<body class="billing-app">
+<header class="app-header">
+    <div class="app-brand">
+        <h1>Billing App</h1>
+    </div>
+    <nav class="app-nav" aria-label="Primary">
+        <a class="nav-link" href="/">Dashboard</a>
+        <a class="nav-link" href="/invoice.html">Invoice</a>
+        <a class="nav-link active" href="/receipt.html">Receipt</a>
+        <a class="nav-link" href="/waybill.html">Waybill</a>
+    </nav>
+</header>
 
-{% block title %}Receipt | Billing App{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/receipt.css' %}">
-{% endblock %}
-
-{% block content %}
-<section id="receipt-module" class="module{% if preview %} is-preview{% endif %}">
-    <div class="module-header">
-        <h2>Receipt</h2>
-        <div class="module-actions">
-            {% if receipt %}
-                <a href="{% url 'receipt-pdf' receipt.pk %}" class="button" target="_blank" rel="noopener">Download PDF</a>
-            {% endif %}
-            {% if not preview %}
+<main class="app-main">
+    <section id="receipt-module" class="module" data-document-type="receipt">
+        <div class="module-header">
+            <h2>Receipt</h2>
+            <div class="module-actions">
+                <button id="receipt-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
                 <button id="receipt-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="receipt-submit" class="button" type="submit" form="receipt-form">Save Receipt</button>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="module-body">
-    <form id="receipt-form" class="document receipt document-editable" method="post" action="{% url 'receipt-form' %}" {% if preview %}hidden{% endif %}>
-            {% csrf_token %}
-            <header class="document-header">
-                <div class="logo-placeholder">Your Logo</div>
-                <div>
-                    <h3>RECEIPT</h3>
-                    <p>No.: {{ receipt.receipt_number|default:"REC-NEW" }}</p>
-                    <p>Date: {{ form.issue_date }}</p>
-                </div>
-            </header>
-
-            <section class="receipt-body">
-                <p><strong>Received From:</strong> {{ form.received_from }}</p>
-                <p><strong>Amount:</strong> {{ form.amount }}</p>
-                <p><strong>Payment Method:</strong> {{ form.payment_method }}</p>
-                <p><strong>For:</strong> {{ form.description }}</p>
-            </section>
-
-            <section class="receipt-footer">
-                <p><strong>Approved By:</strong> {{ form.approved_by }}</p>
-                <div class="signature-line">Signature</div>
-            </section>
-        </form>
-
-        <article id="receipt-preview" class="document receipt" {% if not preview %}hidden{% endif %}>
-            <header class="document-header">
-                <div class="logo-placeholder">Your Logo</div>
-                <div>
-                    <h3>RECEIPT</h3>
-                    <p>No.: {{ receipt.receipt_number|default:"REC-NEW" }}</p>
-                    <p>Date: {{ receipt.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
-                </div>
-            </header>
-
-            {% if not preview %}
-            <div class="preview-actions">
-                <button class="button button-secondary" data-exit-preview>Back to Edit</button>
+                <button id="receipt-submit" class="button" type="button">Download PDF</button>
             </div>
-            {% endif %}
+        </div>
 
-            <section class="receipt-body">
-                <p><strong>Received From:</strong> {{ receipt.received_from|default:form.received_from.value }}</p>
-                <p><strong>Amount:</strong> {{ receipt.amount|default:form.amount.value|floatformat:2 }}</p>
-                <p><strong>Payment Method:</strong> {{ receipt.payment_method|default:form.payment_method.value }}</p>
-                <p><strong>For:</strong> {{ receipt.description|default:form.description.value }}</p>
-            </section>
+        <div class="module-body">
+            <!-- A4 Workspace Container -->
+            <div class="a4-workspace">
+            <form id="receipt-form" class="document receipt-document document-editable" novalidate>
+                <input type="hidden" id="receipt-document-number" name="document_number">
+                <div class="receipt-letterhead">
+                    <div class="letterhead-left">
+                        <h3>RECEIPT</h3>
+                        <p>No.: <span id="receipt-number">REC000</span></p>
+                        <label class="field-block">
+                            <span>Date</span>
+                            <input type="date" id="receipt-issue-date" name="issue_date" required>
+                        </label>
+                    </div>
+                    <div class="letterhead-right">
+                        <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
+                    </div>
+                </div>
 
-            <section class="receipt-footer">
-                <p><strong>Approved By:</strong> {{ receipt.approved_by|default:form.approved_by.value }}</p>
-                <div class="signature-line">Signature</div>
-            </section>
-        </article>
-    </div>
-</section>
-{% endblock %}
+                <section class="receipt-body">
+                    <table class="document-items" id="receipt-items-table">
+                        <thead>
+                            <tr>
+                                <th class="description">Description</th>
+                                <th>Qty</th>
+                                <th>Unit Price (GHC)</th>
+                                <th>Amount (GHC)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <button type="button" id="receipt-add-item" class="button button-secondary">Add Item</button>
 
-{% block extra_js %}
-<script src="{% static 'js/receipt.js' %}"></script>
-{% endblock %}
+                    <div class="receipt-payment-section">
+                        <label class="field-block">
+                            <span>Amount Paid (GHC)</span>
+                            <input type="number" step="0.01" id="receipt-amount-paid" name="amount_paid" placeholder="0.00" required>
+                        </label>
+                        <label class="field-block">
+                            <span>Payment Method</span>
+                            <select id="receipt-payment-method" name="payment_method" required>
+                                <option value="">Select method</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Mobile Money">Mobile Money</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="receipt-totals">
+                        <div class="total-row">
+                            <span>Total Amount:</span>
+                            <span id="receipt-total-display">GH₵ 0.00</span>
+                        </div>
+                        <div class="total-row balance-row">
+                            <span>Balance:</span>
+                            <span id="receipt-balance-display">GH₵ 0.00</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="receipt-signature">
+                    <div class="signature-left">
+                       <label class="field-block">
+                            <span>Issued By: </span>
+                            <input type="text" id="receipt-issued-by" name="issued_by" placeholder="Issued by" required>
+                        </label>
+                    </div>
+                    <div class="signature-right">
+                        <label class="field-block">
+                            <span>Customer Name</span>
+                            <input type="text" id="receipt-customer-name" name="customer_name" placeholder="Client name" required>
+                        </label>
+                         
+                    </div>
+                </section>
+            </form>
+
+            <div id="receipt-preview" class="document receipt-document receipt-preview-landscape" hidden>
+                <div class="receipt-letterhead">
+                    <div class="letterhead-left">
+                        <h3>RECEIPT</h3>
+                        <p>No.: <span class="js-receipt-preview-number">REC000</span></p>
+                        <p class="receipt-date">Date: <span class="js-receipt-preview-date">—</span></p>
+                    </div>
+                    <div class="letterhead-right">
+                        <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
+                    </div>
+                </div>
+
+                <section class="receipt-body">
+
+                    <table class="document-items">
+                        <thead>
+                            <tr>
+                                <th class="description">Description</th>
+                                <th>Qty</th>
+                                <th>Unit Price (GHC)</th>
+                                <th>Amount (GHC)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receipt-preview-rows"></tbody>
+                    </table>
+
+                    <div class="receipt-summary-section">
+                        <div class="receipt-payment-info">
+                            <p><strong>Payment Method:</strong> <span class="js-receipt-preview-payment-method">—</span></p>
+                            <p><strong>Amount Paid:</strong> <span class="js-receipt-preview-amount-paid">GH₵ 0.00</span></p>
+                        </div>
+
+                        <div class="receipt-totals">
+                            <div class="total-row">
+                                <span>Total Amount:</span>
+                                <span class="js-receipt-preview-total-amount">GH₵ 0.00</span>
+                            </div>
+                            <div class="total-row balance-row">
+                                <span>Balance:</span>
+                                <span class="js-receipt-preview-balance">GH₵ 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="receipt-signature">
+                    <div class="signature-left">
+                        <p><strong>Creative Director</strong></p>
+                        <div class="signature-block">
+                            <img src="/assets/sign.png" alt="Creative Director Signature" class="signature-image">
+                        </div>
+                    </div>
+                    <div class="signature-right">
+                        <p><strong>Customer Name:</strong> <span class="js-receipt-preview-customer-name">—</span></p>
+                        <p style="margin-top: 1rem;"><strong>Issued By:</strong> <span class="js-receipt-preview-issued-by">—</span></p>
+                    </div>
+                </section>
+
+                <section id="receipt-preview-contact">
+                    <div class="contact-wrapper">
+                        <p class="account">
+                            <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
+                            <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
+                            <span>0540673202</span>
+                            <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                        </p>
+                         <p class="email">
+                            <span>Email: spaquelsmultimedia@gmail.com</span>
+                            <span>Website: www.spaquelsmultimedia.org</span>
+                        </p>
+                    </div>
+                </section>
+            </div>
+            </div> <!-- End A4 workspace -->
+        </div>
+        <div class="module-toast" id="receipt-toast" role="status" aria-live="polite" hidden></div>
+    </section>
+</main>
+
+<footer class="app-footer">
+    <p>&copy; <span id="receipt-current-year"></span> Billing App. All rights reserved.</p>
+</footer>
+
+<script src="{% static 'js/main.js' %}" defer></script>
+<script src="{% static 'js/receipt.js' %}" defer></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("receipt-current-year").textContent = new Date().getFullYear();
+    });
+</script>
+</body>
+</html>

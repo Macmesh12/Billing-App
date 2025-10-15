@@ -33,9 +33,72 @@
         // ============================================
         // HELPER FUNCTIONS AND UTILITIES
         // ============================================
-        
+
         // Get helper functions from global BillingApp object (defined in main.js)
         const helpers = window.BillingApp || {};
+        const config = window.BILLING_APP_CONFIG || {};
+        const API_BASE = config.apiBaseUrl || helpers.apiBaseUrl || helpers.API_BASE || window.location.origin;
+        const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
+
+        const moduleId = "invoice-module"; // ID of the invoice module element
+        const moduleEl = document.getElementById(moduleId); // Reference to module DOM element
+        const form = document.getElementById("invoice-form"); // Reference to invoice form
+
+        // Exit early if required elements are not found
+        if (!moduleEl || !form) return;
+
+        const elements = {
+            module: moduleEl,
+            form,
+            toast: document.getElementById("invoice-toast"),
+            previewToggleBtn: document.getElementById("invoice-preview-toggle"),
+            exitPreviewBtn: document.querySelector("#invoice-preview [data-exit-preview]") || document.getElementById("invoice-exit-preview"),
+            submitBtn: document.getElementById("invoice-submit"),
+            invoiceNumber: document.getElementById("invoice-number"),
+            previewNumber: document.getElementById("invoice-preview-number"),
+            documentNumberInput: document.getElementById("invoice-document-number"),
+            itemsTable: document.getElementById("invoice-items-table"),
+            itemsTableBody: document.querySelector("#invoice-items-table tbody"),
+            itemsPayload: document.getElementById("invoice-items-payload"),
+            previewRows: document.getElementById("invoice-preview-rows"),
+            levyContainer: document.getElementById("invoice-levies"),
+            previewLevyContainer: document.getElementById("invoice-preview-levies"),
+            subtotal: document.getElementById("invoice-subtotal"),
+            previewSubtotal: document.getElementById("invoice-preview-subtotal"),
+            levyTotal: document.getElementById("invoice-levy-total"),
+            previewLevyTotal: document.getElementById("invoice-preview-levy-total"),
+            vat: document.getElementById("invoice-vat"),
+            previewVat: document.getElementById("invoice-preview-vat"),
+            grandTotal: document.getElementById("invoice-grand-total"),
+            previewGrand: document.getElementById("invoice-preview-grand"),
+            previewCustomer: document.getElementById("invoice-preview-customer"),
+            previewClassification: document.getElementById("invoice-preview-classification"),
+            previewDate: document.getElementById("invoice-preview-date"),
+            previewCompanyInfo: document.getElementById("invoice-preview-company-info"),
+            previewClientRef: document.getElementById("invoice-preview-client-ref"),
+            previewIntro: document.getElementById("invoice-preview-intro"),
+            previewNotesList: document.getElementById("invoice-preview-notes"),
+            addItemBtn: document.getElementById("invoice-add-item"),
+        };
+
+        const findField = (name, fallbackId) => {
+            const field = form.elements.namedItem(name);
+            if (field) return field;
+            return fallbackId ? document.getElementById(fallbackId) : null;
+        };
+
+        const inputs = {
+            customer: findField("customer_name", "invoice-customer-name"),
+            classification: findField("classification", "invoice-classification"),
+            issueDate: findField("issue_date", "invoice-issue-date"),
+            companyName: findField("company_name", "invoice-company-name"),
+            companyInfo: findField("company_info", "invoice-company-info"),
+            clientRef: findField("client_ref", "invoice-client-ref"),
+            intro: findField("intro", "invoice-intro"),
+            notes: findField("notes", "invoice-notes"),
+            signatory: findField("signatory", "invoice-signatory"),
+            contact: findField("contact", "invoice-contact"),
+        };
         
         /**
          * Format Currency Helper
@@ -71,124 +134,63 @@
             ? helpers.parseNumber
             : (value) => Number.parseFloat(value || 0) || 0;
 
-        // ============================================
-        // MODULE INITIALIZATION
-        // ============================================
-        
-        const moduleId = "invoice-module"; // ID of the invoice module element
-        const moduleEl = document.getElementById(moduleId); // Reference to module DOM element
-        const form = document.getElementById("invoice-form"); // Reference to invoice form
-        
-        // Exit early if required elements are not found
-        if (!moduleEl || !form) return;
+    // ============================================
+    // MODULE INITIALIZATION
+    // ============================================
 
-        function toggleModulePreview(isPreview) {
-            // Local fallback toggle for preview mode
-            const showPreview = Boolean(isPreview);
-            moduleEl.classList.toggle("is-preview", showPreview);
-            if (showPreview) {
-                form.setAttribute("hidden", "hidden");
-            } else {
-                form.removeAttribute("hidden");
+        async function ensureInvoiceNumberReserved() {
+            if (state.invoiceNumberReserved && state.invoiceNumber) {
+                return state.invoiceNumber;
             }
-            moduleEl.querySelectorAll(".document").forEach((doc) => {
-                if (!doc.classList.contains("document-editable")) {
-                    if (showPreview) {
-                        doc.removeAttribute("hidden");
-                    } else {
-                        doc.setAttribute("hidden", "hidden");
-                    }
-                }
-            });
-            const exitBtn = document.getElementById("invoice-exit-preview");
-            if (exitBtn) {
-                if (showPreview) exitBtn.removeAttribute("hidden");
-                else exitBtn.setAttribute("hidden", "hidden");
+            const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: "POST" });
+            if (!response.ok) {
+                throw new Error(`Failed to reserve invoice number (${response.status})`);
             }
+            const data = await response.json().catch(() => ({}));
+            if (data?.next_number) {
+                setInvoiceNumber(data.next_number, { reserved: true });
+            }
+            return state.invoiceNumber;
         }
 
-        const togglePreview = typeof helpers.togglePreview === "function"
-            ? (moduleIdentifier, isPreview) => helpers.togglePreview(moduleIdentifier, isPreview)
-            : (moduleIdentifier, isPreview) => {
-                if (moduleIdentifier === moduleId) {
-                    toggleModulePreview(isPreview);
-                }
-            };
-        // Function to toggle between edit and preview modes with fallback
+        async function saveInvoice() {
+            const payload = buildPayload();
+            const isUpdate = Boolean(state.invoiceId);
+            const path = isUpdate ? `/invoices/api/${state.invoiceId}/` : `/invoices/api/create/`;
+            const method = isUpdate ? "PUT" : "POST";
+            const result = await callApi(path, {
+                method,
+                body: JSON.stringify(payload),
+            });
+            if (result?.id) {
+                state.invoiceId = result.id;
+            }
+            if (result?.document_number) {
+                setInvoiceNumber(result.document_number, { reserved: true });
+            }
+            return result;
+        }
+        const state = {
+            // Application state object
+            items: [],
+            levies: [],
+            invoiceId: null,
+            invoiceNumber: "INV000",
+            invoiceNumberReserved: false,
+            isSaving: false,
+        };
 
-        const config = window.BILLING_APP_CONFIG || {};
-        // Global config object from window
-        const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
-        // Base URL for API calls
+        const levyValueMap = new Map();
+        // Map to store levy value elements for quick updates
+        const previewLevyValueMap = new Map();
+        // Map for preview levy elements
 
-    const elements = {
-        // Object containing references to key DOM elements
-        itemsPayload: document.getElementById("invoice-items-payload"),
-        itemsTableBody: document.querySelector("#invoice-items-table tbody"),
-        previewRows: document.getElementById("invoice-preview-rows"),
-        subtotal: document.getElementById("invoice-subtotal"),
-        levyTotal: document.getElementById("invoice-levy-total"),
-        vat: document.getElementById("invoice-vat"),
-        grandTotal: document.getElementById("invoice-grand-total"),
-        previewSubtotal: document.getElementById("invoice-preview-subtotal"),
-        previewLevyTotal: document.getElementById("invoice-preview-levy-total"),
-        previewVat: document.getElementById("invoice-preview-vat"),
-        previewGrand: document.getElementById("invoice-preview-grand"),
-        levyContainer: document.getElementById("invoice-levies"),
-        previewLevyContainer: document.getElementById("invoice-preview-levies"),
-        addItemBtn: document.getElementById("invoice-add-item"),
-        previewToggleBtn: document.getElementById("invoice-preview-toggle"),
-        exitPreviewBtn: document.getElementById("invoice-exit-preview"),
-        submitBtn: document.getElementById("invoice-submit"),
-        toast: document.getElementById("invoice-toast"),
-        invoiceNumber: document.getElementById("invoice-number"),
-        previewNumber: document.getElementById("invoice-preview-number"),
-        previewCustomer: document.getElementById("invoice-preview-customer"),
-        previewClassification: document.getElementById("invoice-preview-classification"),
-        previewDate: document.getElementById("invoice-preview-date"),
-        previewCompanyName: document.getElementById("invoice-preview-company-name"),
-        previewCompanyInfo: document.getElementById("invoice-preview-company-info"),
-        previewClientRef: document.getElementById("invoice-preview-client-ref"),
-        previewIntro: document.getElementById("invoice-preview-intro"),
-        previewNotesList: document.getElementById("invoice-preview-notes"),
-        previewSignatory: document.getElementById("invoice-preview-signatory"),
-        previewContact: document.getElementById("invoice-preview-contact"),
-    };
-
-    const inputs = {
-        // Object containing references to form input elements
-        customer: document.getElementById("invoice-customer"),
-        classification: document.getElementById("invoice-classification"),
-        issueDate: document.getElementById("invoice-issue-date"),
-        companyName: document.getElementById("invoice-company-name"),
-        companyInfo: document.getElementById("invoice-company-info"),
-        clientRef: document.getElementById("invoice-client-ref"),
-        intro: document.getElementById("invoice-intro"),
-        notes: document.getElementById("invoice-notes"),
-        signatory: document.getElementById("invoice-signatory"),
-        contact: document.getElementById("invoice-contact"),
-    };
-
-    const state = {
-        // Application state object
-        items: [],
-        levies: [],
-        invoiceId: null,
-        invoiceNumber: "INV-001",
-        isSaving: false,
-    };
-
-    const levyValueMap = new Map();
-    // Map to store levy value elements for quick updates
-    const previewLevyValueMap = new Map();
-    // Map for preview levy elements
-
-    const DEFAULT_TAX_SETTINGS = [
-        { name: "NHIL", rate: 0.025, isVat: false },
-        { name: "GETFund Levy", rate: 0.025, isVat: false },
-        { name: "COVID", rate: 0.01, isVat: false },
-        { name: "VAT", rate: 0.15, isVat: true },
-    ];
+        const DEFAULT_TAX_SETTINGS = [
+            { name: "NHIL", rate: 0.025, isVat: false },
+            { name: "GETFund Levy", rate: 0.025, isVat: false },
+            { name: "COVID", rate: 0.01, isVat: false },
+            { name: "VAT", rate: 0.15, isVat: true },
+        ];
 
     function normalizeTaxSettings(taxSettings) {
         if (!taxSettings || typeof taxSettings !== "object") {
@@ -220,6 +222,7 @@
             classification: inputs.classification?.value || "",
             issue_date: inputs.issueDate?.value || "",
             items_payload: JSON.stringify(state.items),
+            document_number: elements.documentNumberInput?.value || state.invoiceNumber || "",
         };
     }
 
@@ -271,6 +274,24 @@
             item.textContent = line;
             elements.previewNotesList.appendChild(item);
         });
+    }
+
+    function setInvoiceNumber(value, { reserved = false } = {}) {
+        const numberValue = value || state.invoiceNumber || "";
+        if (!numberValue) {
+            return;
+        }
+        state.invoiceNumber = numberValue;
+        state.invoiceNumberReserved = reserved;
+        if (elements.invoiceNumber) {
+            elements.invoiceNumber.textContent = state.invoiceNumber;
+        }
+        if (elements.previewNumber) {
+            elements.previewNumber.textContent = state.invoiceNumber;
+        }
+        if (elements.documentNumberInput) {
+            elements.documentNumberInput.value = state.invoiceNumber;
+        }
     }
 
     function renderLevyPlaceholders() {
@@ -401,7 +422,10 @@
         elements.previewCustomer && (elements.previewCustomer.textContent = inputs.customer?.value || "—");
         elements.previewClassification && (elements.previewClassification.textContent = inputs.classification?.value || "—");
         elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
-        elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+        const currentNumber = state.invoiceNumber || elements.invoiceNumber?.textContent || "—";
+        if (elements.previewNumber) {
+            elements.previewNumber.textContent = currentNumber;
+        }
         elements.previewCompanyInfo && (elements.previewCompanyInfo.textContent = valueOrPlaceholder(inputs.companyInfo, "Creative Designs | Logo Creation | Branding | Printing"));
         elements.previewClientRef && (elements.previewClientRef.textContent = valueOrPlaceholder(inputs.clientRef, ""));
         elements.previewIntro && (elements.previewIntro.textContent = valueOrPlaceholder(inputs.intro, "Please find below for your appraisal and detailed pro-forma invoice."));
@@ -484,92 +508,64 @@
         await calculateServerTotals();
     }
 
+    function buildPdfPayload(docType, previewEl) {
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+        clone.classList.add("pdf-export");
+        clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
+        clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
+        return {
+            document_type: docType,
+            html: clone.outerHTML,
+            filename: `${state.invoiceNumber || "invoice"}.pdf`,
+        };
+    }
+
     async function downloadInvoicePdf() {
-        if (
-            typeof window.jspdf === "undefined" ||
-            typeof window.jspdf.jsPDF === "undefined" ||
-            typeof window.html2canvas !== "function"
-        ) {
-            showToast("PDF generator not available", "error");
-            return;
-        }
-        
-        await preparePreviewSnapshot();
-        
-        const previewEl = document.getElementById("invoice-preview");
-        if (!previewEl) {
-            showToast("Preview element not found", "error");
-            return;
-        }
-
-        // Create a wrapper for PDF export with exact preview styling
-        const exportWrapper = document.createElement("div");
-        exportWrapper.className = "module is-preview pdf-export-wrapper";
-        exportWrapper.setAttribute("aria-hidden", "true");
-        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
-        
-    const clone = previewEl.cloneNode(true);
-    clone.removeAttribute("hidden");
-    clone.setAttribute("data-pdf-clone", "true");
-        
-        // The preview element itself is the document
-        exportWrapper.appendChild(clone);
-        document.body.appendChild(exportWrapper);
-
-        let filename = state.invoiceNumber || "invoice";
-        if (!filename.toLowerCase().endsWith(".pdf")) {
-            filename = `${filename}.pdf`;
-        }
-
         try {
-            showToast("Generating PDF...", "info");
+            await preparePreviewSnapshot();
 
-            const A4_PX_WIDTH = 794; // 210mm at ~96 DPI
-            const A4_PX_HEIGHT = 1122; // 297mm at ~96 DPI
-            clone.style.width = A4_PX_WIDTH + "px";
-            clone.style.maxWidth = A4_PX_WIDTH + "px";
-
-            const canvas = await window.html2canvas(clone, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: "#ffffff",
-                logging: false,
-                width: A4_PX_WIDTH,
-                height: Math.max(A4_PX_HEIGHT, clone.scrollHeight),
-            });
-
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
-                compress: true,
-            });
-
-            const imgData = canvas.toDataURL("image/png");
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            let renderWidth = pdfWidth;
-            let renderHeight = (canvas.height * renderWidth) / canvas.width;
-
-            if (renderHeight > pdfHeight) {
-                const ratio = pdfHeight / renderHeight;
-                renderHeight = pdfHeight;
-                renderWidth = renderWidth * ratio;
+            const previewEl = document.getElementById("invoice-preview");
+            if (!previewEl) {
+                throw new Error("Preview element not found");
             }
 
-            const offsetX = (pdfWidth - renderWidth) / 2;
-            const offsetY = (pdfHeight - renderHeight) / 2;
+            const payload = buildPdfPayload("invoice", previewEl);
+            
+            console.log("Sending PDF request to:", `${API_BASE}/api/pdf/render/`);
+            console.log("Payload size:", JSON.stringify(payload).length, "bytes");
 
-            pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
-            pdf.save(filename);
-            showToast("PDF downloaded successfully!");
+            const response = await fetch(`${API_BASE}/api/pdf/render/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/pdf",
+                },
+                body: JSON.stringify(payload),
+            }).catch(err => {
+                console.error("Fetch failed:", err);
+                throw new Error(`Network error: ${err.message}. Make sure Django server is running on ${API_BASE}`);
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("PDF render error response:", errorText);
+                throw new Error(`Failed to generate PDF: ${response.status} ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = payload.filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("PDF generation error:", error);
-            showToast("Failed to generate PDF: " + error.message, "error");
-        } finally {
-            document.body.removeChild(exportWrapper);
+            console.error("Download PDF error:", error);
+            throw error;
         }
     }
 
@@ -580,9 +576,14 @@
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
+            syncPreviewFromForm();
+            await ensureInvoiceNumberReserved();
+            await saveInvoice();
             await downloadInvoicePdf();
-            // Increment the counter after successful PDF download
-            await incrementInvoiceNumber();
+            showToast("Invoice saved and downloaded successfully!");
+        } catch (error) {
+            console.error("Failed to save invoice", error);
+            showToast(error.message || "Failed to save invoice", "error");
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
@@ -622,9 +623,7 @@
         try {
             const data = await callApi(`/invoices/api/${id}/`);
             state.invoiceId = data.id;
-            state.invoiceNumber = data.invoice_number || state.invoiceNumber;
-            elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
-            elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+            setInvoiceNumber(data.document_number || data.invoice_number || state.invoiceNumber, { reserved: true });
             if (inputs.customer) inputs.customer.value = data.customer_name || "";
             if (inputs.classification) inputs.classification.value = data.classification || "";
             if (inputs.issueDate && data.issue_date) inputs.issueDate.value = data.issue_date;
@@ -716,31 +715,17 @@
 
     async function loadNextInvoiceNumber() {
         // Load the next invoice number from the counter API
+        if (state.invoiceNumberReserved || state.invoiceId) {
+            return;
+        }
         try {
             const response = await fetch(`${API_BASE}/api/counter/invoice/next/`);
             if (response.ok) {
                 const data = await response.json();
-                state.invoiceNumber = data.next_number;
-                elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
-                elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+                setInvoiceNumber(data.next_number || state.invoiceNumber, { reserved: false });
             }
         } catch (error) {
             console.warn("Failed to load next invoice number", error);
-        }
-    }
-
-    async function incrementInvoiceNumber() {
-        // Increment the invoice number counter after successful PDF download
-        try {
-            const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: "POST" });
-            if (response.ok) {
-                const data = await response.json();
-                state.invoiceNumber = data.next_number;
-                elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
-                elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
-            }
-        } catch (error) {
-            console.warn("Failed to increment invoice number", error);
         }
     }
 

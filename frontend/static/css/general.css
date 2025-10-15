@@ -18,6 +18,11 @@
     --primary: #eab308;
 }
 
+@page {
+    size: 210mm 297mm;
+    margin: 0;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -238,7 +243,7 @@ textarea {
 .is-preview .document-items td,
 .pdf-export-wrapper .document-items th,
 .pdf-export-wrapper .document-items td {
-    border: 2px solid #000000;
+    border: 1px solid rgba(16,24,40,0.12);
     font-weight: 600;
     text-align: center;
     padding: 0.4rem 0.5rem;
@@ -386,27 +391,30 @@ textarea {
     margin-top: 0.5rem;
 }
 
-/* EDIT MODE: A3 size (297mm × 420mm) - Large and readable */
+/* Unified A4 canvas (210mm × 297mm) for every state */
+
 .document {
-    width: 297mm;
-    min-height: 420mm;
+    width: 210mm;
+    min-height: 297mm;
     margin: 0 auto;
     background: #ffffff;
-    padding: 15mm 20mm;
+    padding: 12mm 18mm;
     box-sizing: border-box;
-    font-size: 1.1rem;
-    /* No borders, no shadows - pure white canvas like MS Word */
+    font-size: 1rem;
 }
 
-/* PREVIEW MODE: A4 size (210mm × 297mm) - Print ready */
-.is-preview .document,
+.is-preview .document {
+    overflow: auto;
+}
+
 .pdf-export-wrapper .document {
     width: 210mm;
-    height: 297mm;
-    max-height: 297mm;
-    padding: 8mm 10mm;
-    overflow: auto;
-    font-size: 0.9rem;
+    min-height: 297mm;
+    padding: 12mm 18mm;
+    box-shadow: none;
+    border: none;
+    margin: 0;
+    font-size: 1rem;
 }
 
 .is-preview .document h3,
@@ -425,7 +433,7 @@ textarea {
 
 .is-preview .document p,
 .pdf-export-wrapper .document p {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     margin-bottom: 0.3rem;
 }
 
@@ -601,6 +609,14 @@ textarea {
     display: none;
 }
 
+.module.is-preview .document:not(.document-editable) {
+    display: block;
+}
+
+.module:not(.is-preview) .document:not(.document-editable) {
+    display: none;
+}
+
 /* In preview, hide only the Preview toggle; keep Back to Edit and Download visible */
 .module.is-preview .module-actions [id$="-preview-toggle"] {
     display: none;
@@ -682,6 +698,14 @@ input:disabled, textarea:disabled, select:disabled {
     transform: none;
     box-shadow: none;
 }
+.app-footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+    border-top: 1px solid rgba(0,0,0,0.05);
+    margin-top: 3rem;
+}
 
 /* ============================================
    PDF EXPORT OPTIMIZATIONS
@@ -690,27 +714,27 @@ input:disabled, textarea:disabled, select:disabled {
    ============================================ */
 
 .pdf-export-wrapper {
-    background: white;
+    background: #ffffff;
     width: 210mm !important;
 }
 
 .pdf-export-wrapper .document {
     width: 210mm !important;
     height: 297mm !important;
+    min-height: 297mm !important;
     max-height: 297mm !important;
-    padding: 8mm 10mm !important;
+    padding: 12mm 18mm 10px !important;
     margin: 0 !important;
-    background: white !important;
+    background: #ffffff !important;
     box-shadow: none !important;
     border: none !important;
     overflow: visible !important;
 }
 
-/* Ensure all text is crisp and black in PDF */
+/* Ensure all text is crisp and colors preserved in PDF */
 .pdf-export-wrapper .document * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    color-adjust: exact !important;
 }
 
 /* Preserve backgrounds in PDF */

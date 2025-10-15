@@ -7,6 +7,7 @@ from .models import Waybill
 
 class WaybillForm(forms.ModelForm):
     items_payload = forms.CharField(widget=forms.HiddenInput(), required=False)
+    document_number = forms.CharField(widget=forms.HiddenInput(), required=False)
 
     class Meta:
         model = Waybill
@@ -16,6 +17,7 @@ class WaybillForm(forms.ModelForm):
             "destination",
             "driver_name",
             "receiver_name",
+            "document_number",
         ]
         widgets = {
             "issue_date": forms.DateInput(attrs={"type": "date"}),
@@ -25,10 +27,14 @@ class WaybillForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields["items_payload"].initial = json.dumps(self.instance.items or [])
+            self.fields["document_number"].initial = self.instance.document_number
 
     def save(self, commit=True):
         instance: Waybill = super().save(commit=False)
         instance.items = self._parse_items(self.cleaned_data.get("items_payload") or "[]")
+        document_number = self.cleaned_data.get("document_number")
+        if document_number:
+            instance.document_number = document_number
         if commit:
             instance.save()
         return instance
