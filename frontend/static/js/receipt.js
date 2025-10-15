@@ -1,30 +1,76 @@
+/* ============================================
+   RECEIPT MODULE - MAIN JAVASCRIPT
+   ============================================
+   This file handles all receipt functionality including:
+   - Line item management (add, edit, remove)
+   - Amount calculations (total, balance)
+   - Preview mode toggling
+   - Form validation and submission
+   - PDF/JPEG export functionality
+   - API integration for saving receipts
+   ============================================ */
+
+// IIFE (Immediately Invoked Function Expression) to encapsulate module logic
+// This prevents polluting the global namespace
 (function () {
-    // IIFE for receipt module
+    // ============================================
+    // GLOBAL HELPERS AND CONFIGURATION
+    // ============================================
+    
+    // Import helper functions from global BillingApp object (defined in main.js)
     const helpers = window.BillingApp || {};
-    // Get global helpers
+    
+    /**
+     * Preview Toggle Helper
+     * Switches between edit and preview modes
+     * @type {Function}
+     */
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
-    // Fallback for togglePreview
+    
+    /**
+     * Download Format Chooser
+     * Shows dialog to select PDF or JPEG format
+     * @type {Function}
+     * @returns {Promise<string|null>} - Returns "pdf", "jpeg", or null if cancelled
+     */
     const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
-    // Fallback for format chooser
+    
+    /**
+     * Currency Formatter
+     * Formats numbers to currency strings (e.g., 1234.5 -> "1234.50")
+     * @type {Function}
+     * @param {number} value - Number to format
+     * @returns {string} Formatted currency string
+     */
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
-    // Fallback for formatCurrency
 
+    // ============================================
+    // MODULE INITIALIZATION
+    // ============================================
+    
+    /**
+     * Module Identification
+     * Used to identify this specific module in the DOM
+     */
     const moduleId = "receipt-module";
-    // Module ID
     const moduleEl = document.getElementById(moduleId);
-    // Module element
     const form = document.getElementById("receipt-form");
-    // Form element
+    
+    // Exit early if required elements are not found
     if (!moduleEl || !form) return;
-    // Exit if elements not found
 
+    /**
+     * API Configuration
+     * Base URL for backend API calls
+     */
     const config = window.BILLING_APP_CONFIG || {};
-    // Global config
     const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
-    // API base URL
 
+    /**
+     * DOM Element References
+     * Cached references to frequently accessed DOM elements
+     */
     const elements = {
-        // DOM elements object
         previewToggleBtn: document.getElementById("receipt-preview-toggle"),
         exitPreviewBtn: document.getElementById("receipt-exit-preview"),
         submitBtn: document.getElementById("receipt-submit"),
@@ -44,8 +90,11 @@
         previewBalanceEls: document.querySelectorAll(".js-receipt-preview-balance"),
     };
 
+    /**
+     * Form Input References
+     * References to form input fields
+     */
     const inputs = {
-        // Input elements object
         receivedFrom: document.getElementById("receipt-received-from"),
         customerName: document.getElementById("receipt-customer-name"),
         approvedBy: document.getElementById("receipt-approved-by"),
@@ -54,37 +103,67 @@
         paymentMethod: document.getElementById("receipt-payment-method"),
     };
 
+    /**
+     * Display Element References
+     * Elements that display calculated values
+     */
     const displays = {
         totalDisplay: document.getElementById("receipt-total-display"),
         balanceDisplay: document.getElementById("receipt-balance-display"),
     };
 
+    /**
+     * Application State
+     * Central state management for receipt module
+     */
     const state = {
-        // State object
-        receiptId: null,
-        receiptNumber: "REC-NEW",
-        receiptNumberReserved: false,
-        isSaving: false,
-        items: [],
+        receiptId: null,                    // Database ID of current receipt (null for new)
+        receiptNumber: "REC-NEW",           // Current receipt number
+        receiptNumberReserved: false,       // Whether number has been reserved in counter
+        isSaving: false,                    // Flag to prevent duplicate save operations
+        items: [],                          // Array of receipt line items
     };
 
+    // ============================================
+    // HELPER FUNCTIONS AND UTILITIES
+    // ============================================
+
+    /**
+     * Set Receipt Number
+     * Updates the receipt number in state and UI
+     * @param {string} value - The receipt number to set
+     * @param {Object} options - Configuration options
+     * @param {boolean} options.reserved - Whether the number has been reserved in counter
+     */
     function setReceiptNumber(value, { reserved = false } = {}) {
         if (!value) {
             return;
         }
         state.receiptNumber = value;
         state.receiptNumberReserved = reserved;
+        
+        // Update edit mode display
         if (elements.number) {
             elements.number.textContent = state.receiptNumber;
         }
+        
+        // Update preview mode display
         setText(elements.previewNumberEls, state.receiptNumber);
     }
 
+    /**
+     * Ensure Receipt Number is Reserved
+     * Reserves a receipt number from the counter API if not already reserved
+     * @returns {Promise<Object>} Object with number, reserved flag, and optional error
+     */
     async function ensureReceiptNumberReserved() {
+        // Return early if already reserved
         if (state.receiptNumberReserved && state.receiptNumber) {
             return { number: state.receiptNumber, reserved: true };
         }
+        
         try {
+            // Call API to reserve the next receipt number
             const response = await fetch(`${API_BASE}/api/counter/receipt/next/`, { method: "POST" });
             if (!response.ok) {
                 throw new Error(`Failed to reserve receipt number (${response.status})`);
@@ -104,17 +183,34 @@
         }
     }
 
+    /**
+     * Set Text Content Helper
+     * Sets text content for single element or NodeList
+     * @param {HTMLElement|NodeList} target - Element or list of elements
+     * @param {string} text - Text content to set
+     */
     function setText(target, text) {
         if (!target) return;
+        
+        // Handle NodeList or HTMLCollection
         if (typeof target.length === "number" && !target.nodeType) {
             Array.from(target).forEach((node) => {
                 if (node) node.textContent = text;
             });
             return;
         }
+        
+        // Handle single element
         target.textContent = text;
     }
 
+    /**
+     * Value or Placeholder Helper
+     * Returns field value or placeholder if empty
+     * @param {HTMLInputElement} field - Input field element
+     * @param {string} fallback - Default value if no value or placeholder
+     * @returns {string} Field value, placeholder, or fallback
+     */
     function valueOrPlaceholder(field, fallback = "—") {
         if (!field) return fallback;
         const value = (field.value || "").trim();
@@ -123,6 +219,12 @@
         return fallback;
     }
 
+    /**
+     * Format Date for Display
+     * Converts date string to human-readable format (e.g., "15 October 2025")
+     * @param {string} value - Date string (ISO format or other parseable format)
+     * @returns {string} Formatted date string or fallback
+     */
     function formatDisplayDate(value) {
         if (!value) return "—";
         const date = new Date(value);
@@ -134,20 +236,35 @@
         }).format(date);
     }
 
+    /**
+     * Show Toast Notification
+     * Displays a temporary notification message
+     * @param {string} message - Message to display
+     * @param {string} tone - Tone/style of toast ("success", "error", "warning")
+     */
     function showToast(message, tone = "success") {
-        // Function to show toast
         const el = elements.toast;
         if (!el) return;
+        
         el.textContent = message;
         el.className = `module-toast is-${tone}`;
         el.hidden = false;
+        
+        // Auto-hide after 4 seconds
         setTimeout(() => {
             el.hidden = true;
         }, 4000);
     }
 
+    /**
+     * API Call Helper
+     * Makes HTTP requests to backend API with error handling
+     * @param {string} path - API endpoint path
+     * @param {Object} options - Fetch options (method, headers, body, etc.)
+     * @returns {Promise<Object|null>} Parsed JSON response or null for 204
+     * @throws {Error} On HTTP error status
+     */
     async function callApi(path, options = {}) {
-        // API call function
         const url = `${API_BASE}${path}`;
         const response = await fetch(url, {
             headers: {
@@ -156,22 +273,32 @@
             },
             ...options,
         });
+        
+        // Handle error responses
         if (!response.ok) {
             let detail = await response.json().catch(() => ({}));
             const message = detail.errors ? JSON.stringify(detail.errors) : `${response.status} ${response.statusText}`;
             throw new Error(message);
         }
+        
+        // Handle no-content responses
         if (response.status === 204) return null;
+        
         return response.json();
     }
 
+    /**
+     * Calculate Totals
+     * Computes total amount, amount paid, and balance from items
+     * @returns {Object} Object with total, amountPaid, and balance properties
+     */
     function calculateTotals() {
-        // Calculate total amount from items
+        // Sum all item totals
         const total = state.items.reduce((sum, item) => sum + (item.total || 0), 0);
         const amountPaid = Number(inputs.amountPaid?.value) || 0;
         const balance = total - amountPaid;
         
-        // Update displays
+        // Update display elements
         if (displays.totalDisplay) {
             displays.totalDisplay.textContent = `GH₵ ${formatCurrency(total)}`;
         }
@@ -182,20 +309,28 @@
         return { total, amountPaid, balance };
     }
 
+    // ============================================
+    // RENDERING FUNCTIONS
+    // ============================================
+
+    /**
+     * Render Items in Edit Mode
+     * Creates table rows for all items in edit mode
+     * Always renders exactly 10 rows for consistent layout
+     */
     function renderItems() {
-        // Render items in the table - always show 10 rows
         const tbody = elements.itemsTable?.querySelector("tbody");
         if (!tbody) return;
         
         tbody.innerHTML = "";
         
-        // Render up to 10 rows
+        // Render exactly 10 rows for consistent spacing
         for (let index = 0; index < 10; index++) {
             const item = state.items[index] || {};
             const row = document.createElement("tr");
             
             if (index < state.items.length) {
-                // Row with data and inputs
+                // Row with data and editable inputs
                 row.innerHTML = `
                     <td><input type="text" value="${item.description || ""}" data-index="${index}" data-field="description" placeholder="Item description"></td>
                     <td><input type="number" value="${item.quantity || 0}" data-index="${index}" data-field="quantity" min="0" step="1"></td>
@@ -217,23 +352,28 @@
             tbody.appendChild(row);
         }
         
+        // Update totals and preview after rendering
         calculateTotals();
         renderPreviewItems();
     }
 
+    /**
+     * Render Items in Preview Mode
+     * Creates read-only table rows for preview display
+     * Always renders exactly 10 rows for consistent layout
+     */
     function renderPreviewItems() {
-        // Render items in preview mode - always show 10 rows
         if (!elements.previewRows) return;
         
         elements.previewRows.innerHTML = "";
         
-        // Render up to 10 rows
+        // Render exactly 10 rows for consistent spacing
         for (let index = 0; index < 10; index++) {
             const item = state.items[index];
             const row = document.createElement("tr");
             
             if (item) {
-                // Row with actual data
+                // Row with actual data (read-only)
                 row.innerHTML = `
                     <td>${item.description || "—"}</td>
                     <td>${item.quantity || 0}</td>
@@ -254,30 +394,47 @@
         }
     }
 
+    /**
+     * Sync Preview with Form Data
+     * Updates all preview elements to match current form values
+     * Called before showing preview or generating PDF
+     */
     function syncPreview() {
-        // Sync preview with form data
+        // Update receipt number
         setText(elements.previewNumberEls, state.receiptNumber);
+        
+        // Update date with formatted display
         const prettyDate = formatDisplayDate(inputs.issueDate?.value || "");
         setText(elements.previewDateEls, prettyDate);
+        
+        // Update receipt metadata fields
         setText(elements.previewReceivedFromEls, inputs.receivedFrom?.value || "—");
         setText(elements.previewCustomerNameEls, inputs.customerName?.value || "—");
         setText(elements.previewApprovedByEls, inputs.approvedBy?.value || "—");
         
+        // Update payment information
         const amountPaid = Number(inputs.amountPaid?.value) || 0;
         const paymentMethod = inputs.paymentMethod?.value || "—";
         setText(elements.previewAmountEls, `GH₵ ${formatCurrency(amountPaid)}`);
         setText(elements.previewPaymentMethodEls, paymentMethod);
         
+        // Update calculated totals
         const totals = calculateTotals();
         setText(elements.previewTotalAmountEls, `GH₵ ${formatCurrency(totals.total)}`);
         setText(elements.previewBalanceEls, `GH₵ ${formatCurrency(totals.balance)}`);
         
+        // Re-render preview items
         renderPreviewItems();
     }
 
+    /**
+     * Handle Preview Toggle
+     * Switches from edit mode to preview mode
+     */
     async function handlePreview() {
-        // Handle preview toggle
+        // Sync preview with latest data
         syncPreview();
+        // Switch to preview mode
         togglePreview(moduleId, true);
     }
 
