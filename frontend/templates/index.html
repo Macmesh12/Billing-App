@@ -1,63 +1,111 @@
+<!--
+============================================
+DASHBOARD PAGE - BILLING APP
+============================================
+This is the homepage/dashboard template that extends base.html.
+It provides an overview of the billing application with:
+
+KEY FEATURES:
+- Document counters: Shows total count of invoices, receipts, and waybills
+- Quick actions: Direct links to document editors
+- Animated counter display on page load
+
+STRUCTURE:
+- Dashboard Hero: Title and description
+- Document Counters: Display total counts for each document type
+- Quick Actions: Links to create new documents
+
+DEPENDENCIES:
+- base.html: Base template with header, footer, and common elements
+- home.css: Dashboard-specific styles
+- home.js: Counter animation and data loading logic
+============================================
+-->
 {% extends 'base.html' %}
 {% load static %}
 
 {% block title %}Dashboard | Billing App{% endblock %}
 
 {% block extra_css %}
-{# Use Django static helper so STATIC_URL and storage backends are respected. Previously this linked to /frontend/static/... which bypasses Django's static resolving and will fail in many deployments. #}
+{# Use Django static helper so STATIC_URL and storage backends are respected. 
+   Previously this linked to /frontend/static/... which bypasses Django's static 
+   resolving and will fail in many deployments. #}
 <link rel="stylesheet" href="{% static 'css/home.css' %}">
 {% endblock %}
 
 {% block content %}
+<!-- ============================================
+     DASHBOARD HERO - Welcome Section
+     ============================================ -->
 <section class="dashboard-hero">
     <h2>Track invoices, receipts, and logistics from one workspace.</h2>
     <p>View document counts and access editors below.</p>
 </section>
 
-<!-- Document Counters Section -->
+<!-- ============================================
+     DOCUMENT COUNTERS - Statistics Display
+     ============================================
+     Shows the total number of each document type.
+     Counts are loaded dynamically via JavaScript
+     from the backend API.
+     ============================================ -->
 <section class="dashboard-counters" aria-label="Document counters">
+    <!-- Invoice counter card -->
     <article class="counter-card">
         <span class="counter-value" id="invoices-count">0</span>
         <span class="counter-label">Invoices</span>
     </article>
     
+    <!-- Receipt counter card -->
     <article class="counter-card">
         <span class="counter-value" id="receipts-count">0</span>
         <span class="counter-label">Receipts</span>
     </article>
     
+    <!-- Waybill counter card -->
     <article class="counter-card">
         <span class="counter-value" id="waybills-count">0</span>
         <span class="counter-label">Waybills</span>
     </article>
 </section>
 
-<!-- Quick Actions Section -->
+<!-- ============================================
+     QUICK ACTIONS - Document Creation Links
+     ============================================
+     Provides quick access buttons to open editors
+     for creating new documents
+     ============================================ -->
 <section class="dashboard-actions" aria-label="Quick actions">
+    <!-- Invoice action card -->
     <article class="action-card">
         <span class="action-label">Invoice</span>
         <a class="button" href="{% url 'invoice-form' %}">
             Open Editor
+            <!-- Arrow icon -->
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
         </a>
     </article>
 
+    <!-- Receipt action card -->
     <article class="action-card">
         <span class="action-label">Receipt</span>
         <a class="button" href="{% url 'receipt-form' %}">
             Open Editor
+            <!-- Arrow icon -->
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
         </a>
     </article>
 
+    <!-- Waybill action card -->
     <article class="action-card">
         <span class="action-label">Waybill</span>
         <a class="button" href="{% url 'waybill-form' %}">
             Open Editor
+            <!-- Arrow icon -->
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
