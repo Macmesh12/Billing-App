@@ -1,7 +1,35 @@
-"""Counter service for coordinating document numbers.
+"""
+Counter service for coordinating document numbers.
 
-The store prefers Firestore so numbers stay in sync across installs.
-If Firestore is unavailable, we fall back to the local Django model.
+This module provides a centralized counter system for generating sequential
+document numbers (invoices, receipts, waybills). It supports two backends:
+
+1. FIRESTORE (PREFERRED): Cloud-based counter using Google Cloud Firestore
+   - Numbers stay in sync across multiple installations
+   - Atomic transactions prevent number collisions
+   - Requires google-cloud-firestore and Firebase credentials
+
+2. DJANGO MODEL (FALLBACK): Local database counter
+   - Works without external dependencies
+   - Single-installation only (numbers not shared)
+   - Uses Django's select_for_update for atomicity
+
+CONFIGURATION:
+Set these in Django settings to enable Firestore:
+- FIREBASE_PROJECT_ID: Your Firebase project ID
+- FIREBASE_COUNTER_COLLECTION: Collection name (default: "documentCounters")
+- FIREBASE_COUNTER_DOCUMENT: Document name (default: "global")
+- FIREBASE_COUNTER_PAD: Number padding width (default: 3)
+
+The system automatically falls back to Django model if:
+- Firestore SDK is not installed
+- Firebase credentials are not configured
+- Firestore connection fails
+
+NUMBER FORMAT:
+- Invoice: INV-00001, INV-00002, ...
+- Receipt: REC-00001, REC-00002, ...
+- Waybill: WAY-00001, WAY-00002, ...
 """
 from __future__ import annotations
 
