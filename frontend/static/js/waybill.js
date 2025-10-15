@@ -1,15 +1,49 @@
+/* ============================================
+   WAYBILL MODULE - MAIN JAVASCRIPT
+   ============================================
+   This file handles all waybill functionality including:
+   - Line item management (add, edit, remove)
+   - Delivery and receiver information
+   - Preview mode toggling
+   - Form validation
+   - PDF and JPEG export functionality
+   - API integration for document numbering
+   
+   EDIT MODE:
+   - Users fill out form with line items, delivery info
+   - Line items table with dynamic add/remove
+   - "Preview" button switches to preview mode
+   
+   PREVIEW MODE:
+   - Read-only view matching final document output
+   - "Download" button triggers format selection
+   - "Back to Edit" returns to edit mode
+   
+   PDF/JPEG DOWNLOAD PROCESS:
+   1. User clicks "Download" button
+   2. chooseDownloadFormat() shows modal dialog
+   3. User selects PDF or JPEG format
+   4. syncPreview() updates preview with form data
+   5. buildWaybillPayload() clones preview HTML
+   6. Payload sent to /api/pdf/render/ endpoint
+   7. Backend generates PDF (or JPEG from PDF)
+   8. Browser downloads file
+   ============================================ */
+
+// IIFE (Immediately Invoked Function Expression) to encapsulate module logic
 (function () {
-    // IIFE for waybill module
+    // ============================================
+    // DEPENDENCIES AND GLOBAL REFERENCES
+    // ============================================
+    
+    // Get helper functions from global BillingApp object (defined in main.js)
     const helpers = window.BillingApp || {};
-    // Get global helpers
+    
+    // Extract helper functions with fallbacks
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
-    // Fallback for togglePreview
     const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
-    // Format chooser fallback
     const parseNumber = typeof helpers.parseNumber === "function" ? helpers.parseNumber : (value) => Number.parseFloat(value || 0) || 0;
-    // Fallback for parseNumber
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
-    // Fallback for formatCurrency
     const formatQuantity = typeof helpers.formatQuantity === "function"
         ? helpers.formatQuantity
         : (value) => {
@@ -234,22 +268,53 @@
         togglePreview(moduleId, true);
     }
 
+    /**
+     * Build payload for PDF/JPEG generation from preview HTML
+     * 
+     * This function prepares the waybill preview HTML for server-side
+     * rendering into PDF or JPEG format.
+     * 
+     * PROCESS:
+     * 1. Clone preview DOM to avoid modifying visible preview
+     * 2. Remove interactive elements (exit buttons, etc.)
+     * 3. Wrap in .pdf-export-wrapper for proper styling
+     * 4. Generate safe filename from waybill number
+     * 5. Return payload object for API submission
+     * 
+     * The backend will:
+     * - Parse the HTML string
+     * - Apply CSS styles (general.css + waybill.css)
+     * - Use WeasyPrint to render PDF at A4 size
+     * - If JPEG: convert first page of PDF to image
+     * - Return binary file for download
+     * 
+     * @param {HTMLElement} previewEl - Preview document element to clone
+     * @param {string} format - Desired format ("pdf" or "jpeg")
+     * @returns {Object} Payload object with document_type, html, filename, format
+     */
     function buildWaybillPayload(previewEl, format) {
+        // Clone preview element to avoid modifying original
         const clone = previewEl.cloneNode(true);
         clone.removeAttribute("hidden");
         clone.setAttribute("data-pdf-clone", "true");
         clone.classList.add("pdf-export");
+        
+        // Remove interactive elements that shouldn't appear in PDF/JPEG
         clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
         clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
 
+        // Wrap in pdf-export-wrapper div for proper A4 sizing
+        // This wrapper gets special CSS treatment for print layout
         const wrapper = document.createElement("div");
         wrapper.className = "pdf-export-wrapper";
         wrapper.appendChild(clone);
 
+        // Normalize format and generate safe filename
         const normalizedFormat = format === "jpeg" ? "jpeg" : "pdf";
         const safeBase = String(state.waybillNumber || "waybill").trim().replace(/\s+/g, "_");
         const extension = normalizedFormat === "jpeg" ? "jpg" : "pdf";
 
+        // Return payload for API submission
         return {
             document_type: "waybill",
             html: wrapper.outerHTML,
@@ -258,22 +323,50 @@
         };
     }
 
+    /**
+     * Download waybill as PDF or JPEG file
+     * 
+     * This function handles the complete download workflow:
+     * 1. Sync preview with latest form data
+     * 2. Build HTML payload from preview
+     * 3. Send to backend API for rendering
+     * 4. Download resulting file
+     * 
+     * BACKEND RENDERING:
+     * The backend /api/pdf/render/ endpoint:
+     * - Receives HTML + format specification
+     * - Applies CSS stylesheets (general.css + waybill.css)
+     * - Uses WeasyPrint to render HTML to PDF
+     * - For JPEG: Converts PDF to image using Pillow/ImageMagick
+     * - Returns binary file with appropriate Content-Type
+     * 
+     * PDF FORMAT: application/pdf, best for printing
+     * JPEG FORMAT: image/jpeg, best for sharing digitally
+     * 
+     * @param {string} format - Desired format ("pdf" or "jpeg")
+     * @throws {Error} If preview element not found, network fails, or server errors
+     */
     async function downloadWaybillDocument(format) {
         try {
+            // Ensure preview is up-to-date with form data
             syncPreview();
 
+            // Get preview element to clone
             const previewEl = document.getElementById("waybill-preview");
             if (!previewEl) {
                 throw new Error("Preview element not found");
             }
 
+            // Build payload for backend
             const payload = buildWaybillPayload(previewEl, format);
             const normalizedFormat = payload.format === "jpeg" ? "jpeg" : "pdf";
 
+            // Log debug info for troubleshooting
             console.log("Sending render request to:", `${API_BASE}/api/pdf/render/`);
             console.log("Requested format:", normalizedFormat);
             console.log("Payload size:", JSON.stringify(payload).length, "bytes");
 
+            // Send render request to backend
             const response = await fetch(`${API_BASE}/api/pdf/render/`, {
                 method: "POST",
                 headers: {
@@ -286,12 +379,15 @@
                 throw new Error(`Network error: ${err.message}. Make sure Django server is running on ${API_BASE}`);
             });
 
+            // Check for server errors
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error("Render error response:", errorText);
                 throw new Error(`Failed to generate document: ${response.status} ${response.statusText}`);
             }
 
+            // Download file using blob URL technique
+            // This works for both PDF and JPEG formats
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
@@ -300,33 +396,57 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            URL.revokeObjectURL(url); // Clean up blob URL
         } catch (error) {
             console.error("Download document error:", error);
             throw error;
         }
     }
 
+    /**
+     * Handle "Download" button click
+     * 
+     * This is the main entry point for the download workflow.
+     * 
+     * WORKFLOW:
+     * 1. Show format selection dialog (PDF or JPEG)
+     * 2. Download waybill in chosen format
+     * 3. Show success/error message
+     * 
+     * DOWNLOAD vs SAVE:
+     * Note: Despite the function name, this actually downloads
+     * the document rather than saving to database. Waybills are
+     * ephemeral documents for delivery tracking.
+     * 
+     * @async
+     */
     async function handleSave() {
-        // Handle document download
+        // Prevent multiple simultaneous downloads
         if (state.isSaving) return;
 
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
+            // Step 1: Show format selection dialog
             const chosenFormat = await chooseDownloadFormat();
             if (!chosenFormat) {
+                // User cancelled, abort download
                 return;
             }
+            
+            // Step 2: Download waybill in chosen format
             const normalizedFormat = chosenFormat === "jpeg" ? "jpeg" : "pdf";
             await downloadWaybillDocument(normalizedFormat);
+            
+            // Step 3: Show success message
             const label = normalizedFormat === "jpeg" ? "JPEG" : "PDF";
             showToast(`Waybill downloaded as ${label}!`);
         } catch (error) {
             console.error("Failed to download waybill", error);
             showToast(error.message || "Failed to download waybill", "error");
         } finally {
+            // Re-enable download button
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
         }
