@@ -39,6 +39,7 @@
         const config = window.BILLING_APP_CONFIG || {};
         const API_BASE = config.apiBaseUrl || helpers.apiBaseUrl || helpers.API_BASE || window.location.origin;
         const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
+    const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
 
         const moduleId = "invoice-module"; // ID of the invoice module element
         const moduleEl = document.getElementById(moduleId); // Reference to module DOM element
@@ -140,17 +141,26 @@
 
         async function ensureInvoiceNumberReserved() {
             if (state.invoiceNumberReserved && state.invoiceNumber) {
-                return state.invoiceNumber;
+                return { number: state.invoiceNumber, reserved: true };
             }
-            const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: "POST" });
-            if (!response.ok) {
-                throw new Error(`Failed to reserve invoice number (${response.status})`);
+            try {
+                const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: "POST" });
+                if (!response.ok) {
+                    throw new Error(`Failed to reserve invoice number (${response.status})`);
+                }
+                const data = await response.json().catch(() => ({}));
+                if (data?.next_number) {
+                    setInvoiceNumber(data.next_number, { reserved: true });
+                }
+                return { number: state.invoiceNumber, reserved: true };
+            } catch (error) {
+                console.warn("Could not reserve invoice number", error);
+                state.invoiceNumberReserved = false;
+                if (!state.invoiceNumber) {
+                    await loadNextInvoiceNumber();
+                }
+                return { number: state.invoiceNumber, reserved: false, error };
             }
-            const data = await response.json().catch(() => ({}));
-            if (data?.next_number) {
-                setInvoiceNumber(data.next_number, { reserved: true });
-            }
-            return state.invoiceNumber;
         }
 
         async function saveInvoice() {
@@ -508,7 +518,7 @@
         await calculateServerTotals();
     }
 
-    function buildPdfPayload(docType, previewEl) {
+    function buildDocumentPayload(docType, previewEl, format) {
         const clone = previewEl.cloneNode(true);
         clone.removeAttribute("hidden");
         clone.setAttribute("data-pdf-clone", "true");
@@ -520,15 +530,19 @@
         const wrapper = document.createElement("div");
         wrapper.className = "pdf-export-wrapper";
         wrapper.appendChild(clone);
+        const normalizedFormat = format === "jpeg" ? "jpeg" : "pdf";
+        const safeBase = String(state.invoiceNumber || "invoice").trim().replace(/\s+/g, "_");
+        const extension = normalizedFormat === "jpeg" ? "jpg" : "pdf";
         
         return {
             document_type: docType,
             html: wrapper.outerHTML,
-            filename: `${state.invoiceNumber || "invoice"}.pdf`,
+            filename: `${safeBase}.${extension}`,
+            format: normalizedFormat,
         };
     }
 
-    async function downloadInvoicePdf() {
+    async function downloadInvoiceDocument(format) {
         try {
             await preparePreviewSnapshot();
 
@@ -537,16 +551,18 @@
                 throw new Error("Preview element not found");
             }
 
-            const payload = buildPdfPayload("invoice", previewEl);
-            
-            console.log("Sending PDF request to:", `${API_BASE}/api/pdf/render/`);
+            const payload = buildDocumentPayload("invoice", previewEl, format);
+            const normalizedFormat = payload.format === "jpeg" ? "jpeg" : "pdf";
+
+            console.log("Sending render request to:", `${API_BASE}/api/pdf/render/`);
+            console.log("Requested format:", normalizedFormat);
             console.log("Payload size:", JSON.stringify(payload).length, "bytes");
 
             const response = await fetch(`${API_BASE}/api/pdf/render/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Accept: "application/pdf",
+                    Accept: normalizedFormat === "jpeg" ? "image/jpeg" : "application/pdf",
                 },
                 body: JSON.stringify(payload),
             }).catch(err => {
@@ -570,23 +586,42 @@
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Download PDF error:", error);
+            console.error("Download document error:", error);
             throw error;
         }
     }
 
     async function handleSave() {
-        // Handle PDF download
+        // Handle document download
         if (state.isSaving) return;
         
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
+            const chosenFormat = await chooseDownloadFormat();
+            if (!chosenFormat) {
+                return;
+            }
             syncPreviewFromForm();
-            await ensureInvoiceNumberReserved();
-            await downloadInvoicePdf();
-            showToast("Invoice downloaded successfully!");
+            const reservation = await ensureInvoiceNumberReserved();
+            const normalizedFormat = chosenFormat === "jpeg" ? "jpeg" : "pdf";
+            await downloadInvoiceDocument(normalizedFormat);
+            const label = normalizedFormat === "jpeg" ? "JPEG" : "PDF";
+            const successMessage = `Invoice downloaded as ${label}!`;
+            if (reservation?.reserved) {
+                showToast(successMessage);
+                if (!state.invoiceId) {
+                    state.invoiceNumberReserved = false;
+                    await loadNextInvoiceNumber();
+                }
+            } else {
+                showToast(`${successMessage} However, a new number could not be reserved.`, "warning");
+                if (!state.invoiceId) {
+                    state.invoiceNumberReserved = false;
+                    await loadNextInvoiceNumber();
+                }
+            }
         } catch (error) {
             console.error("Failed to download invoice", error);
             showToast(error.message || "Failed to download invoice", "error");

@@ -4,6 +4,8 @@
     // Get global helpers
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
     // Fallback for togglePreview
+    const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
+    // Format chooser fallback
     const parseNumber = typeof helpers.parseNumber === "function" ? helpers.parseNumber : (value) => Number.parseFloat(value || 0) || 0;
     // Fallback for parseNumber
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
@@ -232,42 +234,51 @@
         togglePreview(moduleId, true);
     }
 
-    async function downloadWaybillPdf() {
+    function buildWaybillPayload(previewEl, format) {
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+        clone.classList.add("pdf-export");
+        clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
+        clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "pdf-export-wrapper";
+        wrapper.appendChild(clone);
+
+        const normalizedFormat = format === "jpeg" ? "jpeg" : "pdf";
+        const safeBase = String(state.waybillNumber || "waybill").trim().replace(/\s+/g, "_");
+        const extension = normalizedFormat === "jpeg" ? "jpg" : "pdf";
+
+        return {
+            document_type: "waybill",
+            html: wrapper.outerHTML,
+            filename: `${safeBase}.${extension}`,
+            format: normalizedFormat,
+        };
+    }
+
+    async function downloadWaybillDocument(format) {
         try {
             syncPreview();
-            
+
             const previewEl = document.getElementById("waybill-preview");
             if (!previewEl) {
                 throw new Error("Preview element not found");
             }
 
-            // Build payload for WeasyPrint backend
-            const clone = previewEl.cloneNode(true);
-            clone.removeAttribute("hidden");
-            clone.setAttribute("data-pdf-clone", "true");
-            clone.classList.add("pdf-export");
-            clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
-            clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
+            const payload = buildWaybillPayload(previewEl, format);
+            const normalizedFormat = payload.format === "jpeg" ? "jpeg" : "pdf";
 
-            // Wrap the content in pdf-export-wrapper div for proper styling
-            const wrapper = document.createElement("div");
-            wrapper.className = "pdf-export-wrapper";
-            wrapper.appendChild(clone);
-
-            const payload = {
-                document_type: "waybill",
-                html: wrapper.outerHTML,
-                filename: `${state.waybillNumber || "waybill"}.pdf`,
-            };
-
-            console.log("Sending PDF request to:", `${API_BASE}/api/pdf/render/`);
+            console.log("Sending render request to:", `${API_BASE}/api/pdf/render/`);
+            console.log("Requested format:", normalizedFormat);
             console.log("Payload size:", JSON.stringify(payload).length, "bytes");
 
             const response = await fetch(`${API_BASE}/api/pdf/render/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Accept: "application/pdf",
+                    Accept: normalizedFormat === "jpeg" ? "image/jpeg" : "application/pdf",
                 },
                 body: JSON.stringify(payload),
             }).catch(err => {
@@ -277,8 +288,8 @@
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error("PDF render error response:", errorText);
-                throw new Error(`Failed to generate PDF: ${response.status} ${response.statusText}`);
+                console.error("Render error response:", errorText);
+                throw new Error(`Failed to generate document: ${response.status} ${response.statusText}`);
             }
 
             const blob = await response.blob();
@@ -290,25 +301,28 @@
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            
-            showToast("PDF downloaded successfully!");
         } catch (error) {
-            console.error("Download PDF error:", error);
-            showToast("Failed to generate PDF: " + error.message, "error");
+            console.error("Download document error:", error);
             throw error;
         }
     }
 
     async function handleSave() {
-        // Handle PDF download
+        // Handle document download
         if (state.isSaving) return;
-        
+
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
-            await downloadWaybillPdf();
-            showToast("Waybill downloaded successfully!");
+            const chosenFormat = await chooseDownloadFormat();
+            if (!chosenFormat) {
+                return;
+            }
+            const normalizedFormat = chosenFormat === "jpeg" ? "jpeg" : "pdf";
+            await downloadWaybillDocument(normalizedFormat);
+            const label = normalizedFormat === "jpeg" ? "JPEG" : "PDF";
+            showToast(`Waybill downloaded as ${label}!`);
         } catch (error) {
             console.error("Failed to download waybill", error);
             showToast(error.message || "Failed to download waybill", "error");

@@ -124,29 +124,6 @@
     margin: 0; /* No margins */
 }
 
-/* PDF Export Wrapper - Hidden container for generating PDF */
-/* This element is positioned off-screen and used by html2pdf.js to render the invoice */
-.pdf-export-wrapper {
-    position: fixed; /* Fixed position to keep it off-screen */
-    left: -9999px; /* Position far left off-screen */
-    top: 0; /* Top of viewport */
-    width: 210mm; /* A4 width (portrait) */
-    min-height: 297mm; /* A4 height (portrait) */
-    padding: 12mm 14mm; /* Margins for printed document */
-    background: #ffffff; /* White background for PDF */
-    color: var(--text); /* Theme text color */
-    box-shadow: none; /* No shadows in PDF */
-    z-index: -1; /* Behind all other content */
-}
-
-/* Remove visual effects from document inside PDF export wrapper */
-.pdf-export-wrapper .document {
-    width: 100%; /* Full width of wrapper */
-    box-shadow: none; /* No shadows */
-    border: none; /* No borders */
-    margin: 0; /* No margins */
-}
-
 /* ============================================
    PREVIEW MODE STYLES
    ============================================
@@ -500,8 +477,8 @@
     background: #eab308; /* Yellow theme maintained */
 }
 .module.is-preview .logo-placeholder {
-    width: 200px; /* Smaller logo in preview */
-    height: 170px; /* Maintain aspect ratio */
+    width: 250px; /* Smaller logo in preview */
+    height: 200px; /* Maintain aspect ratio */
 }
 
 /* ============================================
@@ -546,10 +523,10 @@
 
 /* Account section - yellow background, inline elements with icon placeholders */
 #invoice-preview-contact .account {
-    display: flex;
+    display: inline ;
     justify-content: center;
     align-items: center;
-    gap: 1.5rem;
+    gap: 2rem;
     flex-wrap: wrap;
     width: 100%;
     padding: 0.6rem 1rem;
@@ -619,81 +596,3 @@
     }
 }
 
-/* ============================================
-   PDF EXPORT OPTIMIZATION
-   ============================================
-   Reduce spacing and font sizes for PDF to fit on A4
-   ============================================ */
-
-.pdf-export-wrapper .invoice-letterhead {
-    padding: 0.2rem 0.4rem !important;
-    margin-bottom: 0.15rem !important;
-    min-height: 65px !important;
-    gap: 0.2rem !important;
-}
-
-.pdf-export-wrapper .logo-placeholder {
-    width: 120px !important;
-    height: 80px !important;
-}
-
-.pdf-export-wrapper .invoice-summary {
-    margin: 0.5rem 0 0.5rem auto !important;
-    padding: 0.4rem 0.6rem !important;
-    gap: 0.3rem !important;
-}
-
-.pdf-export-wrapper .invoice-summary .summary-table th,
-.pdf-export-wrapper .invoice-summary .summary-table td {
-    padding: 0.15rem 0 !important;
-    font-size: 0.65rem !important;
-}
-
-.pdf-export-wrapper .levies-table {
-    font-size: 0.6rem !important;
-    gap: 0.15rem !important;
-}
-
-.pdf-export-wrapper .levy-total-row,
-.pdf-export-wrapper .vat-row {
-    padding: 0.2rem 0 !important;
-    font-size: 0.65rem !important;
-}
-
-.pdf-export-wrapper .grand-total {
-    padding-top: 0.25rem !important;
-    font-size: 0.75rem !important;
-}
-
-.pdf-export-wrapper .invoice-notes {
-    margin-top: 0.3rem !important;
-    margin-bottom: 0.3rem !important;
-}
-
-.pdf-export-wrapper .invoice-notes h4 {
-    font-size: 0.75rem !important;
-    margin-bottom: 0.2rem !important;
-}
-
-.pdf-export-wrapper .invoice-notes textarea,
-.pdf-export-wrapper .invoice-notes p,
-.pdf-export-wrapper .invoice-notes ul,
-.pdf-export-wrapper .invoice-notes li {
-    font-size: 0.6rem !important;
-    line-height: 1.25 !important;
-    margin: 0.1rem 0 !important;
-}
-
-.pdf-export-wrapper .invoice-title h3 {
-    font-size: 0.85rem !important;
-    margin: 0.2rem 0 !important;
-}
-
-.pdf-export-wrapper .letterhead-meta {
-    gap: 1rem !important;
-}
-
-.pdf-export-wrapper .letterhead-meta p {
-    font-size: 0.65rem !important;
-    margin: 0.1rem 0 !important;
-}

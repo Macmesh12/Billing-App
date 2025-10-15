@@ -5,6 +5,7 @@ import json
 import logging
 from functools import lru_cache
 from http import HTTPStatus
+from io import BytesIO
 
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -14,6 +15,11 @@ try:
     from weasyprint import HTML
 except ImportError:  # pragma: no cover - handled gracefully at runtime
     HTML = None
+
+try:
+    from PIL import Image
+except ImportError:  # pragma: no cover - optional dependency
+    Image = None
 
 LOGGER = logging.getLogger(__name__)
 
@@ -69,13 +75,14 @@ def _wrap_html(fragment: str, document_type: str) -> str:
     )
 
 
-def _safe_filename(raw: str | None) -> str:
-    candidate = (raw or "document.pdf").strip()
+def _safe_filename(raw: str | None, ext: str = "pdf") -> str:
+    extension = (ext or "pdf").lower().lstrip(".") or "pdf"
+    candidate = (raw or f"document.{extension}").strip()
     filtered = "".join(ch for ch in candidate if ch.isalnum() or ch in {"-", "_", "."})
     if not filtered:
-        filtered = "document.pdf"
-    if not filtered.lower().endswith(".pdf"):
-        filtered = f"{filtered}.pdf"
+        filtered = f"document.{extension}"
+    if not filtered.lower().endswith(f".{extension}"):
+        filtered = f"{filtered}.{extension}"
     return filtered
 
 
@@ -105,16 +112,40 @@ def render_pdf(request: HttpRequest) -> HttpResponse:
         return _cors(JsonResponse({"error": "Empty HTML payload"}, status=HTTPStatus.BAD_REQUEST))
 
     document_type = str(payload.get("document_type") or "document").strip().lower()
-    filename = _safe_filename(payload.get("filename"))
+    requested_format = str(payload.get("format") or "pdf").strip().lower() or "pdf"
+
+    if requested_format in {"jpg", "jpeg"}:
+        output_format = "jpeg"
+        extension = "jpg"
+    elif requested_format == "pdf":
+        output_format = "pdf"
+        extension = "pdf"
+    else:
+        return _cors(JsonResponse({"error": "Unsupported format requested"}, status=HTTPStatus.BAD_REQUEST))
+
+    filename = _safe_filename(payload.get("filename"), ext=extension)
 
     html_document = _wrap_html(fragment, document_type)
+    base_url = request.build_absolute_uri("/")
+    html = HTML(string=html_document, base_url=base_url)
 
     try:
-        pdf_bytes = HTML(string=html_document, base_url=str(settings.FRONTEND_DIR)).write_pdf()
+        if output_format == "pdf":
+            data = html.write_pdf()
+            content_type = "application/pdf"
+        else:
+            if Image is None:
+                return _cors(JsonResponse({"error": "JPEG rendering requires Pillow to be installed"}, status=HTTPStatus.SERVICE_UNAVAILABLE))
+            png_bytes = html.write_png()
+            with Image.open(BytesIO(png_bytes)) as png_image:
+                jpeg_buffer = BytesIO()
+                png_image.convert("RGB").save(jpeg_buffer, format="JPEG", quality=92, optimize=True)
+                data = jpeg_buffer.getvalue()
+            content_type = "image/jpeg"
     except Exception:  # pragma: no cover - bubble error as JSON
-        LOGGER.exception("Failed to render PDF for document type: %%s", document_type)
-        return _cors(JsonResponse({"error": "Failed to render PDF"}, status=HTTPStatus.INTERNAL_SERVER_ERROR))
+        LOGGER.exception("Failed to render document for type %s (format %s)", document_type, output_format)
+        return _cors(JsonResponse({"error": "Failed to render document"}, status=HTTPStatus.INTERNAL_SERVER_ERROR))
 
-    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response = HttpResponse(data, content_type=content_type)
     response["Content-Disposition"] = f"attachment; filename=\"{filename}\""
     return _cors(response)
