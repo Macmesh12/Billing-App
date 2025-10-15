@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV '/home/macmesh/Documents/Programming/Spaquels Softwares/Billing-App/backend/.venv'
+set -gx VIRTUAL_ENV /home/runner/work/Billing-App/Billing-App/backend/.venv
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH
