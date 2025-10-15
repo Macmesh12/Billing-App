@@ -1,77 +1,119 @@
 /* ============================================
-   INVOICE MODULE - MAIN JAVASCRIPT
+   INVOICE MODULE
    ============================================
-   This file handles all invoice functionality including:
-   - Line item management (add, edit, remove)
-   - Real-time calculations (subtotal, taxes, total)
-   - Preview mode toggling
-   - Form validation and submission
-   - PDF export functionality
-   - API integration for saving invoices
+   Comprehensive invoice management system for creating, editing,
+   and exporting invoices with automatic calculations.
+   
+   Features:
+   - Line item management (add, edit, remove up to 10 items)
+   - Real-time calculations (subtotal, taxes, levies, grand total)
+   - Preview mode with live synchronization
+   - Form validation and data persistence
+   - PDF and JPEG export with WeasyPrint rendering
+   - Document number reservation and management
+   - API integration for saving and loading invoices
+   
+   Architecture:
+   - Uses IIFE pattern to prevent global namespace pollution
+   - State management through centralized state object
+   - Event-driven updates with debounced server calculations
+   - Separation of concerns: UI, calculations, API, rendering
    ============================================ */
 
-// IIFE (Immediately Invoked Function Expression) to encapsulate module logic
-// This prevents polluting the global namespace
 (function () {
+    "use strict";
+
+    // ============================================
+    // DOM READY HELPER
+    // ============================================
+    
     /**
-     * DOM Ready Helper Function
-     * Ensures code runs only after the DOM is fully loaded
+     * Ensures code executes only after DOM is fully loaded
+     * Handles both pre-loaded and loading states
      * @param {Function} callback - Function to execute when DOM is ready
      */
     function onReady(callback) {
         if (document.readyState === "loading") {
-            // DOM still loading, wait for DOMContentLoaded event
             document.addEventListener("DOMContentLoaded", callback, { once: true });
         } else {
-            // DOM already loaded, execute immediately
             callback();
         }
     }
 
-    // Execute when DOM is ready
     onReady(() => {
         // ============================================
-        // HELPER FUNCTIONS AND UTILITIES
+        // CONFIGURATION AND GLOBALS
         // ============================================
-
-        // Get helper functions from global BillingApp object (defined in main.js)
+        
+        // Import helper functions from global BillingApp namespace (main.js)
         const helpers = window.BillingApp || {};
         const config = window.BILLING_APP_CONFIG || {};
+        
+        // API base URL with multiple fallback strategies
         const API_BASE = config.apiBaseUrl || helpers.apiBaseUrl || helpers.API_BASE || window.location.origin;
+        
+        // Import shared utility functions with fallbacks
         const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
-    const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
+        const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
 
-        const moduleId = "invoice-module"; // ID of the invoice module element
-        const moduleEl = document.getElementById(moduleId); // Reference to module DOM element
-        const form = document.getElementById("invoice-form"); // Reference to invoice form
+        // Module identifiers
+        const moduleId = "invoice-module";
+        const moduleEl = document.getElementById(moduleId);
+        const form = document.getElementById("invoice-form");
 
-        // Exit early if required elements are not found
+        // Early exit if required elements are missing
         if (!moduleEl || !form) return;
 
+        // ============================================
+        // DOM ELEMENT REFERENCES
+        // ============================================
+        
+        /**
+         * Cached references to DOM elements for performance
+         * Organized by function: controls, display, preview, tables
+         */
         const elements = {
+            // Core elements
             module: moduleEl,
             form,
+            
+            // UI controls
             toast: document.getElementById("invoice-toast"),
             previewToggleBtn: document.getElementById("invoice-preview-toggle"),
             exitPreviewBtn: document.querySelector("#invoice-preview [data-exit-preview]") || document.getElementById("invoice-exit-preview"),
             submitBtn: document.getElementById("invoice-submit"),
+            addItemBtn: document.getElementById("invoice-add-item"),
+            
+            // Document number elements
             invoiceNumber: document.getElementById("invoice-number"),
             previewNumber: document.getElementById("invoice-preview-number"),
             documentNumberInput: document.getElementById("invoice-document-number"),
+            
+            // Items table (edit mode)
             itemsTable: document.getElementById("invoice-items-table"),
             itemsTableBody: document.querySelector("#invoice-items-table tbody"),
             itemsPayload: document.getElementById("invoice-items-payload"),
+            
+            // Preview table
             previewRows: document.getElementById("invoice-preview-rows"),
+            
+            // Levy/tax containers
             levyContainer: document.getElementById("invoice-levies"),
             previewLevyContainer: document.getElementById("invoice-preview-levies"),
+            
+            // Financial totals (edit mode)
             subtotal: document.getElementById("invoice-subtotal"),
-            previewSubtotal: document.getElementById("invoice-preview-subtotal"),
             levyTotal: document.getElementById("invoice-levy-total"),
-            previewLevyTotal: document.getElementById("invoice-preview-levy-total"),
             vat: document.getElementById("invoice-vat"),
-            previewVat: document.getElementById("invoice-preview-vat"),
             grandTotal: document.getElementById("invoice-grand-total"),
+            
+            // Financial totals (preview mode)
+            previewSubtotal: document.getElementById("invoice-preview-subtotal"),
+            previewLevyTotal: document.getElementById("invoice-preview-levy-total"),
+            previewVat: document.getElementById("invoice-preview-vat"),
             previewGrand: document.getElementById("invoice-preview-grand"),
+            
+            // Preview metadata
             previewCustomer: document.getElementById("invoice-preview-customer"),
             previewClassification: document.getElementById("invoice-preview-classification"),
             previewDate: document.getElementById("invoice-preview-date"),
@@ -79,15 +121,23 @@
             previewClientRef: document.getElementById("invoice-preview-client-ref"),
             previewIntro: document.getElementById("invoice-preview-intro"),
             previewNotesList: document.getElementById("invoice-preview-notes"),
-            addItemBtn: document.getElementById("invoice-add-item"),
         };
 
+        /**
+         * Helper to find form fields by name with fallback to ID
+         * @param {string} name - Form field name attribute
+         * @param {string} fallbackId - Element ID to use if name not found
+         * @returns {HTMLElement|null} The form field element
+         */
         const findField = (name, fallbackId) => {
             const field = form.elements.namedItem(name);
             if (field) return field;
             return fallbackId ? document.getElementById(fallbackId) : null;
         };
 
+        /**
+         * Cached references to form input elements
+         */
         const inputs = {
             customer: findField("customer_name", "invoice-customer-name"),
             classification: findField("classification", "invoice-classification"),
@@ -101,10 +151,14 @@
             contact: findField("contact", "invoice-contact"),
         };
         
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        
         /**
-         * Format Currency Helper
-         * Converts numbers to currency strings (e.g., 1234.5 -> "1234.50")
-         * @param {number} value - Number to format
+         * Formats a numeric value as currency (e.g., 1234.5 -> "1,234.50")
+         * Imports from global helpers or provides fallback
+         * @param {number|string} value - Value to format
          * @returns {string} Formatted currency string
          */
         const formatCurrency = typeof helpers.formatCurrency === "function"
@@ -112,9 +166,9 @@
             : (value) => Number(value || 0).toFixed(2);
         
         /**
-         * Format Quantity Helper
-         * Formats quantities, showing decimals only when needed
-         * @param {number} value - Quantity to format
+         * Formats quantity values, showing decimals only when necessary
+         * Whole numbers display without decimal point (e.g., 5 not 5.00)
+         * @param {number|string} value - Quantity to format
          * @returns {string} Formatted quantity string
          */
         const formatQuantity = typeof helpers.formatQuantity === "function"
@@ -126,62 +180,29 @@
             };
         
         /**
-         * Parse Number Helper
-         * Safely converts strings to numbers, defaulting to 0 on failure
+         * Safely parses strings to numbers with graceful error handling
+         * Returns 0 for invalid inputs instead of NaN
          * @param {string|number} value - Value to parse
-         * @returns {number} Parsed number
+         * @returns {number} Parsed number or 0 if invalid
          */
         const parseNumber = typeof helpers.parseNumber === "function"
             ? helpers.parseNumber
             : (value) => Number.parseFloat(value || 0) || 0;
 
-    // ============================================
-    // MODULE INITIALIZATION
-    // ============================================
-
-        async function ensureInvoiceNumberReserved() {
-            if (state.invoiceNumberReserved && state.invoiceNumber) {
-                return { number: state.invoiceNumber, reserved: true };
-            }
-            try {
-                const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: "POST" });
-                if (!response.ok) {
-                    throw new Error(`Failed to reserve invoice number (${response.status})`);
-                }
-                const data = await response.json().catch(() => ({}));
-                if (data?.next_number) {
-                    setInvoiceNumber(data.next_number, { reserved: true });
-                }
-                return { number: state.invoiceNumber, reserved: true };
-            } catch (error) {
-                console.warn("Could not reserve invoice number", error);
-                state.invoiceNumberReserved = false;
-                if (!state.invoiceNumber) {
-                    await loadNextInvoiceNumber();
-                }
-                return { number: state.invoiceNumber, reserved: false, error };
-            }
-        }
-
-        async function saveInvoice() {
-            const payload = buildPayload();
-            const isUpdate = Boolean(state.invoiceId);
-            const path = isUpdate ? `/invoices/api/${state.invoiceId}/` : `/invoices/api/create/`;
-            const method = isUpdate ? "PUT" : "POST";
-            const result = await callApi(path, {
-                method,
-                body: JSON.stringify(payload),
-            });
-            if (result?.id) {
-                state.invoiceId = result.id;
-            }
-            if (result?.document_number) {
-                setInvoiceNumber(result.document_number, { reserved: true });
-            }
-            return result;
-        }
+        // ============================================
+        // APPLICATION STATE
+        // ============================================
+        
+        /**
+         * Central state object managing invoice data and UI state
+         * @property {Array} items - Line items array (max 10 items)
+         * @property {Array} levies - Tax/levy configuration from server
+         * @property {number|null} invoiceId - Database ID for existing invoices
+         * @property {string} invoiceNumber - Current invoice number
+         * @property {boolean} invoiceNumberReserved - Whether number is reserved in backend
+         * @property {boolean} isSaving - Flag to prevent double-submission
+         */
         const state = {
-            // Application state object
             items: [],
             levies: [],
             invoiceId: null,
@@ -190,11 +211,22 @@
             isSaving: false,
         };
 
+        /**
+         * Map storing references to levy value display elements for quick updates
+         * Key: levy name, Value: DOM element
+         */
         const levyValueMap = new Map();
-        // Map to store levy value elements for quick updates
+        
+        /**
+         * Map storing references to preview levy value elements
+         * Key: levy name, Value: DOM element
+         */
         const previewLevyValueMap = new Map();
-        // Map for preview levy elements
 
+        /**
+         * Default tax settings used when server config fails to load
+         * Based on Ghana's tax structure (NHIL, GETFund, COVID levy, VAT)
+         */
         const DEFAULT_TAX_SETTINGS = [
             { name: "NHIL", rate: 0.025, isVat: false },
             { name: "GETFund Levy", rate: 0.025, isVat: false },
@@ -202,67 +234,233 @@
             { name: "VAT", rate: 0.15, isVat: true },
         ];
 
-    function normalizeTaxSettings(taxSettings) {
-        if (!taxSettings || typeof taxSettings !== "object") {
-            return DEFAULT_TAX_SETTINGS.map((entry) => ({ ...entry }));
+        // ============================================
+        // DOCUMENT NUMBER MANAGEMENT
+        // ============================================
+
+        /**
+         * Ensures invoice number is reserved in the backend
+         * Prevents duplicate invoice numbers across sessions
+         * @async
+         * @returns {Promise<Object>} Object with number, reserved status, and optional error
+         */
+        async function ensureInvoiceNumberReserved() {
+            // Return early if already reserved
+            if (state.invoiceNumberReserved && state.invoiceNumber) {
+                return { number: state.invoiceNumber, reserved: true };
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: "POST" });
+                if (!response.ok) {
+                    throw new Error(`Failed to reserve invoice number (${response.status})`);
+                }
+                
+                const data = await response.json().catch(() => ({}));
+                if (data?.next_number) {
+                    setInvoiceNumber(data.next_number, { reserved: true });
+                }
+                
+                return { number: state.invoiceNumber, reserved: true };
+            } catch (error) {
+                console.warn("Could not reserve invoice number", error);
+                state.invoiceNumberReserved = false;
+                
+                // Fallback to loading next number without reservation
+                if (!state.invoiceNumber) {
+                    await loadNextInvoiceNumber();
+                }
+                
+                return { number: state.invoiceNumber, reserved: false, error };
+            }
         }
-        return Object.entries(taxSettings).map(([name, rate]) => ({
-            name,
-            rate: Number(rate) || 0,
-            isVat: name.trim().toUpperCase() === "VAT",
-        }));
-    }
 
-    function showToast(message, tone = "success") {
-        // Function to display toast notifications
-        const el = elements.toast;
-        if (!el) return;
-        el.textContent = message;
-        el.className = `module-toast is-${tone}`;
-        el.hidden = false;
-        setTimeout(() => {
-            el.hidden = true;
-        }, 4000);
-    }
-
-    function buildPayload() {
-        // Function to build JSON payload from form data
-        return {
-            customer_name: inputs.customer?.value || "",
-            classification: inputs.classification?.value || "",
-            issue_date: inputs.issueDate?.value || "",
-            items_payload: JSON.stringify(state.items),
-            document_number: elements.documentNumberInput?.value || state.invoiceNumber || "",
-        };
-    }
-
-    async function callApi(path, options = {}) {
-        // Function to make API calls with error handling
-        const url = `${API_BASE}${path}`;
-        const response = await fetch(url, {
-            headers: {
-                "Content-Type": "application/json",
-                ...(options.headers || {}),
-            },
-            ...options,
-        });
-        if (!response.ok) {
-            let errorDetail = await response.json().catch(() => ({}));
-            const message = errorDetail.errors ? JSON.stringify(errorDetail.errors) : `${response.status} ${response.statusText}`;
-            throw new Error(message);
+        /**
+         * Loads the next available invoice number without reserving it
+         * Used on page load and when reservation fails
+         * @async
+         */
+        async function loadNextInvoiceNumber() {
+            // Don't load if already reserved or editing existing invoice
+            if (state.invoiceNumberReserved || state.invoiceId) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/counter/invoice/next/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setInvoiceNumber(data.next_number || state.invoiceNumber, { reserved: false });
+                }
+            } catch (error) {
+                console.warn("Failed to load next invoice number", error);
+            }
         }
-        if (response.status === 204) {
-            return null;
-        }
-        return response.json();
-    }
 
-    function valueOrPlaceholder(field, fallback = "—") {
-        if (!field) return fallback;
-        const value = (field.value || "").trim();
-        if (value) return value;
-        return field.placeholder ? field.placeholder.trim() : fallback;
-    }
+        /**
+         * Updates invoice number in state and all UI elements
+         * @param {string} value - New invoice number
+         * @param {Object} options - Configuration options
+         * @param {boolean} options.reserved - Whether number is reserved in backend
+         */
+        function setInvoiceNumber(value, { reserved = false } = {}) {
+            const numberValue = value || state.invoiceNumber || "";
+            if (!numberValue) {
+                return;
+            }
+            
+            state.invoiceNumber = numberValue;
+            state.invoiceNumberReserved = reserved;
+            
+            // Update all display elements
+            if (elements.invoiceNumber) {
+                elements.invoiceNumber.textContent = state.invoiceNumber;
+            }
+            if (elements.previewNumber) {
+                elements.previewNumber.textContent = state.invoiceNumber;
+            }
+            if (elements.documentNumberInput) {
+                elements.documentNumberInput.value = state.invoiceNumber;
+            }
+        }
+
+        // ============================================
+        // API INTEGRATION
+        // ============================================
+
+        /**
+         * Saves invoice to backend (create or update)
+         * @async
+         * @returns {Promise<Object>} API response with invoice data
+         */
+        async function saveInvoice() {
+            const payload = buildPayload();
+            const isUpdate = Boolean(state.invoiceId);
+            const path = isUpdate ? `/invoices/api/${state.invoiceId}/` : `/invoices/api/create/`;
+            const method = isUpdate ? "PUT" : "POST";
+            
+            const result = await callApi(path, {
+                method,
+                body: JSON.stringify(payload),
+            });
+            
+            // Update state with response data
+            if (result?.id) {
+                state.invoiceId = result.id;
+            }
+            if (result?.document_number) {
+                setInvoiceNumber(result.document_number, { reserved: true });
+            }
+            
+            return result;
+        }
+
+        /**
+         * Normalizes tax settings from server response to consistent format
+         * Handles both object and array formats, identifies VAT by name
+         * @param {Object|Array} taxSettings - Tax configuration from server
+         * @returns {Array} Normalized array of tax objects
+         */
+        function normalizeTaxSettings(taxSettings) {
+            if (!taxSettings || typeof taxSettings !== "object") {
+                return DEFAULT_TAX_SETTINGS.map((entry) => ({ ...entry }));
+            }
+            
+            return Object.entries(taxSettings).map(([name, rate]) => ({
+                name,
+                rate: Number(rate) || 0,
+                isVat: name.trim().toUpperCase() === "VAT",
+            }));
+        }
+
+        /**
+         * Makes API calls with standardized error handling
+         * Automatically sets JSON content type and parses responses
+         * @async
+         * @param {string} path - API endpoint path (relative to API_BASE)
+         * @param {Object} options - Fetch options (method, body, headers)
+         * @returns {Promise<Object|null>} Parsed JSON response or null for 204
+         * @throws {Error} On non-OK responses with detailed error message
+         */
+        async function callApi(path, options = {}) {
+            const url = `${API_BASE}${path}`;
+            const response = await fetch(url, {
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(options.headers || {}),
+                },
+                ...options,
+            });
+            
+            if (!response.ok) {
+                let errorDetail = await response.json().catch(() => ({}));
+                const message = errorDetail.errors 
+                    ? JSON.stringify(errorDetail.errors) 
+                    : `${response.status} ${response.statusText}`;
+                throw new Error(message);
+            }
+            
+            // Handle no-content responses
+            if (response.status === 204) {
+                return null;
+            }
+            
+            return response.json();
+        }
+
+        /**
+         * Builds API payload from current form state
+         * Packages all invoice data for server submission
+         * @returns {Object} Invoice payload for API
+         */
+        function buildPayload() {
+            return {
+                customer_name: inputs.customer?.value || "",
+                classification: inputs.classification?.value || "",
+                issue_date: inputs.issueDate?.value || "",
+                items_payload: JSON.stringify(state.items),
+                document_number: elements.documentNumberInput?.value || state.invoiceNumber || "",
+            };
+        }
+
+        // ============================================
+        // UI FEEDBACK
+        // ============================================
+
+        /**
+         * Displays a temporary toast notification
+         * Auto-hides after 4 seconds
+         * @param {string} message - Message to display
+         * @param {string} tone - Visual tone: "success", "error", "warning"
+         */
+        function showToast(message, tone = "success") {
+            const el = elements.toast;
+            if (!el) return;
+            
+            el.textContent = message;
+            el.className = `module-toast is-${tone}`;
+            el.hidden = false;
+            
+            setTimeout(() => {
+                el.hidden = true;
+            }, 4000);
+        }
+
+        /**
+         * Returns field value or placeholder/fallback text
+         * Useful for preview mode where empty fields need placeholder display
+         * @param {HTMLElement} field - Form field element
+         * @param {string} fallback - Default text if field is empty
+         * @returns {string} Field value, placeholder, or fallback
+         */
+        function valueOrPlaceholder(field, fallback = "—") {
+            if (!field) return fallback;
+            
+            const value = (field.value || "").trim();
+            if (value) return value;
+            
+            return field.placeholder ? field.placeholder.trim() : fallback;
+        }
 
     function renderPreviewNotes(notesText) {
         if (!elements.previewNotesList) return;
