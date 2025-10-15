@@ -1,6 +1,4 @@
-#!/bin/sh
-'''exec' "/home/macmesh/Documents/Programming/Spaquels Softwares/Billing-App/backend/.venv/bin/python3" "$0" "$@"
-' '''
+#!/home/runner/work/Billing-App/Billing-App/backend/.venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
