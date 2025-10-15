@@ -1,3 +1,53 @@
+<!--
+============================================
+WAYBILL PAGE - BILLING APP
+============================================
+This HTML file contains the structure for the waybill module.
+A waybill is a logistics document for tracking deliveries.
+
+It has two modes:
+1. EDIT MODE - Form for entering waybill data
+2. PREVIEW MODE - Read-only view for reviewing before download
+
+KEY FEATURES:
+- Dynamic line item management (add/remove rows)
+- Delivery and receiver signature sections
+- Client-side PDF generation (A4 size)
+- JPEG export capability
+- Server API integration for saving waybills
+- Preview mode with contact information
+
+STRUCTURE:
+- App Header: Navigation bar
+- Module Header: Title and action buttons (Preview/Download/Back)
+- Module Body:
+  * Edit Form: Editable waybill with inputs and tables
+  * Preview Document: Read-only view matching PDF output
+
+DEPENDENCIES:
+- general.css: Global app styles
+- waybill.css: Waybill-specific styles
+- waybill.js: All waybill logic and interactions
+- main.js: Shared utilities
+
+MODES:
+1. EDIT MODE (Default):
+   - User can fill in waybill number, date, items, delivery info
+   - Line items can be added/removed dynamically
+   - Delivery and receiver officer names
+   
+2. PREVIEW MODE (Toggled by "Preview" button):
+   - Read-only view with formatted data
+   - Displays contact information
+   - Ready for PDF/JPEG export
+   
+PDF/JPEG HANDLING:
+- Download button triggers format selection
+- PDF generated via backend API (/api/pdf/render/)
+- JPEG generated client-side from preview DOM
+- Both maintain A4 portrait orientation
+============================================
+-->
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -6,32 +56,50 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Waybill | Billing App</title>
+    
+    <!-- Google Fonts: Inter font family -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/general.css' %}">
-    <link rel="stylesheet" href="{% static 'css/waybill.css' %}">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{% static 'css/general.css' %}"> <!-- Global styles -->
+    <link rel="stylesheet" href="{% static 'css/waybill.css' %}"> <!-- Waybill-specific styles -->
+    
+    <!-- Global Configuration: API base URL for backend calls -->
     <script>
         window.BILLING_APP_CONFIG = {
-            apiBaseUrl: window.location.origin
+            apiBaseUrl: window.location.origin // Use current origin
         };
     </script>
 </head>
 <body class="billing-app">
+<!-- ============================================
+     APP HEADER - NAVIGATION BAR
+     ============================================ -->
 <header class="app-header">
     <div class="app-brand">
         <h1>Billing App</h1>
     </div>
+    <!-- Primary navigation links -->
     <nav class="app-nav" aria-label="Primary">
         <a class="nav-link" href="/">Dashboard</a>
         <a class="nav-link" href="/invoice.html">Invoice</a>
         <a class="nav-link" href="/receipt.html">Receipt</a>
-        <a class="nav-link active" href="/waybill.html">Waybill</a>
+        <a class="nav-link active" href="/waybill.html">Waybill</a> <!-- Current page -->
     </nav>
 </header>
 
+<!-- ============================================
+     MAIN CONTENT AREA
+     ============================================ -->
 <main class="app-main">
+    <!-- Waybill module container -->
     <section id="waybill-module" class="module" data-document-type="waybill">
+        
+        <!-- ============================================
+             MODULE HEADER - Title and Action Buttons
+             ============================================ -->
         <div class="module-header">
             <h2>Waybill</h2>
             <div class="module-actions">
@@ -41,22 +109,40 @@
             </div>
         </div>
 
+        <!-- ============================================
+             MODULE BODY - Edit Form and Preview
+             ============================================ -->
         <div class="module-body">
+            <!-- ============================================
+                 EDIT MODE - Waybill Form
+                 ============================================
+                 This form is visible by default and allows
+                 the user to enter waybill data for logistics
+                 and delivery tracking.
+                 ============================================ -->
             <form id="waybill-form" class="document waybill-document document-editable" novalidate>
+                <!-- Hidden field for document number (set by API) -->
                 <input type="hidden" id="waybill-document-number" name="document_number">
+                
+                <!-- Letterhead: Waybill title, number, date, and logo -->
                 <div class="waybill-letterhead">
                     <div class="letterhead-left">
                         <h3 class="title">WAYBILL</h3>
+                        <!-- Waybill number (generated by server) -->
                         <p>No.: <span id="waybill-number">WAY000</span></p>
+                        <!-- Issue date input (inline styling for compact layout) -->
                         <p class="waybill-date">Date: <input type="date" id="waybill-issue-date" name="issue_date" required style="display: inline; width: auto; border: none; background: transparent;"></p>
                     </div>
                     <div class="letterhead-right">
+                        <!-- Company logo (served from /assets/) -->
                         <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
                     </div>
                 </div>
 
+                <!-- Hidden field for items payload (JSON string of line items) -->
                 <input type="hidden" id="waybill-items-payload" name="items_payload" value="[]">
 
+                <!-- Line items table (dynamically populated) -->
                 <table class="document-items" id="waybill-items-table">
                     <thead>
                         <tr>
@@ -66,11 +152,14 @@
                             <th>Amount (GHC)</th>
                         </tr>
                     </thead>
-                    <tbody></tbody>
+                    <tbody></tbody> <!-- Rows added dynamically by waybill.js -->
                 </table>
+                <!-- Button to add new line items -->
                 <button type="button" id="waybill-add-item" class="button button-secondary">Add Item</button>
 
+                <!-- Signature section: Delivery and receiving officers -->
                 <div class="waybill-signature-grid">
+                    <!-- Delivered By signature card -->
                     <div class="signature-card">
                         <span class="signature-title">Delivered By</span>
                         <label class="field-block">
@@ -78,6 +167,7 @@
                         </label>
                         <div class="signature-line">Signature</div>
                     </div>
+                    <!-- Received By signature card -->
                     <div class="signature-card">
                         <span class="signature-title">Received By</span>
                         <label class="field-block">
@@ -87,24 +177,43 @@
                     </div>
                 </div>
 
+                <!-- Contact bar: Editable contact information -->
                 <section class="waybill-contact-bar">
                     <input type="text" id="waybill-contact" placeholder="DELIVERED BY SPAQUELS &bull; CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719" aria-label="Waybill contact information">
                 </section>
             </form>
 
+            <!-- ============================================
+                 PREVIEW MODE - Waybill Preview
+                 ============================================
+                 This section is hidden by default and shown when
+                 user clicks "Preview" button. It displays a
+                 read-only view of the waybill data.
+                 
+                 FEATURES:
+                 - Read-only display of all waybill data
+                 - Includes signature sections for delivery tracking
+                 - Includes contact information footer
+                 - Used as source for PDF/JPEG generation
+                 ============================================ -->
             <article id="waybill-preview" class="document waybill-document" hidden>
+                <!-- Letterhead: Waybill title, number, date, and logo (preview) -->
                 <div class="waybill-letterhead">
                     <div class="letterhead-left">
                         <h3>WAYBILL</h3>
+                        <!-- Waybill number (from form) -->
                         <p>No.: <span class="js-waybill-preview-number">WAY000</span></p>
+                        <!-- Issue date (from form) -->
                         <p class="waybill-date">Date: <span class="js-waybill-preview-date">—</span></p>
                     </div>
                     <div class="letterhead-right">
+                        <!-- Company logo -->
                         <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
                     </div>
                 </div>
                 
 
+                <!-- Line items table (populated from form data) -->
                 <table class="document-items">
                     <thead>
                         <tr>
@@ -114,10 +223,12 @@
                             <th>Amount (GHC)</th>
                         </tr>
                     </thead>
-                    <tbody class="js-waybill-preview-rows"></tbody>
+                    <tbody class="js-waybill-preview-rows"></tbody> <!-- Populated by waybill.js -->
                 </table>
 
+                <!-- Signature section: Display delivery and receiving officer names -->
                 <div class="waybill-signature-grid">
+                    <!-- Delivered By display -->
                     <div class="signature-card">
                         <span class="signature-title">Delivered By</span>
                         <div class="field-block">
@@ -126,6 +237,7 @@
                        
                         <div class="signature-line">Signature</div>
                     </div>
+                    <!-- Received By display -->
                     <div class="signature-card">
                         <span class="signature-title">Received By</span>
                         <div class="field-block">
@@ -136,15 +248,18 @@
                     </div>
                 </div>
 
+                <!-- Contact information footer -->
                 <section id="waybill-preview-contact">
                     <div class="contact-wrapper">
                        
+                        <!-- Phone numbers and banking information -->
                         <p class="account">
                             <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
                             <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
                             <span>0540673202</span>
                             <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
                         </p>
+                        <!-- Email and website -->
                          <p class="email">
                             <span>Email: spaquelsmultimedia@gmail.com</span>
                             <span>Website: www.spaquelsmultimedia.org</span>
@@ -153,16 +268,29 @@
                 </section>
             </article>
         </div>
+        
+        <!-- Toast notification for user feedback (hidden by default) -->
         <div class="module-toast" id="waybill-toast" role="status" aria-live="polite" hidden></div>
     </section>
 </main>
 
+<!-- ============================================
+     APP FOOTER
+     ============================================ -->
 <footer class="app-footer">
     <p>&copy; <span id="waybill-current-year"></span> Billing App. All rights reserved.</p>
 </footer>
 
+<!-- ============================================
+     JAVASCRIPT DEPENDENCIES
+     ============================================
+     - main.js: Shared utilities and helpers
+     - waybill.js: Waybill-specific logic
+     ============================================ -->
 <script src="{% static 'js/main.js' %}" defer></script>
 <script src="{% static 'js/waybill.js' %}" defer></script>
+
+<!-- Set current year in footer -->
 <script>
     document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("waybill-current-year").textContent = new Date().getFullYear();

@@ -1,3 +1,34 @@
+<!--
+============================================
+HOME PAGE / DASHBOARD - BILLING APP
+============================================
+This is the main landing page (index.html) that serves as the
+dashboard for the Billing App. It provides an overview and
+quick access to all document types.
+
+KEY FEATURES:
+- Document count display (invoices, receipts, waybills)
+- Quick action buttons to open each document editor
+- Real-time counter animation on page load
+- Clean, card-based layout for easy navigation
+
+STRUCTURE:
+- Dashboard Hero: Welcome message and brief description
+- Document Counters: Three cards showing count of each document type
+- Quick Actions: Three action cards with navigation to editors
+
+DEPENDENCIES:
+- base.html: Parent template providing app header and footer
+- home.css: Dashboard-specific styles
+- home.js: Counter loading and animation logic
+- Backend API: /api/counter/counts/ for document counts
+
+NAVIGATION:
+- Invoice Editor: {% url 'invoice-form' %}
+- Receipt Editor: {% url 'receipt-form' %}
+- Waybill Editor: {% url 'waybill-form' %}
+============================================
+-->
 {% extends 'base.html' %}
 {% load static %}
 
@@ -9,55 +40,81 @@
 {% endblock %}
 
 {% block content %}
+<!-- ============================================
+     DASHBOARD HERO SECTION
+     ============================================
+     Main welcome message and description for users
+     ============================================ -->
 <section class="dashboard-hero">
     <h2>Track invoices, receipts, and logistics from one workspace.</h2>
     <p>View document counts and access editors below.</p>
 </section>
 
-<!-- Document Counters Section -->
+<!-- ============================================
+     DOCUMENT COUNTERS SECTION
+     ============================================
+     Displays real-time count of each document type.
+     Counts are loaded via API and animated on page load.
+     See home.js for implementation details.
+     ============================================ -->
 <section class="dashboard-counters" aria-label="Document counters">
+    <!-- Invoice Counter Card -->
     <article class="counter-card">
         <span class="counter-value" id="invoices-count">0</span>
         <span class="counter-label">Invoices</span>
     </article>
     
+    <!-- Receipt Counter Card -->
     <article class="counter-card">
         <span class="counter-value" id="receipts-count">0</span>
         <span class="counter-label">Receipts</span>
     </article>
     
+    <!-- Waybill Counter Card -->
     <article class="counter-card">
         <span class="counter-value" id="waybills-count">0</span>
         <span class="counter-label">Waybills</span>
     </article>
 </section>
 
-<!-- Quick Actions Section -->
+<!-- ============================================
+     QUICK ACTIONS SECTION
+     ============================================
+     Navigation cards with buttons to open each document editor.
+     Each card includes a label and an "Open Editor" button with
+     an arrow icon for visual feedback.
+     ============================================ -->
 <section class="dashboard-actions" aria-label="Quick actions">
+    <!-- Invoice Action Card -->
     <article class="action-card">
         <span class="action-label">Invoice</span>
         <a class="button" href="{% url 'invoice-form' %}">
             Open Editor
+            <!-- Right arrow icon for visual feedback -->
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
         </a>
     </article>
 
+    <!-- Receipt Action Card -->
     <article class="action-card">
         <span class="action-label">Receipt</span>
         <a class="button" href="{% url 'receipt-form' %}">
             Open Editor
+            <!-- Right arrow icon for visual feedback -->
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
         </a>
     </article>
 
+    <!-- Waybill Action Card -->
     <article class="action-card">
         <span class="action-label">Waybill</span>
         <a class="button" href="{% url 'waybill-form' %}">
             Open Editor
+            <!-- Right arrow icon for visual feedback -->
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
@@ -67,5 +124,11 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- ============================================
+     HOME PAGE JAVASCRIPT
+     ============================================
+     Loads document counts from API and animates counters.
+     See frontend/static/js/home.js for implementation.
+     ============================================ -->
 <script src="{% static 'js/home.js' %}"></script>
 {% endblock %}
