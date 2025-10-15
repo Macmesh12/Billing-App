@@ -18,8 +18,10 @@ except ImportError:  # pragma: no cover - handled gracefully at runtime
 
 try:
     from PIL import Image
+    from pdf2image import convert_from_bytes
 except ImportError:  # pragma: no cover - optional dependency
     Image = None
+    convert_from_bytes = None
 
 LOGGER = logging.getLogger(__name__)
 
@@ -131,16 +133,27 @@ def render_pdf(request: HttpRequest) -> HttpResponse:
 
     try:
         if output_format == "pdf":
+            # Render PDF directly
             data = html.write_pdf()
             content_type = "application/pdf"
         else:
-            if Image is None:
-                return _cors(JsonResponse({"error": "JPEG rendering requires Pillow to be installed"}, status=HTTPStatus.SERVICE_UNAVAILABLE))
-            png_bytes = html.write_png()
-            with Image.open(BytesIO(png_bytes)) as png_image:
-                jpeg_buffer = BytesIO()
-                png_image.convert("RGB").save(jpeg_buffer, format="JPEG", quality=92, optimize=True)
-                data = jpeg_buffer.getvalue()
+            # For JPEG, first render PDF, then convert to image
+            if Image is None or convert_from_bytes is None:
+                return _cors(JsonResponse({"error": "JPEG rendering requires Pillow and pdf2image to be installed"}, status=HTTPStatus.SERVICE_UNAVAILABLE))
+            
+            # Generate PDF first
+            pdf_bytes = html.write_pdf()
+            
+            # Convert PDF to images (one per page)
+            images = convert_from_bytes(pdf_bytes, dpi=150)
+            
+            if not images:
+                raise ValueError("No images generated from PDF")
+            
+            # Convert first page to JPEG
+            jpeg_buffer = BytesIO()
+            images[0].convert("RGB").save(jpeg_buffer, format="JPEG", quality=92, optimize=True)
+            data = jpeg_buffer.getvalue()
             content_type = "image/jpeg"
     except Exception:  # pragma: no cover - bubble error as JSON
         LOGGER.exception("Failed to render document for type %s (format %s)", document_type, output_format)
