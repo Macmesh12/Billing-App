@@ -1,25 +1,43 @@
+"""
+Invoice API endpoints.
+
+This module provides RESTful API endpoints for managing invoices.
+It handles creating, retrieving, updating invoices, and calculating preview totals.
+
+ENDPOINTS:
+- POST /api/invoices/calculate/ - Calculate invoice totals for preview
+- POST /api/invoices/create/ - Create a new invoice
+- GET /api/invoices/<id>/ - Retrieve an invoice
+- PUT/PATCH /api/invoices/<id>/ - Update an invoice
+
+All endpoints support CORS and are exempt from CSRF protection
+for easier frontend integration.
+"""
 import json
-# Import JSON module for parsing/serializing
 from http import HTTPStatus
-# Import HTTP status codes
 
 from django.http import JsonResponse, HttpRequest, HttpResponse
-# Import Django HTTP response classes
 from django.views.decorators.csrf import csrf_exempt
-# Import CSRF exempt decorator
 from django.conf import settings
-# Import Django settings
 
 from .forms import InvoiceForm
-# Import InvoiceForm
 from .models import Invoice
-# Import Invoice model
 from .services.calculator import calculate_totals
-# Import calculate_totals function
 
 
 def _cors(response: HttpResponse) -> HttpResponse:
-    # Add CORS headers to response
+    """
+    Add CORS headers to HTTP response.
+    
+    Allows cross-origin requests from any domain with GET, POST, and OPTIONS methods.
+    This is necessary for the Electron frontend to communicate with the Django backend.
+    
+    Args:
+        response: Django HTTP response object
+        
+    Returns:
+        Modified response with CORS headers
+    """
     response.setdefault("Access-Control-Allow-Origin", "*")
     response.setdefault("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
     response.setdefault("Access-Control-Allow-Headers", "Content-Type")
@@ -28,28 +46,61 @@ def _cors(response: HttpResponse) -> HttpResponse:
 
 @csrf_exempt
 def calculate_preview(request: HttpRequest) -> HttpResponse:
-    # API endpoint to calculate preview totals
-    """POST JSON -> calculates totals using existing invoice logic.
-
-    Expects JSON body with keys matching InvoiceForm + items_payload (JSON string/list).
-    Returns subtotal, levies, grand_total as JSON.
     """
+    Calculate invoice totals for preview without saving.
+    
+    This endpoint accepts invoice line items and calculates subtotal, levies (taxes),
+    and grand total using the same logic as the main invoice form. Used by the
+    frontend to show real-time calculations as the user enters data.
+    
+    Tax configuration is read from settings.TAX_SETTINGS which defines:
+    - NHIL: National Health Insurance Levy
+    - GETFUND: Ghana Education Trust Fund levy
+    - COVID: COVID-19 levy
+    - VAT: Value Added Tax
+    
+    Args:
+        request: Django HTTP request object
+        
+    Returns:
+        JsonResponse with calculated totals:
+        {
+            "subtotal": float,
+            "levies": {"NHIL": float, "GETFUND": float, ...},
+            "grand_total": float
+        }
+        Status 200 OK on success
+        Status 405 METHOD NOT ALLOWED if not POST
+        
+    Example request body:
+        {
+            "items_payload": "[{\"description\": \"Item 1\", \"quantity\": 2, \"unit_price\": 100}]"
+        }
+    """
+    # Handle preflight CORS request
     if request.method == "OPTIONS":
         return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
+    
+    # Only accept POST requests
     if request.method != "POST":
         return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
+    
+    # Parse JSON request body
     data = json.loads(request.body or "{}")
-    # Parse JSON body
+    
+    # Create form instance to use its parsing logic
     form = InvoiceForm(data or None)
-    # Create form instance
-    # ensure form parsing logic runs
+    # Run validation to ensure form parsing logic executes
     form.is_valid()
+    
+    # Extract and parse line items
     items_payload = data.get("items_payload", "[]")
-    # Get items payload
     items = form._parse_items(items_payload)
-    # Parse items
+    
+    # Calculate totals using calculator service
     totals = calculate_totals(items)
-    # Calculate totals
+    
+    # Return calculated values as JSON
     return _cors(JsonResponse(
         {
             "subtotal": float(totals.subtotal),
@@ -61,20 +112,50 @@ def calculate_preview(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt
 def create_invoice(request: HttpRequest) -> HttpResponse:
-    # API endpoint to create invoice
-    """Create an invoice via API. Accepts form data as JSON."""
+    """
+    Create a new invoice via API.
+    
+    Accepts JSON payload with invoice data and creates a new invoice record.
+    The invoice number is auto-generated using the numbering service.
+    Line items are parsed from items_payload and totals are calculated automatically.
+    
+    Args:
+        request: Django HTTP request object
+        
+    Returns:
+        JsonResponse with created invoice data (id, invoice_number)
+        Status 201 CREATED on success
+        Status 400 BAD REQUEST if validation fails
+        Status 405 METHOD NOT ALLOWED if not POST
+        
+    Example request body:
+        {
+            "customer_name": "ABC Company",
+            "issue_date": "2025-10-15",
+            "items_payload": "[{\"description\": \"Item 1\", \"quantity\": 2, \"unit_price\": 100}]",
+            "notes": "Payment terms: Net 30"
+        }
+    """
+    # Handle preflight CORS request
     if request.method == "OPTIONS":
         return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
+    
+    # Only accept POST requests
     if request.method != "POST":
         return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
+    
+    # Parse JSON request body
     data = json.loads(request.body or "{}")
-    # Parse JSON body
+    
+    # Validate data using Django form
     form = InvoiceForm(data or None)
-    # Create form instance
     if not form.is_valid():
         return _cors(JsonResponse({"errors": form.errors}, status=HTTPStatus.BAD_REQUEST))
+    
+    # Save invoice to database
     invoice = form.save()
-    # Save invoice
+    
+    # Return created invoice data
     return _cors(JsonResponse({
         "id": invoice.pk,
         "invoice_number": invoice.invoice_number,

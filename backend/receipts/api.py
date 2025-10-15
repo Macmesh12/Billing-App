@@ -1,21 +1,40 @@
+"""
+Receipt API endpoints.
+
+This module provides RESTful API endpoints for managing receipts.
+It handles creating, retrieving, and updating receipt documents.
+
+ENDPOINTS:
+- POST /api/receipts/create/ - Create a new receipt
+- GET /api/receipts/<id>/ - Retrieve a receipt
+- PUT/PATCH /api/receipts/<id>/ - Update a receipt
+
+All endpoints support CORS and are exempt from CSRF protection
+for easier frontend integration.
+"""
 import json
-# Import JSON module
 from http import HTTPStatus
-# Import HTTP status codes
 
 from django.http import JsonResponse, HttpRequest, HttpResponse
-# Import Django HTTP classes
 from django.views.decorators.csrf import csrf_exempt
-# Import CSRF exempt decorator
 
 from .forms import ReceiptForm
-# Import ReceiptForm
 from .models import Receipt
-# Import Receipt model
 
 
 def _cors(response: HttpResponse) -> HttpResponse:
-    # Add CORS headers
+    """
+    Add CORS headers to HTTP response.
+    
+    Allows cross-origin requests from any domain with GET, POST, and OPTIONS methods.
+    This is necessary for the Electron frontend to communicate with the Django backend.
+    
+    Args:
+        response: Django HTTP response object
+        
+    Returns:
+        Modified response with CORS headers
+    """
     response.setdefault("Access-Control-Allow-Origin", "*")
     response.setdefault("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
     response.setdefault("Access-Control-Allow-Headers", "Content-Type")
@@ -24,19 +43,51 @@ def _cors(response: HttpResponse) -> HttpResponse:
 
 @csrf_exempt
 def create_receipt(request: HttpRequest) -> HttpResponse:
-    # API to create receipt
+    """
+    Create a new receipt via API.
+    
+    Accepts JSON payload with receipt data and creates a new receipt record.
+    The receipt number is auto-generated using the numbering service.
+    
+    Args:
+        request: Django HTTP request object
+        
+    Returns:
+        JsonResponse with created receipt data (id, receipt_number)
+        Status 201 CREATED on success
+        Status 400 BAD REQUEST if validation fails
+        Status 405 METHOD NOT ALLOWED if not POST
+        
+    Example request body:
+        {
+            "received_from": "John Doe",
+            "customer_name": "ABC Company",
+            "issue_date": "2025-10-15",
+            "amount_paid": "1500.00",
+            "payment_method": "Cash",
+            "items_payload": "[{...}]"
+        }
+    """
+    # Handle preflight CORS request
     if request.method == "OPTIONS":
         return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
+    
+    # Only accept POST requests
     if request.method != "POST":
         return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
+    
+    # Parse JSON request body
     data = json.loads(request.body or "{}")
-    # Parse JSON body
+    
+    # Validate data using Django form
     form = ReceiptForm(data or None)
-    # Create form
     if not form.is_valid():
         return _cors(JsonResponse({"errors": form.errors}, status=HTTPStatus.BAD_REQUEST))
+    
+    # Save receipt to database
     receipt = form.save()
-    # Save receipt
+    
+    # Return created receipt data
     return _cors(JsonResponse({
         "id": receipt.pk,
         "receipt_number": receipt.receipt_number,
@@ -46,14 +97,45 @@ def create_receipt(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt
 def get_receipt(request: HttpRequest, pk: int) -> HttpResponse:
-    # API to get/update receipt
+    """
+    Retrieve or update an existing receipt.
+    
+    Supports GET (retrieve), PUT/PATCH (update) methods.
+    
+    Args:
+        request: Django HTTP request object
+        pk: Primary key (ID) of the receipt to retrieve/update
+        
+    Returns:
+        GET: JsonResponse with receipt data
+        PUT/PATCH: JsonResponse with updated receipt data
+        Status 404 NOT FOUND if receipt doesn't exist
+        Status 400 BAD REQUEST if validation fails on update
+        Status 405 METHOD NOT ALLOWED for unsupported methods
+        
+    Example GET response:
+        {
+            "id": 1,
+            "receipt_number": "REC-00001",
+            "received_from": "John Doe",
+            "issue_date": "2025-10-15",
+            "amount": 1500.00,
+            "payment_method": "Cash",
+            "description": "Payment for services",
+            "approved_by": "Jane Smith"
+        }
+    """
+    # Retrieve receipt from database
     try:
         receipt = Receipt.objects.get(pk=pk)
-        # Get receipt
     except Receipt.DoesNotExist:
         return _cors(HttpResponse(status=HTTPStatus.NOT_FOUND))
+    
+    # Handle preflight CORS request
     if request.method == "OPTIONS":
         return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
+    
+    # Handle GET request - retrieve receipt data
     if request.method == "GET":
         data = {
             "id": receipt.pk,
@@ -67,18 +149,26 @@ def get_receipt(request: HttpRequest, pk: int) -> HttpResponse:
             "approved_by": receipt.approved_by,
         }
         return _cors(JsonResponse(data))
+    
+    # Handle PUT/PATCH request - update receipt
     if request.method in {"PUT", "PATCH"}:
+        # Parse JSON request body
         data = json.loads(request.body or "{}")
-        # Parse JSON body
+        
+        # Validate data using Django form with existing instance
         form = ReceiptForm(data or None, instance=receipt)
-        # Create form with instance
         if not form.is_valid():
             return _cors(JsonResponse({"errors": form.errors}, status=HTTPStatus.BAD_REQUEST))
+        
+        # Save updated receipt to database
         receipt = form.save()
-        # Save receipt
+        
+        # Return updated receipt data
         return _cors(JsonResponse({
             "id": receipt.pk,
             "receipt_number": receipt.receipt_number,
             "document_number": receipt.receipt_number,
         }))
+    
+    # Unsupported HTTP method
     return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
