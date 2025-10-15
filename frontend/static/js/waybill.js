@@ -1,15 +1,65 @@
+/* ============================================
+   WAYBILL MODULE - MAIN JAVASCRIPT
+   ============================================
+   This file handles all waybill functionality including:
+   - Shipped item management (add, edit, remove)
+   - Delivery information tracking
+   - Preview mode toggling
+   - Form validation and submission
+   - PDF/JPEG export functionality
+   - API integration for saving waybills
+   ============================================ */
+
+// IIFE (Immediately Invoked Function Expression) to encapsulate module logic
+// This prevents polluting the global namespace
 (function () {
-    // IIFE for waybill module
+    // ============================================
+    // GLOBAL HELPERS AND CONFIGURATION
+    // ============================================
+    
+    // Import helper functions from global BillingApp object (defined in main.js)
     const helpers = window.BillingApp || {};
-    // Get global helpers
+    
+    /**
+     * Preview Toggle Helper
+     * Switches between edit and preview modes
+     * @type {Function}
+     */
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
-    // Fallback for togglePreview
+    
+    /**
+     * Download Format Chooser
+     * Shows dialog to select PDF or JPEG format
+     * @type {Function}
+     * @returns {Promise<string|null>} - Returns "pdf", "jpeg", or null if cancelled
+     */
     const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
-    // Format chooser fallback
+    
+    /**
+     * Parse Number Helper
+     * Safely converts strings to numbers
+     * @type {Function}
+     * @param {string|number} value - Value to parse
+     * @returns {number} Parsed number
+     */
     const parseNumber = typeof helpers.parseNumber === "function" ? helpers.parseNumber : (value) => Number.parseFloat(value || 0) || 0;
-    // Fallback for parseNumber
+    
+    /**
+     * Currency Formatter
+     * Formats numbers to currency strings (e.g., 1234.5 -> "1234.50")
+     * @type {Function}
+     * @param {number} value - Number to format
+     * @returns {string} Formatted currency string
+     */
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
-    // Fallback for formatCurrency
+    
+    /**
+     * Quantity Formatter
+     * Formats quantities, showing decimals only when needed
+     * @type {Function}
+     * @param {number} value - Quantity to format
+     * @returns {string} Formatted quantity string
+     */
     const formatQuantity = typeof helpers.formatQuantity === "function"
         ? helpers.formatQuantity
         : (value) => {
@@ -18,22 +68,33 @@
             return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2);
         };
 
+    // ============================================
+    // MODULE INITIALIZATION
+    // ============================================
+    
+    /**
+     * Module Identification
+     * Used to identify this specific module in the DOM
+     */
     const moduleId = "waybill-module";
-    // Module ID
     const moduleEl = document.getElementById(moduleId);
-    // Module element
     const form = document.getElementById("waybill-form");
-    // Form element
+    
+    // Exit early if required elements are not found
     if (!moduleEl || !form) return;
-    // Exit if elements not found
 
+    /**
+     * API Configuration
+     * Base URL for backend API calls
+     */
     const config = window.BILLING_APP_CONFIG || {};
-    // Global config
     const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
-    // API base URL
 
+    /**
+     * DOM Element References
+     * Cached references to frequently accessed DOM elements
+     */
     const elements = {
-        // DOM elements object
         itemsPayload: document.getElementById("waybill-items-payload"),
         itemsTableBody: document.querySelector("#waybill-items-table tbody"),
         previewRowsContainers: document.querySelectorAll(".js-waybill-preview-rows"),
@@ -55,8 +116,11 @@
         previewContactEls: document.querySelectorAll(".js-waybill-preview-contact"),
     };
 
+    /**
+     * Form Input References
+     * References to form input fields
+     */
     const inputs = {
-        // Input elements object
         issueDate: document.getElementById("waybill-issue-date"),
         customer: document.getElementById("waybill-customer"),
         destination: document.getElementById("waybill-destination"),
@@ -68,25 +132,49 @@
         contact: document.getElementById("waybill-contact"),
     };
 
+    /**
+     * Application State
+     * Central state management for waybill module
+     */
     const state = {
-        // State object
-        items: [],
-        waybillId: null,
-        waybillNumber: "WB-NEW",
-        isSaving: false,
+        items: [],                  // Array of shipped items
+        waybillId: null,            // Database ID of current waybill (null for new)
+        waybillNumber: "WB-NEW",    // Current waybill number
+        isSaving: false,            // Flag to prevent duplicate save operations
     };
 
+    // ============================================
+    // HELPER FUNCTIONS AND UTILITIES
+    // ============================================
+
+    /**
+     * Set Text Content Helper
+     * Sets text content for single element or NodeList
+     * @param {HTMLElement|NodeList} target - Element or list of elements
+     * @param {string} text - Text content to set
+     */
     function setText(target, text) {
         if (!target) return;
+        
+        // Handle NodeList or HTMLCollection
         if (typeof target.length === "number" && !target.nodeType) {
             Array.from(target).forEach((node) => {
                 if (node) node.textContent = text;
             });
             return;
         }
+        
+        // Handle single element
         target.textContent = text;
     }
 
+    /**
+     * Value or Placeholder Helper
+     * Returns field value or placeholder if empty
+     * @param {HTMLInputElement} field - Input field element
+     * @param {string} fallback - Default value if no value or placeholder
+     * @returns {string} Field value, placeholder, or fallback
+     */
     function valueOrPlaceholder(field, fallback = "—") {
         if (!field) return fallback;
         const value = (field.value || "").trim();
@@ -95,6 +183,12 @@
         return fallback;
     }
 
+    /**
+     * Format Date for Display
+     * Converts date string to human-readable format (e.g., "15 October 2025")
+     * @param {string} value - Date string (ISO format or other parseable format)
+     * @returns {string} Formatted date string or fallback
+     */
     function formatDisplayDate(value) {
         if (!value) return "—";
         const date = new Date(value);
@@ -106,20 +200,35 @@
         }).format(date);
     }
 
+    /**
+     * Show Toast Notification
+     * Displays a temporary notification message
+     * @param {string} message - Message to display
+     * @param {string} tone - Tone/style of toast ("success", "error", "warning")
+     */
     function showToast(message, tone = "success") {
-        // Function to show toast
         const el = elements.toast;
         if (!el) return;
+        
         el.textContent = message;
         el.className = `module-toast is-${tone}`;
         el.hidden = false;
+        
+        // Auto-hide after 4 seconds
         setTimeout(() => {
             el.hidden = true;
         }, 4000);
     }
 
+    /**
+     * API Call Helper
+     * Makes HTTP requests to backend API with error handling
+     * @param {string} path - API endpoint path
+     * @param {Object} options - Fetch options (method, headers, body, etc.)
+     * @returns {Promise<Object|null>} Parsed JSON response or null for 204
+     * @throws {Error} On HTTP error status
+     */
     async function callApi(path, options = {}) {
-        // API call function
         const response = await fetch(`${API_BASE}${path}`, {
             headers: {
                 "Content-Type": "application/json",
@@ -127,23 +236,39 @@
             },
             ...options,
         });
+        
+        // Handle error responses
         if (!response.ok) {
             let detail = await response.json().catch(() => ({}));
             const message = detail.errors ? JSON.stringify(detail.errors) : `${response.status} ${response.statusText}`;
             throw new Error(message);
         }
+        
+        // Handle no-content responses
         if (response.status === 204) return null;
+        
         return response.json();
     }
 
+    // ============================================
+    // RENDERING FUNCTIONS
+    // ============================================
+
+    /**
+     * Update Preview Items
+     * Renders shipped items in preview mode
+     * Always renders exactly 10 rows for consistent layout
+     */
     function updatePreviewItems() {
         const previewBodies = elements.previewRowsContainers;
         if (!previewBodies || !previewBodies.length) return;
+        
+        // Update all preview containers (may be multiple in waybill layout)
         previewBodies.forEach((container) => {
             if (!container) return;
             container.innerHTML = "";
             
-            // Always render 10 rows
+            // Render exactly 10 rows for consistent spacing
             for (let index = 0; index < 10; index++) {
                 const item = state.items[index];
                 const previewRow = document.createElement("tr");
