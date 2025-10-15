@@ -88,21 +88,51 @@ def _safe_filename(raw: str | None, ext: str = "pdf") -> str:
 
 @csrf_exempt
 def render_pdf(request: HttpRequest) -> HttpResponse:
-    """Render PDF bytes from provided HTML fragment."""
+    """
+    Render PDF or JPEG from HTML fragment.
+    
+    This endpoint accepts HTML content and renders it to PDF or JPEG format
+    using WeasyPrint. The HTML is wrapped with appropriate CSS for the
+    document type before rendering.
+    
+    Request:
+        Method: POST
+        Body (JSON):
+            - html: HTML fragment to render (required)
+            - document_type: Type of document (invoice, receipt, waybill) for CSS selection
+            - format: Output format - "pdf" or "jpeg" (default: "pdf")
+            - filename: Desired output filename (sanitized automatically)
+    
+    Response:
+        - Content-Type: application/pdf or image/jpeg
+        - Content-Disposition: attachment with sanitized filename
+        - Body: Binary PDF or JPEG data
+    
+    Errors:
+        - 400: Invalid JSON, missing html field, or unsupported format
+        - 405: Method not allowed (not POST)
+        - 500: Rendering failed
+        - 503: WeasyPrint or Pillow not available
+    """
+    # Handle CORS preflight
     if request.method == "OPTIONS":
         return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
 
+    # Only accept POST requests
     if request.method != "POST":
         return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
 
+    # Check if WeasyPrint is available
     if HTML is None:
         return _cors(JsonResponse({"error": "PDF renderer is not available"}, status=HTTPStatus.SERVICE_UNAVAILABLE))
 
+    # Parse JSON payload
     try:
         payload = json.loads(request.body or "{}")
     except json.JSONDecodeError:
         return _cors(JsonResponse({"error": "Invalid JSON payload"}, status=HTTPStatus.BAD_REQUEST))
 
+    # Validate HTML field
     fragment_raw = payload.get("html")
     if fragment_raw is None:
         return _cors(JsonResponse({"error": "Missing 'html' field"}, status=HTTPStatus.BAD_REQUEST))
@@ -111,9 +141,11 @@ def render_pdf(request: HttpRequest) -> HttpResponse:
     if not fragment.strip():
         return _cors(JsonResponse({"error": "Empty HTML payload"}, status=HTTPStatus.BAD_REQUEST))
 
+    # Extract document type and requested format
     document_type = str(payload.get("document_type") or "document").strip().lower()
     requested_format = str(payload.get("format") or "pdf").strip().lower() or "pdf"
 
+    # Normalize format and determine file extension
     if requested_format in {"jpg", "jpeg"}:
         output_format = "jpeg"
         extension = "jpg"
@@ -123,22 +155,30 @@ def render_pdf(request: HttpRequest) -> HttpResponse:
     else:
         return _cors(JsonResponse({"error": "Unsupported format requested"}, status=HTTPStatus.BAD_REQUEST))
 
+    # Sanitize filename
     filename = _safe_filename(payload.get("filename"), ext=extension)
 
+    # Wrap HTML fragment with CSS and document structure
     html_document = _wrap_html(fragment, document_type)
+    # Use absolute URL for resolving relative paths in HTML
     base_url = request.build_absolute_uri("/")
     html = HTML(string=html_document, base_url=base_url)
 
+    # Render to requested format
     try:
         if output_format == "pdf":
+            # Render directly to PDF
             data = html.write_pdf()
             content_type = "application/pdf"
         else:
+            # Render to JPEG via PNG intermediate
             if Image is None:
                 return _cors(JsonResponse({"error": "JPEG rendering requires Pillow to be installed"}, status=HTTPStatus.SERVICE_UNAVAILABLE))
+            # WeasyPrint renders to PNG, then convert to JPEG
             png_bytes = html.write_png()
             with Image.open(BytesIO(png_bytes)) as png_image:
                 jpeg_buffer = BytesIO()
+                # Convert to RGB (remove alpha) and save as JPEG
                 png_image.convert("RGB").save(jpeg_buffer, format="JPEG", quality=92, optimize=True)
                 data = jpeg_buffer.getvalue()
             content_type = "image/jpeg"
@@ -146,6 +186,7 @@ def render_pdf(request: HttpRequest) -> HttpResponse:
         LOGGER.exception("Failed to render document for type %s (format %s)", document_type, output_format)
         return _cors(JsonResponse({"error": "Failed to render document"}, status=HTTPStatus.INTERNAL_SERVER_ERROR))
 
+    # Return rendered document as file download
     response = HttpResponse(data, content_type=content_type)
     response["Content-Disposition"] = f"attachment; filename=\"{filename}\""
     return _cors(response)
