@@ -784,281 +784,423 @@
         // Debounced server calculation to avoid excessive API calls during typing
         const debouncedServerTotals = debounce(calculateServerTotals, 300);
 
-    async function handlePreviewToggle() {
-        // Function to handle preview toggle button click
-        // Ensure preview table reflects latest items before switching view
-        renderItems();
-        syncPreviewFromForm();
-        await calculateServerTotals();
-        togglePreview(moduleId, true);
-    }
+        // ============================================
+        // PREVIEW MODE MANAGEMENT
+        // ============================================
 
-    async function preparePreviewSnapshot() {
-        renderItems();
-        syncPreviewFromForm();
-        await calculateServerTotals();
-    }
-
-    function buildDocumentPayload(docType, previewEl, format) {
-        const clone = previewEl.cloneNode(true);
-        clone.removeAttribute("hidden");
-        clone.setAttribute("data-pdf-clone", "true");
-        clone.classList.add("pdf-export");
-        clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
-        clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
-        
-        // Wrap the content in pdf-export-wrapper div for proper styling
-        const wrapper = document.createElement("div");
-        wrapper.className = "pdf-export-wrapper";
-        wrapper.appendChild(clone);
-        const normalizedFormat = format === "jpeg" ? "jpeg" : "pdf";
-        const safeBase = String(state.invoiceNumber || "invoice").trim().replace(/\s+/g, "_");
-        const extension = normalizedFormat === "jpeg" ? "jpg" : "pdf";
-        
-        return {
-            document_type: docType,
-            html: wrapper.outerHTML,
-            filename: `${safeBase}.${extension}`,
-            format: normalizedFormat,
-        };
-    }
-
-    async function downloadInvoiceDocument(format) {
-        try {
-            await preparePreviewSnapshot();
-
-            const previewEl = document.getElementById("invoice-preview");
-            if (!previewEl) {
-                throw new Error("Preview element not found");
-            }
-
-            const payload = buildDocumentPayload("invoice", previewEl, format);
-            const normalizedFormat = payload.format === "jpeg" ? "jpeg" : "pdf";
-
-            console.log("Sending render request to:", `${API_BASE}/api/pdf/render/`);
-            console.log("Requested format:", normalizedFormat);
-            console.log("Payload size:", JSON.stringify(payload).length, "bytes");
-
-            const response = await fetch(`${API_BASE}/api/pdf/render/`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Accept: normalizedFormat === "jpeg" ? "image/jpeg" : "application/pdf",
-                },
-                body: JSON.stringify(payload),
-            }).catch(err => {
-                console.error("Fetch failed:", err);
-                throw new Error(`Network error: ${err.message}. Make sure Django server is running on ${API_BASE}`);
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error("PDF render error response:", errorText);
-                throw new Error(`Failed to generate PDF: ${response.status} ${response.statusText}`);
-            }
-
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = payload.filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error("Download document error:", error);
-            throw error;
-        }
-    }
-
-    async function handleSave() {
-        // Handle document download
-        if (state.isSaving) return;
-        
-        state.isSaving = true;
-        elements.submitBtn?.setAttribute("disabled", "disabled");
-
-        try {
-            const chosenFormat = await chooseDownloadFormat();
-            if (!chosenFormat) {
-                return;
-            }
+        /**
+         * Handles preview toggle button click
+         * Ensures preview is fully synchronized before displaying
+         * @async
+         */
+        async function handlePreviewToggle() {
+            // Refresh all preview content
+            renderItems();
             syncPreviewFromForm();
-            const reservation = await ensureInvoiceNumberReserved();
-            const normalizedFormat = chosenFormat === "jpeg" ? "jpeg" : "pdf";
-            await downloadInvoiceDocument(normalizedFormat);
-            const label = normalizedFormat === "jpeg" ? "JPEG" : "PDF";
-            const successMessage = `Invoice downloaded as ${label}!`;
-            if (reservation?.reserved) {
-                showToast(successMessage);
-                if (!state.invoiceId) {
-                    state.invoiceNumberReserved = false;
-                    await loadNextInvoiceNumber();
-                }
-            } else {
-                showToast(`${successMessage} However, a new number could not be reserved.`, "warning");
-                if (!state.invoiceId) {
-                    state.invoiceNumberReserved = false;
-                    await loadNextInvoiceNumber();
-                }
-            }
-        } catch (error) {
-            console.error("Failed to download invoice", error);
-            showToast(error.message || "Failed to download invoice", "error");
-        } finally {
-            state.isSaving = false;
-            elements.submitBtn?.removeAttribute("disabled");
+            await calculateServerTotals();
+            
+            // Switch to preview mode
+            togglePreview(moduleId, true);
         }
-    }
 
-    function getQueryParam(name) {
-        // Function to get URL query parameter
-        const params = new URLSearchParams(window.location.search);
-        return params.get(name);
-    }
+        /**
+         * Prepares preview for PDF/JPEG generation
+         * Ensures all data is rendered and calculated before export
+         * @async
+         */
+        async function preparePreviewSnapshot() {
+            renderItems();
+            syncPreviewFromForm();
+            await calculateServerTotals();
+        }
 
-    async function loadConfig() {
-        // Function to load tax configuration from API
-        try {
-            const data = await callApi("/invoices/api/config/");
-            state.levies = normalizeTaxSettings(data?.tax_settings);
-            if (!state.levies.length) {
+        // ============================================
+        // PDF/JPEG EXPORT
+        // ============================================
+
+        /**
+         * Builds HTML payload for PDF/JPEG rendering
+         * Clones preview DOM, removes interactive elements, wraps for styling
+         * @param {string} docType - Document type identifier ("invoice")
+         * @param {HTMLElement} previewEl - Preview DOM element to clone
+         * @param {string} format - Export format ("pdf" or "jpeg")
+         * @returns {Object} Payload for server rendering API
+         */
+        function buildDocumentPayload(docType, previewEl, format) {
+            // Deep clone preview element
+            const clone = previewEl.cloneNode(true);
+            clone.removeAttribute("hidden");
+            clone.setAttribute("data-pdf-clone", "true");
+            clone.classList.add("pdf-export");
+            
+            // Remove interactive elements not needed in export
+            clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
+            clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
+            
+            // Wrap in container div for proper PDF styling (matches preview exactly)
+            const wrapper = document.createElement("div");
+            wrapper.className = "pdf-export-wrapper";
+            wrapper.appendChild(clone);
+            
+            // Normalize format and generate filename
+            const normalizedFormat = format === "jpeg" ? "jpeg" : "pdf";
+            const safeBase = String(state.invoiceNumber || "invoice").trim().replace(/\s+/g, "_");
+            const extension = normalizedFormat === "jpeg" ? "jpg" : "pdf";
+            
+            return {
+                document_type: docType,
+                html: wrapper.outerHTML,
+                filename: `${safeBase}.${extension}`,
+                format: normalizedFormat,
+            };
+        }
+
+        /**
+         * Downloads invoice as PDF or JPEG using server-side rendering
+         * Prepares preview, sends HTML to backend, triggers browser download
+         * @async
+         * @param {string} format - Export format ("pdf" or "jpeg")
+         * @throws {Error} On network errors or render failures
+         */
+        async function downloadInvoiceDocument(format) {
+            try {
+                // Ensure preview is fully rendered and calculated
+                await preparePreviewSnapshot();
+
+                // Get preview element for cloning
+                const previewEl = document.getElementById("invoice-preview");
+                if (!previewEl) {
+                    throw new Error("Preview element not found");
+                }
+
+                // Build payload with HTML and metadata
+                const payload = buildDocumentPayload("invoice", previewEl, format);
+                const normalizedFormat = payload.format === "jpeg" ? "jpeg" : "pdf";
+
+                // Log request details for debugging
+                console.log("Sending render request to:", `${API_BASE}/api/pdf/render/`);
+                console.log("Requested format:", normalizedFormat);
+                console.log("Payload size:", JSON.stringify(payload).length, "bytes");
+
+                // Send render request to backend
+                const response = await fetch(`${API_BASE}/api/pdf/render/`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: normalizedFormat === "jpeg" ? "image/jpeg" : "application/pdf",
+                    },
+                    body: JSON.stringify(payload),
+                }).catch(err => {
+                    console.error("Fetch failed:", err);
+                    throw new Error(`Network error: ${err.message}. Make sure Django server is running on ${API_BASE}`);
+                });
+
+                // Check for render errors
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("PDF render error response:", errorText);
+                    throw new Error(`Failed to generate PDF: ${response.status} ${response.statusText}`);
+                }
+
+                // Download rendered document
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = payload.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error("Download document error:", error);
+                throw error;
+            }
+        }
+
+        // ============================================
+        // SAVE/DOWNLOAD HANDLER
+        // ============================================
+
+        /**
+         * Handles the submit button click - prompts for format and downloads document
+         * Flow: choose format → reserve number → download → show toast → load next number
+         * Prevents double-submission with state.isSaving flag
+         * @async
+         */
+        async function handleSave() {
+            // Prevent double-submission
+            if (state.isSaving) return;
+            
+            state.isSaving = true;
+            elements.submitBtn?.setAttribute("disabled", "disabled");
+
+            try {
+                // Prompt user to choose PDF or JPEG
+                const chosenFormat = await chooseDownloadFormat();
+                if (!chosenFormat) {
+                    // User cancelled
+                    return;
+                }
+                
+                // Sync preview data
+                syncPreviewFromForm();
+                
+                // Reserve invoice number in backend
+                const reservation = await ensureInvoiceNumberReserved();
+                
+                // Download document
+                const normalizedFormat = chosenFormat === "jpeg" ? "jpeg" : "pdf";
+                await downloadInvoiceDocument(normalizedFormat);
+                
+                // Show success message
+                const label = normalizedFormat === "jpeg" ? "JPEG" : "PDF";
+                const successMessage = `Invoice downloaded as ${label}!`;
+                
+                if (reservation?.reserved) {
+                    showToast(successMessage);
+                    // Load next number for new invoice (only if not editing existing)
+                    if (!state.invoiceId) {
+                        state.invoiceNumberReserved = false;
+                        await loadNextInvoiceNumber();
+                    }
+                } else {
+                    // Number reservation failed but download succeeded
+                    showToast(`${successMessage} However, a new number could not be reserved.`, "warning");
+                    if (!state.invoiceId) {
+                        state.invoiceNumberReserved = false;
+                        await loadNextInvoiceNumber();
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to download invoice", error);
+                showToast(error.message || "Failed to download invoice", "error");
+            } finally {
+                // Re-enable button
+                state.isSaving = false;
+                elements.submitBtn?.removeAttribute("disabled");
+            }
+        }
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+
+        /**
+         * Extracts query parameter from current URL
+         * @param {string} name - Parameter name
+         * @returns {string|null} Parameter value or null
+         */
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        /**
+         * Loads tax/levy configuration from server
+         * Falls back to DEFAULT_TAX_SETTINGS on error
+         * @async
+         */
+        async function loadConfig() {
+            try {
+                const data = await callApi("/invoices/api/config/");
+                state.levies = normalizeTaxSettings(data?.tax_settings);
+                
+                // Fallback to defaults if server returns empty
+                if (!state.levies.length) {
+                    state.levies = normalizeTaxSettings();
+                }
+            } catch (error) {
+                console.warn("Failed to load invoice config", error);
                 state.levies = normalizeTaxSettings();
             }
-        } catch (error) {
-            console.warn("Failed to load invoice config", error);
-            state.levies = normalizeTaxSettings();
-        }
-        renderLevyPlaceholders();
-        recalcTotals();
-    }
-
-    async function loadExistingInvoice() {
-        // Function to load existing invoice data if ID in URL
-        const id = getQueryParam("id");
-        if (!id) {
-            state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
-            renderItems();
-            return;
-        }
-        try {
-            const data = await callApi(`/invoices/api/${id}/`);
-            state.invoiceId = data.id;
-            setInvoiceNumber(data.document_number || data.invoice_number || state.invoiceNumber, { reserved: true });
-            if (inputs.customer) inputs.customer.value = data.customer_name || "";
-            if (inputs.classification) inputs.classification.value = data.classification || "";
-            if (inputs.issueDate && data.issue_date) inputs.issueDate.value = data.issue_date;
-            const receivedItems = Array.isArray(data.items) ? data.items : [];
-            state.items = receivedItems.length ? receivedItems : [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
-            renderItems();
-        } catch (error) {
-            console.error("Failed to load invoice", error);
-            state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
-            renderItems();
-        }
-        syncPreviewFromForm();
-    }
-
-    function attachEventListeners() {
-        // Function to attach all event listeners
-        elements.itemsTableBody?.addEventListener("input", (event) => {
-            const target = event.target;
-            const field = target.getAttribute("data-field");
-            const index = Number(target.getAttribute("data-index"));
-            if (Number.isNaN(index) || !field) return;
-            const item = state.items[index] || {};
-            if (field === "description") {
-                item.description = target.value;
-            } else {
-                item[field] = parseNumber(target.value);
-            }
-            item.total = parseNumber(item.quantity) * parseNumber(item.unit_price);
-            state.items[index] = item;
-            // Update only what's needed to avoid breaking typing focus
-            const rowEl = target.closest("tr");
-            const totalEl = rowEl ? rowEl.querySelector(".row-total") : null;
-            if (totalEl) totalEl.textContent = formatCurrency(item.total || 0);
-            if (elements.itemsPayload) {
-                elements.itemsPayload.value = JSON.stringify(state.items);
-            }
+            
+            // Render levy rows and calculate initial totals
+            renderLevyPlaceholders();
             recalcTotals();
-            debouncedServerTotals();
-        });
+        }
 
-        elements.itemsTableBody?.addEventListener("click", (event) => {
-            const button = event.target.closest("button[data-remove]");
-            if (!button) return;
-            const index = Number(button.getAttribute("data-remove"));
-            state.items.splice(index, 1);
-            renderItems();
-        });
-
-        elements.addItemBtn?.addEventListener("click", () => {
-            if (state.items.length >= 10) {
-                showToast("Maximum 10 items allowed", "error");
+        /**
+         * Loads existing invoice data when editing (ID in URL)
+         * Populates form fields and items from API response
+         * @async
+         */
+        async function loadExistingInvoice() {
+            const id = getQueryParam("id");
+            
+            // No ID means creating new invoice
+            if (!id) {
+                state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+                renderItems();
                 return;
             }
-            state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
-            renderItems();
-            debouncedServerTotals();
-        });
-
-        elements.previewToggleBtn?.addEventListener("click", () => {
-            handlePreviewToggle();
-        });
-
-        elements.submitBtn?.addEventListener("click", () => {
-            handleSave();
-        });
-
-        elements.exitPreviewBtn?.addEventListener("click", () => {
-            togglePreview(moduleId, false);
-        });
-
-        const liveSyncFields = [
-            inputs.customer,
-            inputs.classification,
-            inputs.companyName,
-            inputs.companyInfo,
-            inputs.clientRef,
-            inputs.intro,
-            inputs.notes,
-            inputs.signatory,
-            inputs.contact,
-        ];
-        liveSyncFields.forEach((field) => {
-            field?.addEventListener("input", () => {
-                syncPreviewFromForm();
-            });
-        });
-        inputs.issueDate?.addEventListener("change", syncPreviewFromForm);
-    }
-
-    async function loadNextInvoiceNumber() {
-        // Load the next invoice number from the counter API
-        if (state.invoiceNumberReserved || state.invoiceId) {
-            return;
-        }
-        try {
-            const response = await fetch(`${API_BASE}/api/counter/invoice/next/`);
-            if (response.ok) {
-                const data = await response.json();
-                setInvoiceNumber(data.next_number || state.invoiceNumber, { reserved: false });
+            
+            try {
+                // Fetch invoice data from API
+                const data = await callApi(`/invoices/api/${id}/`);
+                
+                // Update state
+                state.invoiceId = data.id;
+                setInvoiceNumber(data.document_number || data.invoice_number || state.invoiceNumber, { reserved: true });
+                
+                // Populate form fields
+                if (inputs.customer) inputs.customer.value = data.customer_name || "";
+                if (inputs.classification) inputs.classification.value = data.classification || "";
+                if (inputs.issueDate && data.issue_date) inputs.issueDate.value = data.issue_date;
+                
+                // Load items (with fallback to empty item)
+                const receivedItems = Array.isArray(data.items) ? data.items : [];
+                state.items = receivedItems.length ? receivedItems : [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+                
+                renderItems();
+            } catch (error) {
+                console.error("Failed to load invoice", error);
+                // Fallback to empty state
+                state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+                renderItems();
             }
-        } catch (error) {
-            console.warn("Failed to load next invoice number", error);
+            
+            // Sync preview with loaded data
+            syncPreviewFromForm();
         }
-    }
 
-    (async function init() {
-        // Initialization function, runs on load
-        attachEventListeners();
-        await loadConfig();
-        await loadNextInvoiceNumber();  // Load the next number on page load
-        await loadExistingInvoice();
-        syncPreviewFromForm();
-        debouncedServerTotals();
-    })();
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
+        /**
+         * Attaches all event listeners for user interactions
+         * Handles item editing, buttons, and live preview sync
+         */
+        function attachEventListeners() {
+            // ========== ITEM TABLE INPUT HANDLER ==========
+            // Handles real-time editing of line items
+            elements.itemsTableBody?.addEventListener("input", (event) => {
+                const target = event.target;
+                const field = target.getAttribute("data-field");
+                const index = Number(target.getAttribute("data-index"));
+                
+                // Validate we have a valid item index
+                if (Number.isNaN(index) || !field) return;
+                
+                // Get or create item
+                const item = state.items[index] || {};
+                
+                // Update field value
+                if (field === "description") {
+                    item.description = target.value;
+                } else {
+                    item[field] = parseNumber(target.value);
+                }
+                
+                // Recalculate item total
+                item.total = parseNumber(item.quantity) * parseNumber(item.unit_price);
+                state.items[index] = item;
+                
+                // Update only the total cell to preserve input focus
+                const rowEl = target.closest("tr");
+                const totalEl = rowEl ? rowEl.querySelector(".row-total") : null;
+                if (totalEl) totalEl.textContent = formatCurrency(item.total || 0);
+                
+                // Update hidden payload
+                if (elements.itemsPayload) {
+                    elements.itemsPayload.value = JSON.stringify(state.items);
+                }
+                
+                // Recalculate totals
+                recalcTotals();
+                debouncedServerTotals();
+            });
+
+            // ========== REMOVE ITEM BUTTON HANDLER ==========
+            elements.itemsTableBody?.addEventListener("click", (event) => {
+                const button = event.target.closest("button[data-remove]");
+                if (!button) return;
+                
+                const index = Number(button.getAttribute("data-remove"));
+                state.items.splice(index, 1);
+                renderItems();
+            });
+
+            // ========== ADD ITEM BUTTON HANDLER ==========
+            elements.addItemBtn?.addEventListener("click", () => {
+                // Enforce 10-item maximum
+                if (state.items.length >= 10) {
+                    showToast("Maximum 10 items allowed", "error");
+                    return;
+                }
+                
+                state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
+                renderItems();
+                debouncedServerTotals();
+            });
+
+            // ========== PREVIEW TOGGLE BUTTON ==========
+            elements.previewToggleBtn?.addEventListener("click", () => {
+                handlePreviewToggle();
+            });
+
+            // ========== SUBMIT/DOWNLOAD BUTTON ==========
+            elements.submitBtn?.addEventListener("click", () => {
+                handleSave();
+            });
+
+            // ========== EXIT PREVIEW BUTTON ==========
+            elements.exitPreviewBtn?.addEventListener("click", () => {
+                togglePreview(moduleId, false);
+            });
+
+            // ========== LIVE PREVIEW SYNC ==========
+            // Auto-sync preview when form fields change
+            const liveSyncFields = [
+                inputs.customer,
+                inputs.classification,
+                inputs.companyName,
+                inputs.companyInfo,
+                inputs.clientRef,
+                inputs.intro,
+                inputs.notes,
+                inputs.signatory,
+                inputs.contact,
+            ];
+            
+            liveSyncFields.forEach((field) => {
+                field?.addEventListener("input", () => {
+                    syncPreviewFromForm();
+                });
+            });
+            
+            // Date field uses 'change' event instead of 'input'
+            inputs.issueDate?.addEventListener("change", syncPreviewFromForm);
+        }
+
+        // ============================================
+        // MODULE INITIALIZATION
+        // ============================================
+
+        /**
+         * Asynchronous initialization function
+         * Runs when DOM is ready, sets up the invoice module
+         * @async
+         */
+        (async function init() {
+            // 1. Attach all event listeners
+            attachEventListeners();
+            
+            // 2. Load tax configuration from server
+            await loadConfig();
+            
+            // 3. Load next invoice number for new invoices
+            await loadNextInvoiceNumber();
+            
+            // 4. Load existing invoice if editing (ID in URL)
+            await loadExistingInvoice();
+            
+            // 5. Sync preview with initial form state
+            syncPreviewFromForm();
+            
+            // 6. Perform initial calculation
+            debouncedServerTotals();
+        })();
     });
 })();
