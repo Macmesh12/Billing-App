@@ -27,6 +27,10 @@ electron/
 - Python 3.11+
 - Node.js 20+
 - Linux desktop environment (tested on Ubuntu 22.04)
+- Poppler utilities (required for JPEG export)
+  ```bash
+  sudo apt-get install poppler-utils  # Ubuntu/Debian
+  ```
 
 ## Setup
 

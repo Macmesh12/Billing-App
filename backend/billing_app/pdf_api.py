@@ -1,4 +1,18 @@
-"""PDF rendering API endpoints."""
+"""
+PDF and JPEG rendering API endpoints.
+
+This module provides endpoints for converting HTML documents to PDF or JPEG format.
+It uses WeasyPrint for PDF generation and pdf2image (with poppler-utils) for JPEG conversion.
+
+Dependencies:
+    - weasyprint: Converts HTML/CSS to PDF
+    - pdf2image: Converts PDF pages to images (requires poppler-utils system package)
+    - Pillow (PIL): Image processing for JPEG optimization
+    
+System Requirements:
+    - For JPEG export: poppler-utils must be installed
+      Ubuntu/Debian: sudo apt-get install poppler-utils
+"""
 from __future__ import annotations
 
 import json
@@ -133,24 +147,34 @@ def render_pdf(request: HttpRequest) -> HttpResponse:
 
     try:
         if output_format == "pdf":
-            # Render PDF directly
+            # Direct PDF rendering using WeasyPrint
+            # This converts the HTML+CSS into a PDF document
             data = html.write_pdf()
             content_type = "application/pdf"
         else:
-            # For JPEG, first render PDF, then convert to image
+            # JPEG rendering: Multi-step process required
+            # WeasyPrint v66+ removed write_png(), so we now:
+            # 1. Render to PDF first
+            # 2. Convert PDF to image using pdf2image (requires poppler-utils)
+            # 3. Convert image to JPEG with optimization
+            
             if Image is None or convert_from_bytes is None:
                 return _cors(JsonResponse({"error": "JPEG rendering requires Pillow and pdf2image to be installed"}, status=HTTPStatus.SERVICE_UNAVAILABLE))
             
-            # Generate PDF first
+            # Step 1: Generate PDF from HTML
             pdf_bytes = html.write_pdf()
             
-            # Convert PDF to images (one per page)
+            # Step 2: Convert PDF pages to PIL Image objects
+            # DPI=150 provides good quality while keeping file size reasonable
             images = convert_from_bytes(pdf_bytes, dpi=150)
             
             if not images:
                 raise ValueError("No images generated from PDF")
             
-            # Convert first page to JPEG
+            # Step 3: Convert first page to JPEG format
+            # - Convert to RGB mode (JPEG doesn't support transparency)
+            # - Quality 92 balances visual quality with file size
+            # - Optimize flag enables additional compression
             jpeg_buffer = BytesIO()
             images[0].convert("RGB").save(jpeg_buffer, format="JPEG", quality=92, optimize=True)
             data = jpeg_buffer.getvalue()
