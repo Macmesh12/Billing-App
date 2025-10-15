@@ -259,9 +259,14 @@
             clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
             clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
 
+            // Wrap the content in pdf-export-wrapper div for proper styling
+            const wrapper = document.createElement("div");
+            wrapper.className = "pdf-export-wrapper";
+            wrapper.appendChild(clone);
+
             const payload = {
                 document_type: "receipt",
-                html: clone.outerHTML,
+                html: wrapper.outerHTML,
                 filename: `${state.receiptNumber || "receipt"}.pdf`,
             };
 
@@ -307,13 +312,33 @@
     async function handleSave() {
         // Handle PDF download
         if (state.isSaving) return;
+        
+        // Validate required fields
+        const customerName = elements.form?.elements.namedItem("customer_name")?.value?.trim();
+        const issueDate = elements.form?.elements.namedItem("issue_date")?.value?.trim();
+        
+        if (!customerName) {
+            showToast("Please enter customer name", "error");
+            elements.form?.elements.namedItem("customer_name")?.focus();
+            return;
+        }
+        
+        if (!issueDate) {
+            showToast("Please select receipt date", "error");
+            elements.form?.elements.namedItem("issue_date")?.focus();
+            return;
+        }
+        
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
             await downloadReceiptPdf();
+            showToast("Receipt downloaded successfully!");
             // Increment the counter after successful PDF download
             await incrementReceiptNumber();
+        } catch (error) {
+            showToast("Failed to download receipt: " + error.message, "error");
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");

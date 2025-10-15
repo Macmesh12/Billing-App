@@ -249,9 +249,14 @@
             clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
             clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
 
+            // Wrap the content in pdf-export-wrapper div for proper styling
+            const wrapper = document.createElement("div");
+            wrapper.className = "pdf-export-wrapper";
+            wrapper.appendChild(clone);
+
             const payload = {
                 document_type: "waybill",
-                html: clone.outerHTML,
+                html: wrapper.outerHTML,
                 filename: `${state.waybillNumber || "waybill"}.pdf`,
             };
 
@@ -297,13 +302,26 @@
     async function handleSave() {
         // Handle PDF download
         if (state.isSaving) return;
+        
+        // Validate required fields
+        const issueDate = elements.form?.elements.namedItem("issue_date")?.value?.trim();
+        
+        if (!issueDate) {
+            showToast("Please select waybill date", "error");
+            elements.form?.elements.namedItem("issue_date")?.focus();
+            return;
+        }
+        
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
             await downloadWaybillPdf();
+            showToast("Waybill downloaded successfully!");
             // Increment the counter after successful PDF download
             await incrementWaybillNumber();
+        } catch (error) {
+            showToast("Failed to download waybill: " + error.message, "error");
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");

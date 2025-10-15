@@ -101,7 +101,10 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 # URL prefix for static files
-STATICFILES_DIRS = [FRONTEND_DIR / "static"]
+STATICFILES_DIRS = [
+    FRONTEND_DIR / "static",
+    BASE_DIR.parent / "assets",
+]
 # Directories to search for static files
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

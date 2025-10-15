@@ -515,9 +515,15 @@
         clone.classList.add("pdf-export");
         clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
         clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
+        
+        // Wrap the content in pdf-export-wrapper div for proper styling
+        const wrapper = document.createElement("div");
+        wrapper.className = "pdf-export-wrapper";
+        wrapper.appendChild(clone);
+        
         return {
             document_type: docType,
-            html: clone.outerHTML,
+            html: wrapper.outerHTML,
             filename: `${state.invoiceNumber || "invoice"}.pdf`,
         };
     }
@@ -570,20 +576,36 @@
     }
 
     async function handleSave() {
-        // Handle PDF download
+        // Handle PDF download - simplified to just download without saving
         if (state.isSaving) return;
+        
+        // Validate required fields for PDF
+        const customerName = inputs.customer?.value?.trim();
+        const issueDate = inputs.issueDate?.value?.trim();
+        
+        if (!customerName) {
+            showToast("Please enter customer name", "error");
+            inputs.customer?.focus();
+            return;
+        }
+        
+        if (!issueDate) {
+            showToast("Please select invoice date", "error");
+            inputs.issueDate?.focus();
+            return;
+        }
+        
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
             syncPreviewFromForm();
             await ensureInvoiceNumberReserved();
-            await saveInvoice();
             await downloadInvoicePdf();
-            showToast("Invoice saved and downloaded successfully!");
+            showToast("Invoice downloaded successfully!");
         } catch (error) {
-            console.error("Failed to save invoice", error);
-            showToast(error.message || "Failed to save invoice", "error");
+            console.error("Failed to download invoice", error);
+            showToast(error.message || "Failed to download invoice", "error");
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
