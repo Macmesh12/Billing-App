@@ -1,4 +1,4 @@
-#!/home/macmesh/Documents/Programming/Spaquels Softwares/Billing-App/backend/.venv/bin/python3
+#!/home/runner/work/Billing-App/Billing-App/backend/.venv/bin/python3
 # -*- coding: utf-8 -*-
 # Copyright 2025 Google LLC
 #
