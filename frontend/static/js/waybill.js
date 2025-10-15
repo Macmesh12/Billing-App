@@ -1,15 +1,28 @@
+/* ============================================
+   WAYBILL MODULE - MAIN JAVASCRIPT
+   ============================================
+   This file handles all waybill functionality including:
+   - Line item management (add, edit, remove)
+   - Real-time display updates
+   - Preview mode toggling
+   - Form validation and submission
+   - PDF export functionality
+   - API integration for saving waybills
+   ============================================ */
+
+// IIFE (Immediately Invoked Function Expression) to encapsulate module logic
+// This prevents polluting the global namespace
 (function () {
-    // IIFE for waybill module
+    // ============================================
+    // HELPER FUNCTIONS AND UTILITIES
+    // ============================================
+    
+    // Get helper functions from global BillingApp object (defined in main.js)
     const helpers = window.BillingApp || {};
-    // Get global helpers
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
-    // Fallback for togglePreview
     const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
-    // Format chooser fallback
     const parseNumber = typeof helpers.parseNumber === "function" ? helpers.parseNumber : (value) => Number.parseFloat(value || 0) || 0;
-    // Fallback for parseNumber
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
-    // Fallback for formatCurrency
     const formatQuantity = typeof helpers.formatQuantity === "function"
         ? helpers.formatQuantity
         : (value) => {
@@ -18,22 +31,22 @@
             return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2);
         };
 
-    const moduleId = "waybill-module";
-    // Module ID
-    const moduleEl = document.getElementById(moduleId);
-    // Module element
-    const form = document.getElementById("waybill-form");
-    // Form element
+    // ============================================
+    // MODULE INITIALIZATION
+    // ============================================
+    
+    const moduleId = "waybill-module"; // ID of the waybill module element
+    const moduleEl = document.getElementById(moduleId); // Reference to module DOM element
+    const form = document.getElementById("waybill-form"); // Reference to waybill form
+    
+    // Exit early if required elements are not found
     if (!moduleEl || !form) return;
-    // Exit if elements not found
 
     const config = window.BILLING_APP_CONFIG || {};
-    // Global config
-    const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
-    // API base URL
+    const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765"; // API base URL with fallback
 
+    // DOM element references for waybill form and preview
     const elements = {
-        // DOM elements object
         itemsPayload: document.getElementById("waybill-items-payload"),
         itemsTableBody: document.querySelector("#waybill-items-table tbody"),
         previewRowsContainers: document.querySelectorAll(".js-waybill-preview-rows"),
@@ -55,8 +68,8 @@
         previewContactEls: document.querySelectorAll(".js-waybill-preview-contact"),
     };
 
+    // Form input field references
     const inputs = {
-        // Input elements object
         issueDate: document.getElementById("waybill-issue-date"),
         customer: document.getElementById("waybill-customer"),
         destination: document.getElementById("waybill-destination"),
@@ -68,14 +81,23 @@
         contact: document.getElementById("waybill-contact"),
     };
 
+    // Application state object
     const state = {
-        // State object
-        items: [],
-        waybillId: null,
-        waybillNumber: "WB-NEW",
-        isSaving: false,
+        items: [], // Array of line items (products being shipped)
+        waybillId: null, // Database ID of current waybill (null for new waybill)
+        waybillNumber: "WB-NEW", // Current waybill number
+        isSaving: false, // Flag to prevent concurrent save operations
     };
 
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    
+    /**
+     * Set text content on a single element or NodeList
+     * @param {Element|NodeList} target - Element or elements to update
+     * @param {string} text - Text to set
+     */
     function setText(target, text) {
         if (!target) return;
         if (typeof target.length === "number" && !target.nodeType) {
@@ -87,6 +109,12 @@
         target.textContent = text;
     }
 
+    /**
+     * Get field value or placeholder/fallback
+     * @param {HTMLInputElement} field - Input field
+     * @param {string} fallback - Fallback text if no value or placeholder
+     * @returns {string} Field value, placeholder, or fallback
+     */
     function valueOrPlaceholder(field, fallback = "—") {
         if (!field) return fallback;
         const value = (field.value || "").trim();
@@ -95,6 +123,11 @@
         return fallback;
     }
 
+    /**
+     * Format a date value for display
+     * @param {string} value - Date value (ISO format or other)
+     * @returns {string} Formatted date string or fallback
+     */
     function formatDisplayDate(value) {
         if (!value) return "—";
         const date = new Date(value);

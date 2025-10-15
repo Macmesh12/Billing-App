@@ -1,30 +1,44 @@
-(function () {
-    // IIFE for receipt module
-    const helpers = window.BillingApp || {};
-    // Get global helpers
-    const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
-    // Fallback for togglePreview
-    const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
-    // Fallback for format chooser
-    const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
-    // Fallback for formatCurrency
+/* ============================================
+   RECEIPT MODULE - MAIN JAVASCRIPT
+   ============================================
+   This file handles all receipt functionality including:
+   - Line item management (add, edit, remove)
+   - Real-time calculations (total, balance)
+   - Preview mode toggling
+   - Form validation and submission
+   - PDF export functionality
+   - API integration for saving receipts
+   ============================================ */
 
-    const moduleId = "receipt-module";
-    // Module ID
-    const moduleEl = document.getElementById(moduleId);
-    // Module element
-    const form = document.getElementById("receipt-form");
-    // Form element
+// IIFE (Immediately Invoked Function Expression) to encapsulate module logic
+// This prevents polluting the global namespace
+(function () {
+    // ============================================
+    // HELPER FUNCTIONS AND UTILITIES
+    // ============================================
+    
+    // Get helper functions from global BillingApp object (defined in main.js)
+    const helpers = window.BillingApp || {};
+    const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
+    const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
+    const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
+
+    // ============================================
+    // MODULE INITIALIZATION
+    // ============================================
+    
+    const moduleId = "receipt-module"; // ID of the receipt module element
+    const moduleEl = document.getElementById(moduleId); // Reference to module DOM element
+    const form = document.getElementById("receipt-form"); // Reference to receipt form
+    
+    // Exit early if required elements are not found
     if (!moduleEl || !form) return;
-    // Exit if elements not found
 
     const config = window.BILLING_APP_CONFIG || {};
-    // Global config
-    const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
-    // API base URL
+    const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765"; // API base URL with fallback
 
+    // DOM element references for receipt form and preview
     const elements = {
-        // DOM elements object
         previewToggleBtn: document.getElementById("receipt-preview-toggle"),
         exitPreviewBtn: document.getElementById("receipt-exit-preview"),
         submitBtn: document.getElementById("receipt-submit"),
@@ -44,8 +58,8 @@
         previewBalanceEls: document.querySelectorAll(".js-receipt-preview-balance"),
     };
 
+    // Form input field references
     const inputs = {
-        // Input elements object
         receivedFrom: document.getElementById("receipt-received-from"),
         customerName: document.getElementById("receipt-customer-name"),
         approvedBy: document.getElementById("receipt-approved-by"),
@@ -54,20 +68,31 @@
         paymentMethod: document.getElementById("receipt-payment-method"),
     };
 
+    // Display element references for calculated values
     const displays = {
         totalDisplay: document.getElementById("receipt-total-display"),
         balanceDisplay: document.getElementById("receipt-balance-display"),
     };
 
+    // Application state object
     const state = {
-        // State object
-        receiptId: null,
-        receiptNumber: "REC-NEW",
-        receiptNumberReserved: false,
-        isSaving: false,
-        items: [],
+        receiptId: null, // Database ID of current receipt (null for new receipt)
+        receiptNumber: "REC-NEW", // Current receipt number
+        receiptNumberReserved: false, // Whether the number is reserved in the counter
+        isSaving: false, // Flag to prevent concurrent save operations
+        items: [], // Array of line items
     };
 
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    
+    /**
+     * Set the receipt number in state and update all displays
+     * @param {string} value - The receipt number to set
+     * @param {Object} options - Options object
+     * @param {boolean} options.reserved - Whether the number is reserved
+     */
     function setReceiptNumber(value, { reserved = false } = {}) {
         if (!value) {
             return;
@@ -80,6 +105,10 @@
         setText(elements.previewNumberEls, state.receiptNumber);
     }
 
+    /**
+     * Ensure a receipt number is reserved before saving
+     * @returns {Promise<Object>} Object with number, reserved flag, and optional error
+     */
     async function ensureReceiptNumberReserved() {
         if (state.receiptNumberReserved && state.receiptNumber) {
             return { number: state.receiptNumber, reserved: true };
@@ -104,6 +133,11 @@
         }
     }
 
+    /**
+     * Set text content on a single element or NodeList
+     * @param {Element|NodeList} target - Element or elements to update
+     * @param {string} text - Text to set
+     */
     function setText(target, text) {
         if (!target) return;
         if (typeof target.length === "number" && !target.nodeType) {
@@ -115,6 +149,12 @@
         target.textContent = text;
     }
 
+    /**
+     * Get field value or placeholder/fallback
+     * @param {HTMLInputElement} field - Input field
+     * @param {string} fallback - Fallback text if no value or placeholder
+     * @returns {string} Field value, placeholder, or fallback
+     */
     function valueOrPlaceholder(field, fallback = "—") {
         if (!field) return fallback;
         const value = (field.value || "").trim();
@@ -123,6 +163,11 @@
         return fallback;
     }
 
+    /**
+     * Format a date value for display
+     * @param {string} value - Date value (ISO format or other)
+     * @returns {string} Formatted date string or fallback
+     */
     function formatDisplayDate(value) {
         if (!value) return "—";
         const date = new Date(value);
@@ -134,8 +179,12 @@
         }).format(date);
     }
 
+    /**
+     * Display a toast notification message
+     * @param {string} message - Message to display
+     * @param {string} tone - Toast style: "success", "error", or "warning"
+     */
     function showToast(message, tone = "success") {
-        // Function to show toast
         const el = elements.toast;
         if (!el) return;
         el.textContent = message;
@@ -146,8 +195,13 @@
         }, 4000);
     }
 
+    /**
+     * Make an API call with error handling
+     * @param {string} path - API endpoint path
+     * @param {Object} options - Fetch options
+     * @returns {Promise<Object|null>} Response data or null
+     */
     async function callApi(path, options = {}) {
-        // API call function
         const url = `${API_BASE}${path}`;
         const response = await fetch(url, {
             headers: {
