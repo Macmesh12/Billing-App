@@ -1,3 +1,40 @@
+<!--
+============================================
+RECEIPT PAGE - BILLING APP
+============================================
+This HTML file contains the structure for the receipt module.
+It has two modes:
+1. EDIT MODE - Form for entering receipt data
+2. PREVIEW MODE - Read-only view for reviewing before download
+
+KEY FEATURES:
+- Dynamic line item management (add/remove rows)
+- Real-time calculation of totals and balance
+- Payment method selection
+- Client-side PDF and JPEG generation (A4 size)
+- Server API integration for document numbering
+- Preview mode with signature display
+
+STRUCTURE:
+- App Header: Navigation bar
+- Module Header: Title and action buttons (Preview/Download/Back)
+- Module Body:
+  * Edit Form: Editable receipt with inputs and tables
+  * Preview Document: Read-only view matching PDF/JPEG output
+
+DEPENDENCIES:
+- general.css: Global app styles
+- receipt.css: Receipt-specific styles
+- receipt.js: All receipt logic and interactions
+- main.js: Shared utilities (togglePreview, chooseDownloadFormat)
+
+PDF AND JPEG HANDLING:
+- Download button triggers format selection dialog
+- PDF: Generated server-side via WeasyPrint for printing
+- JPEG: Generated server-side, converted from PDF for sharing
+- Both formats use the same preview HTML structure
+============================================
+-->
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -6,32 +43,50 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Receipt | Billing App</title>
+    
+    <!-- Google Fonts: Inter font family -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/general.css' %}">
-    <link rel="stylesheet" href="{% static 'css/receipt.css' %}">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{% static 'css/general.css' %}"> <!-- Global styles -->
+    <link rel="stylesheet" href="{% static 'css/receipt.css' %}"> <!-- Receipt-specific styles -->
+    
+    <!-- Global Configuration: API base URL for backend calls -->
     <script>
         window.BILLING_APP_CONFIG = {
-            apiBaseUrl: window.location.origin
+            apiBaseUrl: window.location.origin // Use current origin
         };
     </script>
 </head>
 <body class="billing-app">
+<!-- ============================================
+     APP HEADER - NAVIGATION BAR
+     ============================================ -->
 <header class="app-header">
     <div class="app-brand">
         <h1>Billing App</h1>
     </div>
+    <!-- Primary navigation links -->
     <nav class="app-nav" aria-label="Primary">
         <a class="nav-link" href="/">Dashboard</a>
         <a class="nav-link" href="/invoice.html">Invoice</a>
-        <a class="nav-link active" href="/receipt.html">Receipt</a>
+        <a class="nav-link active" href="/receipt.html">Receipt</a> <!-- Current page -->
         <a class="nav-link" href="/waybill.html">Waybill</a>
     </nav>
 </header>
 
+<!-- ============================================
+     MAIN CONTENT AREA
+     ============================================ -->
 <main class="app-main">
+    <!-- Receipt module container -->
     <section id="receipt-module" class="module" data-document-type="receipt">
+        
+        <!-- ============================================
+             MODULE HEADER - Title and Action Buttons
+             ============================================ -->
         <div class="module-header">
             <h2>Receipt</h2>
             <div class="module-actions">
@@ -41,26 +96,43 @@
             </div>
         </div>
 
+        <!-- ============================================
+             MODULE BODY - Edit Form and Preview
+             ============================================ -->
         <div class="module-body">
-            <!-- A4 Workspace Container -->
+            <!-- A4 Workspace Container - Centers document like Word page -->
             <div class="a4-workspace">
+            
+            <!-- ============================================
+                 EDIT MODE - Receipt Form
+                 ============================================
+                 This form is visible by default and allows
+                 the user to enter receipt data
+                 ============================================ -->
             <form id="receipt-form" class="document receipt-document document-editable" novalidate>
                 <input type="hidden" id="receipt-document-number" name="document_number">
+                
+                <!-- Letterhead: Logo and metadata (number, date) -->
                 <div class="receipt-letterhead">
                     <div class="letterhead-left">
                         <h3>RECEIPT</h3>
+                        <!-- Receipt number (generated by server) -->
                         <p>No.: <span id="receipt-number">REC000</span></p>
+                        <!-- Issue date input -->
                         <label class="field-block">
                             <span>Date</span>
                             <input type="date" id="receipt-issue-date" name="issue_date" required>
                         </label>
                     </div>
                     <div class="letterhead-right">
+                        <!-- Company logo (right-aligned via CSS) -->
                         <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
                     </div>
                 </div>
 
+                <!-- Receipt Body: Line items, payment, and totals -->
                 <section class="receipt-body">
+                    <!-- Line items table: Editable rows with description, quantity, price, and amount -->
                     <table class="document-items" id="receipt-items-table">
                         <thead>
                             <tr>
@@ -72,8 +144,10 @@
                         </thead>
                         <tbody></tbody>
                     </table>
+                    <!-- Button to add new line items dynamically -->
                     <button type="button" id="receipt-add-item" class="button button-secondary">Add Item</button>
 
+                    <!-- Payment information section -->
                     <div class="receipt-payment-section">
                         <label class="field-block">
                             <span>Amount Paid (GHC)</span>
@@ -90,6 +164,7 @@
                         </label>
                     </div>
 
+                    <!-- Totals display: Total amount and balance (calculated in JS) -->
                     <div class="receipt-totals">
                         <div class="total-row">
                             <span>Total Amount:</span>
@@ -102,6 +177,7 @@
                     </div>
                 </section>
 
+                <!-- Signature section: Issued by and customer name -->
                 <section class="receipt-signature">
                     <div class="signature-left">
                        <label class="field-block">
@@ -119,20 +195,42 @@
                 </section>
             </form>
 
+            <!-- ============================================
+                 PREVIEW MODE - Read-only Receipt Document
+                 ============================================
+                 This preview is shown when user clicks "Preview"
+                 button. It displays a read-only view that matches
+                 the final PDF/JPEG output exactly.
+                 
+                 PDF/JPEG GENERATION PROCESS:
+                 1. User clicks "Download" button
+                 2. Format selection dialog appears (PDF or JPEG)
+                 3. This preview HTML is cloned by receipt.js
+                 4. Clone is wrapped in .pdf-export-wrapper class
+                 5. HTML sent to backend /api/pdf/render/ endpoint
+                 6. Backend uses WeasyPrint to generate PDF
+                 7. For JPEG: PDF converted to image format
+                 8. File downloaded to user's computer
+                 ============================================ -->
             <div id="receipt-preview" class="document receipt-document receipt-preview-landscape" hidden>
+                <!-- Letterhead: Logo and metadata (number, date) -->
                 <div class="receipt-letterhead">
                     <div class="letterhead-left">
                         <h3>RECEIPT</h3>
+                        <!-- Receipt number (from form) -->
                         <p>No.: <span class="js-receipt-preview-number">REC000</span></p>
+                        <!-- Issue date (from form) -->
                         <p class="receipt-date">Date: <span class="js-receipt-preview-date">—</span></p>
                     </div>
                     <div class="letterhead-right">
+                        <!-- Company logo -->
                         <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
                     </div>
                 </div>
 
+                <!-- Receipt Body: Line items, payment, and totals -->
                 <section class="receipt-body">
-
+                    <!-- Line items table: Read-only rows populated from form data -->
                     <table class="document-items">
                         <thead>
                             <tr>
@@ -145,6 +243,7 @@
                         <tbody id="receipt-preview-rows"></tbody>
                     </table>
 
+                    <!-- Summary section: Payment info and totals -->
                     <div class="receipt-summary-section">
                         <div class="receipt-payment-info">
                             <p><strong>Payment Method:</strong> <span class="js-receipt-preview-payment-method">—</span></p>
@@ -164,10 +263,12 @@
                     </div>
                 </section>
 
+                <!-- Signature section: Creative director signature and customer details -->
                 <section class="receipt-signature">
                     <div class="signature-left">
                         <p><strong>Creative Director</strong></p>
                         <div class="signature-block">
+                            <!-- Signature image displayed in preview and PDF/JPEG -->
                             <img src="/assets/sign.png" alt="Creative Director Signature" class="signature-image">
                         </div>
                     </div>
@@ -177,6 +278,7 @@
                     </div>
                 </section>
 
+                <!-- Contact information footer (included in PDF/JPEG) -->
                 <section id="receipt-preview-contact">
                     <div class="contact-wrapper">
                         <p class="account">
@@ -194,17 +296,32 @@
             </div>
             </div> <!-- End A4 workspace -->
         </div>
+        
+        <!-- Toast notification area for user feedback -->
         <div class="module-toast" id="receipt-toast" role="status" aria-live="polite" hidden></div>
     </section>
 </main>
 
+<!-- ============================================
+     APP FOOTER
+     ============================================ -->
 <footer class="app-footer">
     <p>&copy; <span id="receipt-current-year"></span> Billing App. All rights reserved.</p>
 </footer>
 
+<!-- ============================================
+     JAVASCRIPT DEPENDENCIES
+     ============================================
+     Load order matters:
+     1. main.js: Provides shared utilities (BillingApp.togglePreview, 
+        BillingApp.chooseDownloadFormat, BillingApp.formatCurrency)
+     2. receipt.js: Receipt-specific logic for form handling,
+        calculations, preview sync, and PDF/JPEG downloads
+     ============================================ -->
 <script src="{% static 'js/main.js' %}" defer></script>
 <script src="{% static 'js/receipt.js' %}" defer></script>
 <script>
+    // Set current year in footer dynamically
     document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("receipt-current-year").textContent = new Date().getFullYear();
     });
