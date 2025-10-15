@@ -576,24 +576,8 @@
     }
 
     async function handleSave() {
-        // Handle PDF download - simplified to just download without saving
+        // Handle PDF download
         if (state.isSaving) return;
-        
-        // Validate required fields for PDF
-        const customerName = inputs.customer?.value?.trim();
-        const issueDate = inputs.issueDate?.value?.trim();
-        
-        if (!customerName) {
-            showToast("Please enter customer name", "error");
-            inputs.customer?.focus();
-            return;
-        }
-        
-        if (!issueDate) {
-            showToast("Please select invoice date", "error");
-            inputs.issueDate?.focus();
-            return;
-        }
         
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");

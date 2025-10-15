@@ -313,32 +313,17 @@
         // Handle PDF download
         if (state.isSaving) return;
         
-        // Validate required fields
-        const customerName = elements.form?.elements.namedItem("customer_name")?.value?.trim();
-        const issueDate = elements.form?.elements.namedItem("issue_date")?.value?.trim();
-        
-        if (!customerName) {
-            showToast("Please enter customer name", "error");
-            elements.form?.elements.namedItem("customer_name")?.focus();
-            return;
-        }
-        
-        if (!issueDate) {
-            showToast("Please select receipt date", "error");
-            elements.form?.elements.namedItem("issue_date")?.focus();
-            return;
-        }
-        
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
+            syncPreviewFromForm();
+            await ensureReceiptNumberReserved();
             await downloadReceiptPdf();
             showToast("Receipt downloaded successfully!");
-            // Increment the counter after successful PDF download
-            await incrementReceiptNumber();
         } catch (error) {
-            showToast("Failed to download receipt: " + error.message, "error");
+            console.error("Failed to download receipt", error);
+            showToast(error.message || "Failed to download receipt", "error");
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");

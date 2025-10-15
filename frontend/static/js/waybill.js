@@ -303,25 +303,15 @@
         // Handle PDF download
         if (state.isSaving) return;
         
-        // Validate required fields
-        const issueDate = elements.form?.elements.namedItem("issue_date")?.value?.trim();
-        
-        if (!issueDate) {
-            showToast("Please select waybill date", "error");
-            elements.form?.elements.namedItem("issue_date")?.focus();
-            return;
-        }
-        
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
             await downloadWaybillPdf();
             showToast("Waybill downloaded successfully!");
-            // Increment the counter after successful PDF download
-            await incrementWaybillNumber();
         } catch (error) {
-            showToast("Failed to download waybill: " + error.message, "error");
+            console.error("Failed to download waybill", error);
+            showToast(error.message || "Failed to download waybill", "error");
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
