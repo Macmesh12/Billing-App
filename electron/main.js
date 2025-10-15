@@ -1,62 +1,100 @@
+/**
+ * ELECTRON MAIN PROCESS
+ * 
+ * This is the main entry point for the Electron desktop application.
+ * It manages the application lifecycle and spawns the Django backend server.
+ * 
+ * Architecture:
+ * - Starts Django backend server on http://127.0.0.1:8765
+ * - Creates main browser window pointing to frontend HTML
+ * - Manages process cleanup on application exit
+ * 
+ * The application uses a hybrid architecture:
+ * - Backend: Django server (Python) running locally
+ * - Frontend: HTML/CSS/JavaScript served from filesystem
+ * - Desktop shell: Electron (Chromium + Node.js)
+ */
+
 const { app, BrowserWindow } = require('electron');
-// Import Electron modules
 const { spawn } = require('child_process');
-// Import spawn for child processes
 const path = require('path');
-// Import path module
 
+// Reference to Django backend process for cleanup
 let djangoProcess;
-// Variable to hold Django process
 
+/**
+ * Create the main application window
+ * 
+ * Creates a Chromium browser window with preload script for secure
+ * communication between renderer and main processes.
+ */
 function createWindow() {
-  // Function to create main window
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     webPreferences: {
+      // Preload script for secure IPC bridge
       preload: path.join(__dirname, 'preload.js'),
-      // Preload script path
+      // Enable context isolation for security
       contextIsolation: true,
-      // Enable context isolation
     }
   });
 
+  // Load frontend HTML from filesystem
   const frontendEntry = path.join(__dirname, '..', 'frontend', 'public', 'index.html');
-  // Path to frontend entry HTML
   mainWindow.loadFile(frontendEntry);
-  // Load the HTML file
 }
 
+/**
+ * Start Django development server
+ * 
+ * Spawns Python Django server process on localhost:8765.
+ * The server runs in the background and handles API requests from the frontend.
+ */
 function startDjango() {
-  // Function to start Django server
   djangoProcess = spawn('python', ['manage.py', 'runserver', '127.0.0.1:8765'], {
+    // Set working directory to backend folder
     cwd: path.join(__dirname, '..', 'backend'),
-    // Working directory for backend
+    // Inherit stdio to see Django logs in terminal
     stdio: 'inherit'
-    // Inherit stdio
   });
 }
 
+// ============================================
+// APPLICATION LIFECYCLE EVENTS
+// ============================================
+
+/**
+ * App ready event - Initialize application
+ * 
+ * Fires when Electron has finished initialization.
+ * Start Django backend and create main window.
+ */
 app.on('ready', () => {
-  // When app is ready
   startDjango();
-  // Start Django
   createWindow();
-  // Create window
 });
 
+/**
+ * Window all closed event - Handle app shutdown
+ * 
+ * On Windows/Linux, quit the app when all windows are closed.
+ * On macOS, apps typically stay active until explicitly quit.
+ */
 app.on('window-all-closed', () => {
-  // When all windows closed
   if (process.platform !== 'darwin') {
     app.quit();
-    // Quit app on non-mac
   }
 });
 
+/**
+ * Will quit event - Cleanup before exit
+ * 
+ * Terminate Django backend process before app exits
+ * to prevent orphaned processes.
+ */
 app.on('will-quit', () => {
-  // Before quitting
   if (djangoProcess) {
     djangoProcess.kill();
-    // Kill Django process
   }
 });

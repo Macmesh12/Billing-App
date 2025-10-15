@@ -1,27 +1,41 @@
+/* ============================================
+   RECEIPT MODULE - MAIN JAVASCRIPT
+   ============================================
+   This file handles all receipt functionality including:
+   - Receipt data entry and validation
+   - Line item management for multi-item receipts
+   - Preview mode toggling
+   - PDF/JPEG export functionality
+   - API integration for saving receipts
+   - Receipt number management and reservation
+   ============================================ */
+
+// IIFE (Immediately Invoked Function Expression) to encapsulate module logic
+// This prevents polluting the global namespace
 (function () {
-    // IIFE for receipt module
+    // ============================================
+    // HELPER FUNCTIONS AND UTILITIES
+    // ============================================
+    
+    // Get helper functions from global BillingApp object (defined in main.js)
     const helpers = window.BillingApp || {};
-    // Get global helpers
+    
+    // Extract helper functions with fallbacks if not available
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
-    // Fallback for togglePreview
     const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
-    // Fallback for format chooser
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
-    // Fallback for formatCurrency
 
+    // Module identification
     const moduleId = "receipt-module";
-    // Module ID
     const moduleEl = document.getElementById(moduleId);
-    // Module element
     const form = document.getElementById("receipt-form");
-    // Form element
+    
+    // Exit early if required elements are not found
     if (!moduleEl || !form) return;
-    // Exit if elements not found
 
+    // Configuration setup
     const config = window.BILLING_APP_CONFIG || {};
-    // Global config
     const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
-    // API base URL
 
     const elements = {
         // DOM elements object
@@ -104,17 +118,30 @@
         }
     }
 
+    /**
+     * Set text content for single element or collection of elements
+     * @param {Element|NodeList|Array} target - Element(s) to update
+     * @param {string} text - Text content to set
+     */
     function setText(target, text) {
         if (!target) return;
+        // Check if target is a collection (NodeList or Array)
         if (typeof target.length === "number" && !target.nodeType) {
             Array.from(target).forEach((node) => {
                 if (node) node.textContent = text;
             });
             return;
         }
+        // Single element
         target.textContent = text;
     }
 
+    /**
+     * Get field value or its placeholder as fallback
+     * @param {HTMLInputElement} field - Input field element
+     * @param {string} fallback - Default value if field is empty
+     * @returns {string} Field value, placeholder, or fallback
+     */
     function valueOrPlaceholder(field, fallback = "—") {
         if (!field) return fallback;
         const value = (field.value || "").trim();
@@ -123,6 +150,11 @@
         return fallback;
     }
 
+    /**
+     * Format date string for display using British date format
+     * @param {string} value - Date string (ISO format)
+     * @returns {string} Formatted date (e.g., "15 October 2025")
+     */
     function formatDisplayDate(value) {
         if (!value) return "—";
         const date = new Date(value);
@@ -134,20 +166,31 @@
         }).format(date);
     }
 
+    /**
+     * Display toast notification message
+     * @param {string} message - Message to display
+     * @param {string} tone - Tone/type: 'success', 'error', or 'warning'
+     */
     function showToast(message, tone = "success") {
-        // Function to show toast
         const el = elements.toast;
         if (!el) return;
         el.textContent = message;
         el.className = `module-toast is-${tone}`;
         el.hidden = false;
+        // Auto-hide after 4 seconds
         setTimeout(() => {
             el.hidden = true;
         }, 4000);
     }
 
+    /**
+     * Make API call with error handling
+     * @param {string} path - API endpoint path
+     * @param {Object} options - Fetch options (method, body, headers, etc.)
+     * @returns {Promise<Object|null>} JSON response or null for 204 status
+     * @throws {Error} When API request fails
+     */
     async function callApi(path, options = {}) {
-        // API call function
         const url = `${API_BASE}${path}`;
         const response = await fetch(url, {
             headers: {
@@ -156,22 +199,34 @@
             },
             ...options,
         });
+        
+        // Handle error responses
         if (!response.ok) {
             let detail = await response.json().catch(() => ({}));
             const message = detail.errors ? JSON.stringify(detail.errors) : `${response.status} ${response.statusText}`;
             throw new Error(message);
         }
+        
+        // Return null for no-content responses
         if (response.status === 204) return null;
         return response.json();
     }
 
+    /**
+     * Calculate receipt totals including amount paid and balance
+     * @returns {Object} Object with total, amountPaid, and balance properties
+     */
     function calculateTotals() {
-        // Calculate total amount from items
+        // Sum all line item totals
         const total = state.items.reduce((sum, item) => sum + (item.total || 0), 0);
+        
+        // Get amount paid from input field
         const amountPaid = Number(inputs.amountPaid?.value) || 0;
+        
+        // Calculate remaining balance
         const balance = total - amountPaid;
         
-        // Update displays
+        // Update display elements with formatted currency
         if (displays.totalDisplay) {
             displays.totalDisplay.textContent = `GH₵ ${formatCurrency(total)}`;
         }
@@ -182,20 +237,24 @@
         return { total, amountPaid, balance };
     }
 
+    /**
+     * Render receipt line items in the editable table
+     * Always displays exactly 10 rows, showing empty placeholders for unused rows
+     */
     function renderItems() {
-        // Render items in the table - always show 10 rows
         const tbody = elements.itemsTable?.querySelector("tbody");
         if (!tbody) return;
         
+        // Clear existing rows
         tbody.innerHTML = "";
         
-        // Render up to 10 rows
+        // Render exactly 10 rows (filled or empty)
         for (let index = 0; index < 10; index++) {
             const item = state.items[index] || {};
             const row = document.createElement("tr");
             
             if (index < state.items.length) {
-                // Row with data and inputs
+                // Row with data and editable inputs
                 row.innerHTML = `
                     <td><input type="text" value="${item.description || ""}" data-index="${index}" data-field="description" placeholder="Item description"></td>
                     <td><input type="number" value="${item.quantity || 0}" data-index="${index}" data-field="quantity" min="0" step="1"></td>
