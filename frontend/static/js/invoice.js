@@ -462,244 +462,327 @@
             return field.placeholder ? field.placeholder.trim() : fallback;
         }
 
-    function renderPreviewNotes(notesText) {
-        if (!elements.previewNotesList) return;
-        elements.previewNotesList.innerHTML = "";
-        const lines = (notesText || "").split(/\r?\n/)
-            .map((line) => line.replace(/^[-•\s]+/, "").trim())
-            .filter(Boolean);
+        // ============================================
+        // PREVIEW RENDERING
+        // ============================================
 
-        if (lines.length === 0) {
-            const placeholderItem = document.createElement("li");
-            placeholderItem.className = "empty-state";
-            placeholderItem.textContent = "Add notes to display terms.";
-            elements.previewNotesList.appendChild(placeholderItem);
-            return;
-        }
-
-        lines.forEach((line) => {
-            const item = document.createElement("li");
-            item.textContent = line;
-            elements.previewNotesList.appendChild(item);
-        });
-    }
-
-    function setInvoiceNumber(value, { reserved = false } = {}) {
-        const numberValue = value || state.invoiceNumber || "";
-        if (!numberValue) {
-            return;
-        }
-        state.invoiceNumber = numberValue;
-        state.invoiceNumberReserved = reserved;
-        if (elements.invoiceNumber) {
-            elements.invoiceNumber.textContent = state.invoiceNumber;
-        }
-        if (elements.previewNumber) {
-            elements.previewNumber.textContent = state.invoiceNumber;
-        }
-        if (elements.documentNumberInput) {
-            elements.documentNumberInput.value = state.invoiceNumber;
-        }
-    }
-
-    function renderLevyPlaceholders() {
-        // Function to render levy placeholders in edit and preview sections
-        if (!elements.levyContainer || !elements.previewLevyContainer) return;
-        elements.levyContainer.innerHTML = "";
-        elements.previewLevyContainer.innerHTML = "";
-        levyValueMap.clear();
-        previewLevyValueMap.clear();
-
-        state.levies
-            .filter(({ isVat }) => !isVat)
-            .forEach(({ name, rate }) => {
-            const line = document.createElement("p");
-            line.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-levy="${name}">0.00</span>`;
-            elements.levyContainer.appendChild(line);
-            const valueEl = line.querySelector("[data-levy]");
-            levyValueMap.set(name, valueEl);
-
-            const previewLine = document.createElement("p");
-            previewLine.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-preview-levy="${name}">0.00</span>`;
-            elements.previewLevyContainer.appendChild(previewLine);
-            const previewVal = previewLine.querySelector("[data-preview-levy]");
-            previewLevyValueMap.set(name, previewVal);
-            });
-    }
-
-    function renderItems() {
-        // Function to render invoice items in table and preview - always show 10 rows
-        const tableBody = elements.itemsTableBody;
-        const previewBody = elements.previewRows;
-        if (tableBody) tableBody.innerHTML = "";
-        if (previewBody) previewBody.innerHTML = "";
-
-        // Render exactly 10 rows
-        for (let index = 0; index < 10; index++) {
-            const item = state.items[index];
+        /**
+         * Renders notes/terms as a formatted list in preview mode
+         * Parses newline-separated text, strips bullet points, shows placeholder if empty
+         * @param {string} notesText - Raw notes text from textarea
+         */
+        function renderPreviewNotes(notesText) {
+            if (!elements.previewNotesList) return;
             
-            // Edit mode row
-            const row = document.createElement("tr");
-            if (item) {
-                row.innerHTML = `
-                    <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
-                    <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
-                    <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
-                    <td class="row-total">${formatCurrency(item.total || 0)}</td>
-                    <td><button type="button" class="btn-remove-row" data-remove="${index}" aria-label="Remove row" title="Remove this item">×</button></td>
-                `;
-            } else {
-                row.innerHTML = `
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                `;
-                row.classList.add("empty-row");
-            }
-            tableBody?.appendChild(row);
+            elements.previewNotesList.innerHTML = "";
+            
+            // Parse and clean notes text
+            const lines = (notesText || "")
+                .split(/\r?\n/)
+                .map((line) => line.replace(/^[-•\s]+/, "").trim())
+                .filter(Boolean);
 
-            // Preview mode row
-            const previewRow = document.createElement("tr");
-            if (item) {
-                previewRow.innerHTML = `
-                    <td>${item.description || ""}</td>
-                    <td>${formatQuantity(item.quantity || 0)}</td>
-                    <td>${formatCurrency(item.unit_price || 0)}</td>
-                    <td>${formatCurrency(item.total || 0)}</td>
-                `;
-            } else {
-                previewRow.innerHTML = `
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                `;
-                previewRow.classList.add("empty-row");
-            }
-            previewBody?.appendChild(previewRow);
-        }
-
-        if (elements.itemsPayload) {
-            elements.itemsPayload.value = JSON.stringify(state.items);
-        }
-
-        recalcTotals();
-    }
-
-    function recalcTotals() {
-        // Function to recalculate and update totals display
-        const subtotal = state.items.reduce((sum, item) => sum + parseNumber(item.total), 0);
-        elements.subtotal && (elements.subtotal.textContent = formatCurrency(subtotal));
-        elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(subtotal));
-
-        let levyTotal = 0;
-        let vatAmount = 0;
-
-        state.levies.forEach(({ name, rate, isVat }) => {
-            const amount = subtotal * rate;
-            if (isVat) {
-                vatAmount = amount;
+            // Show placeholder for empty notes
+            if (lines.length === 0) {
+                const placeholderItem = document.createElement("li");
+                placeholderItem.className = "empty-state";
+                placeholderItem.textContent = "Add notes to display terms.";
+                elements.previewNotesList.appendChild(placeholderItem);
                 return;
             }
-            const levyEl = levyValueMap.get(name);
-            if (levyEl) {
-                levyEl.textContent = formatCurrency(amount);
-            }
-            const previewEl = previewLevyValueMap.get(name);
-            if (previewEl) {
-                previewEl.textContent = formatCurrency(amount);
-            }
-            levyTotal += amount;
-        });
 
-    const totalLeviesAndValue = subtotal + levyTotal;
-    elements.levyTotal && (elements.levyTotal.textContent = formatCurrency(totalLeviesAndValue));
-    elements.previewLevyTotal && (elements.previewLevyTotal.textContent = formatCurrency(totalLeviesAndValue));
-        elements.vat && (elements.vat.textContent = formatCurrency(vatAmount));
-        elements.previewVat && (elements.previewVat.textContent = formatCurrency(vatAmount));
-
-        const grandTotal = subtotal + levyTotal + vatAmount;
-        elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(grandTotal));
-        elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(grandTotal));
-    }
-
-    function syncPreviewFromForm() {
-        // Function to sync preview fields with form inputs
-        elements.previewCustomer && (elements.previewCustomer.textContent = inputs.customer?.value || "—");
-        elements.previewClassification && (elements.previewClassification.textContent = inputs.classification?.value || "—");
-        elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
-        const currentNumber = state.invoiceNumber || elements.invoiceNumber?.textContent || "—";
-        if (elements.previewNumber) {
-            elements.previewNumber.textContent = currentNumber;
-        }
-        elements.previewCompanyInfo && (elements.previewCompanyInfo.textContent = valueOrPlaceholder(inputs.companyInfo, "Creative Designs | Logo Creation | Branding | Printing"));
-        elements.previewClientRef && (elements.previewClientRef.textContent = valueOrPlaceholder(inputs.clientRef, ""));
-        elements.previewIntro && (elements.previewIntro.textContent = valueOrPlaceholder(inputs.intro, "Please find below for your appraisal and detailed pro-forma invoice."));
-        // Sync notes into preview list
-        renderPreviewNotes(inputs.notes?.value || "");
-    }
-
-    async function calculateServerTotals() {
-        // Function to calculate totals using server API
-        try {
-            const payload = buildPayload();
-            const result = await callApi("/invoices/api/calculate-preview/", {
-                method: "POST",
-                body: JSON.stringify(payload),
+            // Render each note as a list item
+            lines.forEach((line) => {
+                const item = document.createElement("li");
+                item.textContent = line;
+                elements.previewNotesList.appendChild(item);
             });
-            if (!result) return;
-            elements.subtotal && (elements.subtotal.textContent = formatCurrency(result.subtotal));
-            elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(result.subtotal));
+        }
 
-            let levySum = 0;
+        /**
+         * Creates levy/tax display rows in both edit and preview sections
+         * Excludes VAT (shown separately), creates cached element references
+         */
+        function renderLevyPlaceholders() {
+            if (!elements.levyContainer || !elements.previewLevyContainer) return;
+            
+            // Clear existing content
+            elements.levyContainer.innerHTML = "";
+            elements.previewLevyContainer.innerHTML = "";
+            levyValueMap.clear();
+            previewLevyValueMap.clear();
+
+            // Render non-VAT levies
+            state.levies
+                .filter(({ isVat }) => !isVat)
+                .forEach(({ name, rate }) => {
+                    // Edit mode levy row
+                    const line = document.createElement("p");
+                    line.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-levy="${name}">0.00</span>`;
+                    elements.levyContainer.appendChild(line);
+                    const valueEl = line.querySelector("[data-levy]");
+                    levyValueMap.set(name, valueEl);
+
+                    // Preview mode levy row
+                    const previewLine = document.createElement("p");
+                    previewLine.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-preview-levy="${name}">0.00</span>`;
+                    elements.previewLevyContainer.appendChild(previewLine);
+                    const previewVal = previewLine.querySelector("[data-preview-levy]");
+                    previewLevyValueMap.set(name, previewVal);
+                });
+        }
+
+        // ============================================
+        // ITEMS TABLE RENDERING
+        // ============================================
+
+        /**
+         * Renders invoice line items in both edit and preview tables
+         * Always displays exactly 10 rows (filled or empty) for consistent layout
+         * Updates hidden payload field and triggers calculation
+         */
+        function renderItems() {
+            const tableBody = elements.itemsTableBody;
+            const previewBody = elements.previewRows;
+            
+            if (tableBody) tableBody.innerHTML = "";
+            if (previewBody) previewBody.innerHTML = "";
+
+            // Always render exactly 10 rows for consistent document layout
+            for (let index = 0; index < 10; index++) {
+                const item = state.items[index];
+                
+                // ========== EDIT MODE ROW ==========
+                const row = document.createElement("tr");
+                
+                if (item) {
+                    // Row with actual data and input fields
+                    row.innerHTML = `
+                        <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
+                        <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
+                        <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
+                        <td class="row-total">${formatCurrency(item.total || 0)}</td>
+                        <td><button type="button" class="btn-remove-row" data-remove="${index}" aria-label="Remove row" title="Remove this item">×</button></td>
+                    `;
+                } else {
+                    // Empty placeholder row
+                    row.innerHTML = `
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    `;
+                    row.classList.add("empty-row");
+                }
+                tableBody?.appendChild(row);
+
+                // ========== PREVIEW MODE ROW ==========
+                const previewRow = document.createElement("tr");
+                
+                if (item) {
+                    // Row with formatted display values
+                    previewRow.innerHTML = `
+                        <td>${item.description || ""}</td>
+                        <td>${formatQuantity(item.quantity || 0)}</td>
+                        <td>${formatCurrency(item.unit_price || 0)}</td>
+                        <td>${formatCurrency(item.total || 0)}</td>
+                    `;
+                } else {
+                    // Empty placeholder row
+                    previewRow.innerHTML = `
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    `;
+                    previewRow.classList.add("empty-row");
+                }
+                previewBody?.appendChild(previewRow);
+            }
+
+            // Update hidden field with serialized items data
+            if (elements.itemsPayload) {
+                elements.itemsPayload.value = JSON.stringify(state.items);
+            }
+
+            // Recalculate all totals after rendering
+            recalcTotals();
+        }
+
+        // ============================================
+        // FINANCIAL CALCULATIONS
+        // ============================================
+
+        /**
+         * Recalculates and updates all financial totals (client-side)
+         * Computes subtotal, levies, VAT, and grand total
+         * Updates both edit and preview display elements
+         * 
+         * Calculation flow:
+         * 1. Subtotal = sum of all line item totals
+         * 2. Levies = subtotal * levy rates (NHIL, GETFund, COVID)
+         * 3. Levy Total = subtotal + sum of levies
+         * 4. VAT = subtotal * VAT rate
+         * 5. Grand Total = subtotal + levies + VAT
+         */
+        function recalcTotals() {
+            // Calculate subtotal from line items
+            const subtotal = state.items.reduce((sum, item) => sum + parseNumber(item.total), 0);
+            
+            // Update subtotal displays
+            elements.subtotal && (elements.subtotal.textContent = formatCurrency(subtotal));
+            elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(subtotal));
+
+            let levyTotal = 0;
             let vatAmount = 0;
-            Object.entries(result.levies || {}).forEach(([name, amount]) => {
-                const formattedAmount = formatCurrency(amount);
-                if (name.trim().toUpperCase() === "VAT") {
+
+            // Calculate and display each levy/tax
+            state.levies.forEach(({ name, rate, isVat }) => {
+                const amount = subtotal * rate;
+                
+                if (isVat) {
+                    // VAT is handled separately
                     vatAmount = amount;
-                    elements.vat && (elements.vat.textContent = formattedAmount);
-                    elements.previewVat && (elements.previewVat.textContent = formattedAmount);
                     return;
                 }
-                levySum += amount;
+                
+                // Update levy display elements
                 const levyEl = levyValueMap.get(name);
                 if (levyEl) {
-                    levyEl.textContent = formattedAmount;
+                    levyEl.textContent = formatCurrency(amount);
                 }
                 const previewEl = previewLevyValueMap.get(name);
                 if (previewEl) {
-                    previewEl.textContent = formattedAmount;
+                    previewEl.textContent = formatCurrency(amount);
                 }
+                
+                levyTotal += amount;
             });
-            // Ensure VAT fields are refreshed even if the server omits the entry
-            const vatFormatted = formatCurrency(vatAmount);
-            elements.vat && (elements.vat.textContent = vatFormatted);
-            elements.previewVat && (elements.previewVat.textContent = vatFormatted);
-            const subtotalNumber = Number(result.subtotal || 0);
-            const totalLeviesAndValue = subtotalNumber + levySum;
+
+            // Levy Total = Subtotal + Levies (not including VAT)
+            const totalLeviesAndValue = subtotal + levyTotal;
             elements.levyTotal && (elements.levyTotal.textContent = formatCurrency(totalLeviesAndValue));
             elements.previewLevyTotal && (elements.previewLevyTotal.textContent = formatCurrency(totalLeviesAndValue));
+            
+            // Update VAT displays
+            elements.vat && (elements.vat.textContent = formatCurrency(vatAmount));
+            elements.previewVat && (elements.previewVat.textContent = formatCurrency(vatAmount));
 
-            const grandTotal = Number(result.grand_total ?? (subtotalNumber + levySum + vatAmount));
+            // Grand Total = Subtotal + Levies + VAT
+            const grandTotal = subtotal + levyTotal + vatAmount;
             elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(grandTotal));
             elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(grandTotal));
-        } catch (error) {
-            console.warn("Failed to calculate preview totals", error);
         }
-    }
 
-    // Simple debounce helper
-    function debounce(fn, delay = 250) {
-        let t;
-        return function (...args) {
-            clearTimeout(t);
-            t = setTimeout(() => fn.apply(this, args), delay);
-        };
-    }
+        /**
+         * Synchronizes preview display with current form values
+         * Updates all preview text fields, dates, and notes
+         * Called on form input changes and before toggling to preview mode
+         */
+        function syncPreviewFromForm() {
+            // Sync basic fields
+            elements.previewCustomer && (elements.previewCustomer.textContent = inputs.customer?.value || "—");
+            elements.previewClassification && (elements.previewClassification.textContent = inputs.classification?.value || "—");
+            elements.previewDate && (elements.previewDate.textContent = inputs.issueDate?.value || "—");
+            
+            // Sync invoice number
+            const currentNumber = state.invoiceNumber || elements.invoiceNumber?.textContent || "—";
+            if (elements.previewNumber) {
+                elements.previewNumber.textContent = currentNumber;
+            }
+            
+            // Sync fields with placeholders
+            elements.previewCompanyInfo && (elements.previewCompanyInfo.textContent = valueOrPlaceholder(inputs.companyInfo, "Creative Designs | Logo Creation | Branding | Printing"));
+            elements.previewClientRef && (elements.previewClientRef.textContent = valueOrPlaceholder(inputs.clientRef, ""));
+            elements.previewIntro && (elements.previewIntro.textContent = valueOrPlaceholder(inputs.intro, "Please find below for your appraisal and detailed pro-forma invoice."));
+            
+            // Render notes as formatted list
+            renderPreviewNotes(inputs.notes?.value || "");
+        }
 
-    const debouncedServerTotals = debounce(calculateServerTotals, 300);
+        /**
+         * Calculates totals using server-side API for accuracy
+         * Server calculation ensures consistency with saved invoices
+         * Updates all financial displays on success, fails silently
+         * @async
+         */
+        async function calculateServerTotals() {
+            try {
+                const payload = buildPayload();
+                const result = await callApi("/invoices/api/calculate-preview/", {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                });
+                
+                if (!result) return;
+                
+                // Update subtotals
+                elements.subtotal && (elements.subtotal.textContent = formatCurrency(result.subtotal));
+                elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(result.subtotal));
+
+                let levySum = 0;
+                let vatAmount = 0;
+                
+                // Process each levy from server response
+                Object.entries(result.levies || {}).forEach(([name, amount]) => {
+                    const formattedAmount = formatCurrency(amount);
+                    
+                    if (name.trim().toUpperCase() === "VAT") {
+                        vatAmount = amount;
+                        elements.vat && (elements.vat.textContent = formattedAmount);
+                        elements.previewVat && (elements.previewVat.textContent = formattedAmount);
+                        return;
+                    }
+                    
+                    levySum += amount;
+                    const levyEl = levyValueMap.get(name);
+                    if (levyEl) {
+                        levyEl.textContent = formattedAmount;
+                    }
+                    const previewEl = previewLevyValueMap.get(name);
+                    if (previewEl) {
+                        previewEl.textContent = formattedAmount;
+                    }
+                });
+                
+                // Ensure VAT is displayed even if server omits it
+                const vatFormatted = formatCurrency(vatAmount);
+                elements.vat && (elements.vat.textContent = vatFormatted);
+                elements.previewVat && (elements.previewVat.textContent = vatFormatted);
+                
+                // Calculate and display levy total
+                const subtotalNumber = Number(result.subtotal || 0);
+                const totalLeviesAndValue = subtotalNumber + levySum;
+                elements.levyTotal && (elements.levyTotal.textContent = formatCurrency(totalLeviesAndValue));
+                elements.previewLevyTotal && (elements.previewLevyTotal.textContent = formatCurrency(totalLeviesAndValue));
+
+                // Calculate and display grand total
+                const grandTotal = Number(result.grand_total ?? (subtotalNumber + levySum + vatAmount));
+                elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(grandTotal));
+                elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(grandTotal));
+            } catch (error) {
+                console.warn("Failed to calculate preview totals", error);
+            }
+        }
+
+        /**
+         * Creates a debounced version of a function
+         * Delays execution until after calls have stopped for specified time
+         * @param {Function} fn - Function to debounce
+         * @param {number} delay - Delay in milliseconds
+         * @returns {Function} Debounced function
+         */
+        function debounce(fn, delay = 250) {
+            let t;
+            return function (...args) {
+                clearTimeout(t);
+                t = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
+        // Debounced server calculation to avoid excessive API calls during typing
+        const debouncedServerTotals = debounce(calculateServerTotals, 300);
 
     async function handlePreviewToggle() {
         // Function to handle preview toggle button click
