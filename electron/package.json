@@ -6,7 +6,7 @@
     "dev": "concurrently \"npm:django\" \"npm:electron\"",
     "django": "python ../backend/manage.py runserver 127.0.0.1:8765",
     "electron": "wait-on http://127.0.0.1:8765 && electron .",
-    "package": "electron-builder --linux deb"
+    "package": "electron-builder --linux deb --mac dmg --win nsis"
   },
   "dependencies": {
     "electron-updater": "^6.1.4"
@@ -33,6 +33,19 @@
       ],
       "icon": "../assets/billing app icon.png",
       "category": "Office"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "../assets/billing app icon.png",
+      "category": "public.app-category.business"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "../assets/billing app icon.png"
     },
     "publish": [
       {
