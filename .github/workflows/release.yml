@@ -1,0 +1,87 @@
+name: Build and publish Electron releases
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-linux:
+    name: Build Linux (.deb) and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies (electron)
+        working-directory: electron
+        run: npm ci
+      - name: Generate icons
+        working-directory: electron
+        run: npm run generate-icons || true
+      - name: Build and publish .deb
+        working-directory: electron
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --linux deb --publish always
+
+  build-windows:
+    name: Build Windows (NSIS) and publish
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies (electron)
+        working-directory: electron
+        run: npm ci
+      - name: Generate icons
+        working-directory: electron
+        run: npm run generate-icons || true
+      - name: Build and publish NSIS installer
+        working-directory: electron
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish always
+
+  build-mac:
+    name: Build macOS (DMG) and publish
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies (electron)
+        working-directory: electron
+        run: npm ci
+      - name: Generate icons
+        working-directory: electron
+        run: npm run generate-icons || true
+      - name: Create mac .icns from PNG
+        if: runner.os == 'macOS'
+        working-directory: electron
+        run: |
+          mkdir -p build/icons.iconset
+          sips -z 16 16    build/icons/icon.png --out build/icons.iconset/icon_16x16.png
+          sips -z 32 32    build/icons/icon.png --out build/icons.iconset/icon_16x16@2x.png
+          sips -z 32 32    build/icons/icon.png --out build/icons.iconset/icon_32x32.png
+          sips -z 64 64    build/icons/icon.png --out build/icons.iconset/icon_32x32@2x.png
+          sips -z 128 128  build/icons/icon.png --out build/icons.iconset/icon_128x128.png
+          sips -z 256 256  build/icons/icon.png --out build/icons.iconset/icon_128x128@2x.png
+          sips -z 256 256  build/icons/icon.png --out build/icons.iconset/icon_256x256.png
+          sips -z 512 512  build/icons/icon.png --out build/icons.iconset/icon_256x256@2x.png
+          sips -z 512 512  build/icons/icon.png --out build/icons.iconset/icon_512x512.png
+          sips -z 1024 1024 build/icons/icon.png --out build/icons.iconset/icon_512x512@2x.png
+          iconutil -c icns build/icons.iconset -o build/icons/icon.icns || true
+      - name: Build and publish DMG
+        working-directory: electron
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --mac dmg --publish always

@@ -90,9 +90,10 @@ function setupAutoUpdates(targetWindow) {
       console.error('Failed to check for updates:', error);
     });
   };
-
+  // Allow overriding the interval via env var (milliseconds). Default: 1000ms for testing.
+  const intervalMs = parseInt(process.env.AUTO_UPDATE_INTERVAL_MS, 10) || 1000;
   checkForUpdates();
-  updateIntervalHandle = setInterval(checkForUpdates, 1000);
+  updateIntervalHandle = setInterval(checkForUpdates, intervalMs);
 }
 
 app.whenReady().then(() => {

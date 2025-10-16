@@ -1,12 +1,16 @@
 {
   "name": "billing-app-desktop",
   "version": "0.1.0",
+  "description": "Billing App desktop client",
+  "homepage": "https://github.com/Macmesh12/Billing-App",
   "main": "main.js",
-  "scripts": {
+  "author": "Macmesh <you@example.com>",
+    "scripts": {
     "dev": "concurrently \"npm:django\" \"npm:electron\"",
     "django": "python ../backend/manage.py runserver 127.0.0.1:8765",
     "electron": "wait-on http://127.0.0.1:8765 && electron .",
-    "package": "electron-builder --linux deb --mac dmg --win nsis"
+    "package": "electron-builder --linux deb --mac dmg --win nsis",
+    "generate-icons": "mkdir -p build/icons && convert ../assets/\"billing app icon.png\" -resize 256x256 build/icons/icon.png && convert build/icons/icon.png -define icon:auto-resize=64,48,32,16 build/icons/icon.ico"
   },
   "dependencies": {
     "electron-updater": "^6.1.4"
@@ -31,21 +35,22 @@
       "target": [
         "deb"
       ],
-      "icon": "../assets/billing app icon.png",
-      "category": "Office"
+      "icon": "build/icons/icon.png",
+      "category": "Office",
+      "maintainer": "Macmesh <macmesh.com>"
     },
     "mac": {
       "target": [
         "dmg"
       ],
-      "icon": "../assets/billing app icon.png",
+      "icon": "build/icons/icon.icns",
       "category": "public.app-category.business"
     },
     "win": {
       "target": [
         "nsis"
       ],
-      "icon": "../assets/billing app icon.png"
+      "icon": "build/icons/icon.ico"
     },
     "publish": [
       {
