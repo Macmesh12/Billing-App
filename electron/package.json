@@ -6,7 +6,10 @@
     "dev": "concurrently \"npm:django\" \"npm:electron\"",
     "django": "python ../backend/manage.py runserver 127.0.0.1:8765",
     "electron": "wait-on http://127.0.0.1:8765 && electron .",
-    "package": "electron-builder"
+    "package": "electron-builder --linux deb"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.4"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
@@ -15,6 +18,7 @@
     "wait-on": "^7.0.1"
   },
   "build": {
+    "productName": "Billing App",
     "appId": "com.billingapp.desktop",
     "files": [
       "**/*",
@@ -22,6 +26,20 @@
     ],
     "directories": {
       "output": "dist"
-    }
+    },
+    "linux": {
+      "target": [
+        "deb"
+      ],
+      "icon": "../assets/billing app icon.png",
+      "category": "Office"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Macmesh12",
+        "repo": "Billing-App"
+      }
+    ]
   }
 }
