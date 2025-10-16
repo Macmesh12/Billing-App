@@ -23,6 +23,7 @@
   },
   "build": {
     "productName": "Billing App",
+    "executableName": "billing-app",
     "appId": "com.billingapp.desktop",
     "files": [
       "**/*",
