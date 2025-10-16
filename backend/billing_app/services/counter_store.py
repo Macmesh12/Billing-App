@@ -168,7 +168,14 @@ def _build_store() -> BaseCounterStore:
     if not project_id:
         logger.info("FIREBASE_PROJECT_ID not configured; using Django counter store")
         return DjangoModelCounterStore()
+    # Skip Firestore in development if credentials aren't configured
+    # This prevents blocking during local development
     try:
+        # Quick check without blocking - use Django store if no credentials
+        import os
+        if not os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
+            logger.info("No Firestore credentials found; using Django counter store")
+            return DjangoModelCounterStore()
         return FirestoreCounterStore()
     except Exception as exc:  # pragma: no cover - fallback path
         if firestore_exceptions and isinstance(exc, firestore_exceptions.GoogleAPICallError):

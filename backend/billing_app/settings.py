@@ -15,6 +15,12 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "0.0.0.0"]
 # Allowed hosts for security
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # React dev server
+    "http://127.0.0.1:5173",
+]
+CORS_ALLOW_CREDENTIALS = True
+
 INSTALLED_APPS = [
     # List of installed Django apps
     "django.contrib.admin",
@@ -23,6 +29,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "billing_app.invoices",
     "receipts",
     "waybills",
@@ -31,6 +38,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     # Middleware classes for request processing
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -46,8 +54,8 @@ TEMPLATES = [
     # Template engine configuration
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [FRONTEND_DIR / "templates"],
-        # Directories to search for templates
+        "DIRS": [],
+        # No templates - React handles frontend
         "APP_DIRS": True,
         # Look for templates in app directories
         "OPTIONS": {
@@ -102,10 +110,9 @@ USE_TZ = True
 STATIC_URL = "/static/"
 # URL prefix for static files
 STATICFILES_DIRS = [
-    FRONTEND_DIR / "static",
     BASE_DIR.parent / "assets",
 ]
-# Directories to search for static files
+# Directories to search for static files (assets for PDFs)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Default auto field type for models

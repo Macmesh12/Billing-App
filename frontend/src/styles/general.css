@@ -1,0 +1,820 @@
+:root {
+    --accent: #eab308;
+    --accent-2: #fbbf24;
+    --accent-dark: #ca8a04;
+    --border: #fef3c7;
+    --bg: #fefce8;
+    --bg-2: linear-gradient(180deg, #fefce8 0%, #fef9e6 100%);
+    --card-bg: #ffffff;
+    --text: #0f1724;
+    --muted: #556070;
+    --muted-2: #7b8794;
+    --success: #10b981;
+    --danger: #ef4444;
+    --glass: rgba(255,255,255,0.6);
+    --radius: 12px;
+    --shadow-soft: 0 8px 30px rgba(16,24,40,0.06);
+    --shadow-strong: 0 20px 50px rgba(2,6,23,0.12);
+    --primary: #eab308;
+}
+
+@page {
+    size: A4 portrait;
+    margin: 5mm;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body,
+body.billing-app {
+    margin: 0;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg-2);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.app-header {
+    background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,0.55));
+    border-bottom: 1px solid rgba(16,24,40,0.04);
+    padding: 1.25rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    letter-spacing: -0.2px;
+    color: var(--text);
+}
+
+.app-nav {
+    display: flex;
+    gap: 1rem;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.nav-link:hover {
+    color: var(--accent);
+}
+
+.nav-link.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 0.2rem;
+}
+
+.app-main {
+    padding: 2rem;
+}
+
+
+
+.module {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.5rem;
+    background: rgba(255,255,255,0.9);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.module-body {
+    background: #f8f9fa;
+    min-height: calc(100vh - 180px);
+    padding: 2rem 0;
+}
+
+.module-header h2 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--text);
+}
+
+.module-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.button {
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.6rem 1.1rem;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.95rem;
+    box-shadow: 0 6px 18px rgba(31,99,234,0.12);
+    transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+
+.button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-strong);
+}
+
+.button-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid rgba(31,111,235,0.12);
+    padding: 0.5rem 0.9rem;
+    border-radius: 10px;
+}
+
+.app-main {
+    padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.grid {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.grid.two-column {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9rem;
+    color: var(--muted);
+    gap: 0.4rem;
+}
+
+input, textarea, select {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(16,24,40,0.06);
+    border-radius: 8px;
+    font-size: 0.975rem;
+    background: linear-gradient(180deg, rgba(250,251,255,0.8), rgba(255,255,255,0.6));
+}
+
+textarea {
+    min-height: 4rem;
+}
+
+.line-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.line-items th,
+.line-items td {
+    border-bottom: 1px solid rgba(16,24,40,0.04);
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+}
+
+.line-items input {
+    width: 100%;
+}
+
+/* ============================================
+   UNIFIED TABLE STYLING - FIXED 10 ROWS SPACE
+   ============================================ */
+.document-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.6rem;
+    table-layout: fixed;
+}
+
+/* Reserve fixed space for 10 rows so content doesn't shift */
+.document-items tbody {
+    min-height: 400px;
+    display: table-row-group;
+}
+
+.is-preview .document-items tbody,
+.pdf-export-wrapper .document-items tbody {
+    min-height: 250px;
+}
+
+.document-items thead {
+    background: linear-gradient(180deg, rgba(234,179,8,0.08), rgba(254,243,199,0.9));
+}
+
+.document-items th,
+.document-items td {
+    padding: 0.5rem 0.7rem;
+    border: 1px solid rgba(16,24,40,0.12);
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.3;
+}
+
+.document-items th {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.3px;
+    color: var(--muted);
+}
+
+/* PREVIEW MODE: Black borders and centered text */
+.is-preview .document-items th,
+.is-preview .document-items td,
+.pdf-export-wrapper .document-items th,
+.pdf-export-wrapper .document-items td {
+    border: 1px solid rgba(16,24,40,0.12);
+    font-weight: 600;
+    text-align: center;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+.is-preview .document-items th,
+.pdf-export-wrapper .document-items th {
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* Column widths in preview/PDF - 4 columns layout */
+.is-preview .document-items th.description,
+.is-preview .document-items td.description,
+.pdf-export-wrapper .document-items th.description,
+.pdf-export-wrapper .document-items td.description {
+    width: 50%;
+}
+
+.is-preview .document-items th:nth-child(2),
+.is-preview .document-items td:nth-child(2),
+.pdf-export-wrapper .document-items th:nth-child(2),
+.pdf-export-wrapper .document-items td:nth-child(2) {
+    width: 15%;
+}
+
+.is-preview .document-items th:nth-child(3),
+.is-preview .document-items td:nth-child(3),
+.pdf-export-wrapper .document-items th:nth-child(3),
+.pdf-export-wrapper .document-items td:nth-child(3) {
+    width: 17.5%;
+}
+
+.is-preview .document-items th:nth-child(4),
+.is-preview .document-items td:nth-child(4),
+.pdf-export-wrapper .document-items th:nth-child(4),
+.pdf-export-wrapper .document-items td:nth-child(4) {
+    width: 17.5%;
+}
+
+/* Column widths - consistent across all documents */
+.document-items th.description,
+.document-items td.description {
+    width: 45%;
+}
+
+.document-items th:nth-child(2),
+.document-items td:nth-child(2) {
+    width: 12%;
+    text-align: center;
+}
+
+.document-items th:nth-child(3),
+.document-items td:nth-child(3) {
+    width: 18%;
+    text-align: right;
+}
+
+.document-items th:nth-child(4),
+.document-items td:nth-child(4) {
+    width: 25%;
+    text-align: right;
+}
+
+.document-items tbody tr:hover {
+    background: rgba(31,111,235,0.03);
+}
+
+.document-items input,
+.document-items select {
+    width: 100%;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    padding: 0.15rem 0.3rem;
+    font-size: 0.85rem;
+}
+
+.document-items input:focus,
+.document-items select:focus {
+    outline: none;
+    background: rgba(31,111,235,0.05);
+    border-radius: 3px;
+}
+
+/* Remove Row Button - Cross (×) Icon */
+.btn-remove-row {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+    font-weight: 700;
+}
+
+.btn-remove-row:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+.btn-remove-row:active {
+    transform: scale(0.95);
+}
+
+/* Add Item Button - EXACT same for all documents */
+.button-secondary[id$="-add-item"] {
+    margin-top: 0.4rem;
+    margin-bottom: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+.totals {
+    margin-top: 1.5rem;
+    border-radius: 12px;
+    padding: 1rem;
+    max-width: 420px;
+    margin-left: auto;
+    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,252,255,0.9));
+    box-shadow: 0 10px 30px rgba(15,23,42,0.03);
+}
+
+.totals-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.totals-row.grand {
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Unified A3 canvas (297mm × 420mm) for edit mode */
+
+/* A3 workspace container - centers the document like MS Word */
+.a4-workspace {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.document {
+    width: 297mm;
+    min-height: 420mm;
+    margin: auto auto;
+    background: #ffffff;
+    padding: 15mm 20mm;
+    box-sizing: border-box;
+    font-size: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+/* Preview mode / PDF - A4 size */
+.is-preview .document,
+.pdf-export-wrapper .document {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 12mm 15mm;
+    margin: 0;
+    background: #ffffff;
+    box-shadow: none;
+    border: none;
+    overflow: visible;
+}
+
+.is-preview .document h3,
+.pdf-export-wrapper .document h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.4rem;
+    margin-top: 0.4rem;
+}
+
+.is-preview .document h4,
+.pdf-export-wrapper .document h4 {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+    margin-top: 0.3rem;
+}
+
+.is-preview .document p,
+.pdf-export-wrapper .document p {
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+}
+
+/* Hide company contact info in EDIT mode, show only in PREVIEW */
+.invoice-contact-bar,
+.receipt-contact-bar,
+.waybill-contact-bar {
+    display: none;
+}
+
+.is-preview .invoice-contact-bar,
+.is-preview .receipt-contact-bar,
+.is-preview .waybill-contact-bar,
+.pdf-export-wrapper .invoice-contact-bar,
+.pdf-export-wrapper .receipt-contact-bar,
+.pdf-export-wrapper .waybill-contact-bar {
+    display: block;
+}
+
+/* Ensure content fits on A4 */
+.document * {
+    box-sizing: border-box;
+}
+
+/* Compact typography for A4 fit */
+.document h3 {
+    margin: 0 0 0.4rem 0;
+    font-size: 1.2rem;
+    line-height: 1.2;
+}
+
+.document h4 {
+    margin: 0 0 0.3rem 0;
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.document p {
+    margin: 0.2rem 0;
+    line-height: 1.3;
+    font-size: 0.9rem;
+}
+
+.document section {
+    margin-bottom: 0.8rem;
+}
+
+.document label {
+    font-size: 0.85rem;
+}
+
+.document input,
+.document select,
+.document textarea {
+    font-size: 0.9rem;
+}
+
+/* Letterhead-style header inside documents */
+.document .document-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 1rem 1.25rem;
+    padding: 1rem 1.25rem;
+    margin: -0.5rem -0.5rem 1rem;
+    border-radius: 8px;
+    background: linear-gradient(100deg, rgba(31,111,235,0.06), rgba(31,111,235,0.02));
+    border: 1px solid rgba(31,111,235,0.08);
+}
+
+.document .document-header h3 {
+    margin: 0 0 0.35rem 0;
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
+}
+
+.document .document-number,
+.document .document-date {
+    margin: 0.15rem 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.document .document-number span,
+.document .document-date span {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(31,111,235,0.08);
+    color: var(--text);
+}
+
+.document-editable .document-meta,
+.document-editable .receipt-body,
+.document-editable .sender-receiver {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.document-editable p {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.25rem 0;
+}
+
+.document-editable strong {
+    font-weight: 600;
+}
+
+/* Field layout utilities */
+.field-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.field-block {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.document .document-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem 1rem;
+}
+
+.document-editable input,
+.document-editable select,
+.document-editable textarea {
+    border: none;
+    border-bottom: 1px dotted rgba(16,24,40,0.06);
+    background: transparent;
+    font: inherit;
+    padding: 0.1rem 0.25rem;
+    min-width: 6rem;
+}
+
+.document-editable input:focus,
+.document-editable select:focus,
+.document-editable textarea:focus {
+    outline: none;
+    border-bottom-color: var(--accent);
+}
+
+.document-editable select {
+    padding-right: 1.5rem;
+}
+
+.document-editable input[type="number"] {
+    text-align: right;
+}
+
+.document-editable .document-totals {
+    margin-top: 2rem;
+}
+
+.preview-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+}
+
+.signature-line {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.3rem;
+    width: 200px;
+}
+
+.module.is-preview form {
+    display: none;
+}
+
+.module.is-preview .document:not(.document-editable) {
+    display: block;
+}
+
+.module:not(.is-preview) .document:not(.document-editable) {
+    display: none;
+}
+
+/* In preview, hide only the Preview toggle; keep Back to Edit and Download visible */
+.module.is-preview .module-actions [id$="-preview-toggle"] {
+    display: none;
+}
+
+.module-toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: rgba(17,24,39,0.95);
+    color: #fff;
+    padding: 0.85rem 1.2rem;
+    border-radius: 12px;
+    box-shadow: 0 18px 50px rgba(2,6,23,0.4);
+    font-weight: 700;
+    z-index: 2000;
+    transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.module-toast.is-error {
+    background: #b91c1c;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--muted);
+    font-style: italic;
+    padding: 1rem 0;
+}
+
+/* Modernize native date inputs */
+input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: linear-gradient(180deg, rgba(250,251,255,0.8), rgba(255,255,255,0.6));
+    padding: 0.55rem 0.7rem;
+    border: 1px solid rgba(16,24,40,0.06);
+    border-radius: 8px;
+    line-height: 1.2;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: opacity(0.7);
+}
+
+input, textarea, select {
+    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+input::placeholder, textarea::placeholder {
+    color: rgba(85, 96, 112, 0.65);
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: rgba(31,111,235,0.35);
+    box-shadow: 0 0 0 4px rgba(31,111,235,0.12);
+    background: #fff;
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"],
+.is-invalid {
+    border-color: rgba(239,68,68,0.55) !important;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.18) !important;
+}
+
+input:disabled, textarea:disabled, select:disabled {
+    background: rgba(245,247,250,0.8);
+    color: rgba(85,96,112,0.7);
+    cursor: not-allowed;
+}
+
+.button[disabled], .button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+.app-footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+    border-top: 1px solid rgba(0,0,0,0.05);
+    margin-top: 3rem;
+}
+
+/* ============================================
+   PDF export alignment
+   ============================================ */
+
+.pdf-export-wrapper {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: transparent;
+}
+
+.pdf-export-wrapper .document,
+.pdf-export .document {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 12mm 11mm;
+    margin: 0;
+    background: #ffffff;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+}
+
+.pdf-export-wrapper .document * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.pdf-export-wrapper .document section,
+.pdf-export-wrapper .document table {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* ============================================
+   Download format modal
+   ============================================ */
+
+.download-format-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    padding: 1.5rem;
+}
+
+.download-format-backdrop.is-hidden {
+    display: none;
+}
+
+.download-format-dialog {
+    width: min(360px, 100%);
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 2rem 1.75rem 1.5rem;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+    text-align: center;
+}
+
+.download-format-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+}
+
+.download-format-description {
+    margin: 0;
+    color: rgba(15, 23, 42, 0.68);
+    font-size: 0.95rem;
+}
+
+.download-format-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.download-format-actions .button {
+    flex: 1 1 0;
+}
+
+.download-format-cancel {
+    margin-top: 1.25rem;
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+}
+
+.download-format-cancel:hover,
+.download-format-cancel:focus {
+    text-decoration: underline;
+    outline: none;
+}

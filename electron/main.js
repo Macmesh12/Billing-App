@@ -21,10 +21,10 @@ function createWindow() {
     }
   });
 
-  const frontendEntry = path.join(__dirname, '..', 'frontend', 'public', 'index.html');
-  // Path to frontend entry HTML
-  mainWindow.loadFile(frontendEntry);
-  // Load the HTML file
+  const frontendEntry = 'http://localhost:5173/';
+  // URL to React dev server
+  mainWindow.loadURL(frontendEntry);
+  // Load the URL
 }
 
 function startDjango() {

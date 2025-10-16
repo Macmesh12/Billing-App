@@ -2,8 +2,6 @@ from django.contrib import admin
 # Import Django admin
 from django.urls import include, path
 # Import URL utilities
-from django.views.generic import TemplateView
-# Import generic template view
 from django.conf import settings
 from django.conf.urls.static import static
 from billing_app import counter_api, pdf_api
@@ -11,11 +9,7 @@ from billing_app import counter_api, pdf_api
 
 urlpatterns = [
     # URL patterns for the application
-    path("", TemplateView.as_view(template_name="index.html"), name="home"),
-    # Home page route
-    path("invoice.html", TemplateView.as_view(template_name="invoice.html"), name="invoice-page"),
-    path("receipt.html", TemplateView.as_view(template_name="receipt.html"), name="receipt-page"),
-    path("waybill.html", TemplateView.as_view(template_name="waybill.html"), name="waybill-page"),
+    # React frontend handles all page routing, Django serves APIs only
     path("admin/", admin.site.urls),
     # Admin interface
     path("invoices/", include("billing_app.invoices.urls")),
