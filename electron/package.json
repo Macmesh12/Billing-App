@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Billing App desktop client",
   "homepage": "https://github.com/Macmesh12/Billing-App",
-  "main": "main.js",
+  "main": "app/main.js",
   "author": "Macmesh <you@example.com>",
     "scripts": {
     "dev": "concurrently \"npm:django\" \"npm:electron\"",
