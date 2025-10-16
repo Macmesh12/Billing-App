@@ -1,7 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './Layout';
 import '../styles/invoice.css';
 import { chooseDownloadFormat } from '../utils/formatChooser';
+
+const DEFAULT_TAX_SETTINGS = {
+  NHIL: 0.025,
+  GETFUND: 0.025,
+  COVID: 0.01,
+  VAT: 0.15,
+};
 
 const Invoice = () => {
   const API_BASE = "http://127.0.0.1:8765";
@@ -9,6 +16,7 @@ const Invoice = () => {
   // State management
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('INV000');
+  const [invoiceNumberReserved, setInvoiceNumberReserved] = useState(false);
   const [formData, setFormData] = useState({
     customer_name: '',
     issue_date: new Date().toISOString().split('T')[0],
@@ -21,78 +29,219 @@ const Invoice = () => {
   });
   
   const [items, setItems] = useState([
-    { description: '', quantity: 1, unit_cost: 0, total: 0 }
+    { description: '', quantity: 0, unit_price: 0, total: 0 }
   ]);
-  
-  const [calculations, setCalculations] = useState({
+
+  const [taxSettings, setTaxSettings] = useState(() => ({ ...DEFAULT_TAX_SETTINGS }));
+  const [calculations, setCalculations] = useState(() => ({
     subtotal: 0,
-    nhil: 0,
-    getfund: 0,
-    covid: 0,
-    levy_total: 0,
-    vat: 0,
-    grand_total: 0
-  });
+    levies: {},
+    grandTotal: 0,
+  }));
 
   const [toast, setToast] = useState({ message: '', visible: false, type: 'info' });
   const [isDownloading, setIsDownloading] = useState(false);
-
-  // Reserve invoice number on mount
-  useEffect(() => {
-    async function reserveInvoiceNumber() {
-      try {
-        const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: 'POST' });
-        if (response.ok) {
-          const data = await response.json();
-          setInvoiceNumber(data.next_number || 'INV000');
-        }
-      } catch (error) {
-        console.error('Failed to reserve invoice number:', error);
-        showToast('Failed to reserve invoice number', 'error');
-      }
-    }
-    reserveInvoiceNumber();
-  }, []);
-
-  // Calculate totals whenever items change
-  useEffect(() => {
-    const calc = async () => {
-      try {
-        const itemsPayload = items.map(item => ({
-          description: item.description,
-          quantity: parseFloat(item.quantity) || 0,
-          unit_cost: parseFloat(item.unit_cost) || 0
-        }));
-
-        const response = await fetch(`${API_BASE}/invoices/api/calculate-preview/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: itemsPayload })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setCalculations({
-            subtotal: data.subtotal || 0,
-            nhil: data.nhil || 0,
-            getfund: data.getfund || 0,
-            covid: data.covid || 0,
-            levy_total: data.levy_total || 0,
-            vat: data.vat || 0,
-            grand_total: data.grand_total || 0
-          });
-        }
-      } catch (error) {
-        console.error('Failed to calculate totals:', error);
-      }
-    };
-    calc();
-  }, [items]);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, visible: true, type });
     setTimeout(() => setToast({ message: '', visible: false, type: 'info' }), 3000);
   };
+
+  const formatPercentage = (rate) => {
+    if (typeof rate !== 'number' || Number.isNaN(rate)) {
+      return null;
+    }
+    const percent = (rate * 100).toFixed(2);
+    return percent.endsWith('.00') ? percent.slice(0, -3) : percent;
+  };
+
+  const formatLevyLabel = useCallback((name) => {
+    const cleanedName = (name || '').trim();
+    const rateSource = taxSettings?.[cleanedName] ?? DEFAULT_TAX_SETTINGS[cleanedName];
+    const numericRate = typeof rateSource === 'number' ? rateSource : Number(rateSource) || 0;
+    const percentLabel = formatPercentage(numericRate);
+    return percentLabel ? `${cleanedName || 'Levy'} (${percentLabel}%)` : cleanedName || 'Levy';
+  }, [taxSettings]);
+
+  const formatQuantity = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return '0';
+    }
+    return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2);
+  };
+
+  const formatCurrency = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return '0.00';
+    }
+    return numeric.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const buildItemsPayload = useCallback(() => {
+    return items.map((item) => {
+      const quantity = parseFloat(item.quantity) || 0;
+      const unitPrice = parseFloat(item.unit_price) || 0;
+      const totalRaw = quantity * unitPrice;
+      const total = Number.isFinite(totalRaw) ? Math.round(totalRaw * 100) / 100 : 0;
+
+      return {
+        description: item.description || '',
+        quantity,
+        unit_price: unitPrice,
+        total,
+      };
+    });
+  }, [items]);
+
+  const computeLocalTotals = useCallback((payloadItems) => {
+    const effectiveSettings = taxSettings && Object.keys(taxSettings).length ? taxSettings : DEFAULT_TAX_SETTINGS;
+    const subtotalValue = payloadItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+
+    const leviesMap = {};
+    let levyValueTotal = 0;
+    let vatAmount = 0;
+
+    Object.entries(effectiveSettings).forEach(([name, rate]) => {
+      const numericRate = Number(rate) || 0;
+      const amount = subtotalValue * numericRate;
+      const roundedAmount = Math.round(amount * 100) / 100;
+      leviesMap[name] = roundedAmount;
+      if (name.trim().toUpperCase() === 'VAT') {
+        vatAmount += roundedAmount;
+      } else {
+        levyValueTotal += roundedAmount;
+      }
+    });
+
+    const grandTotalValue = subtotalValue + levyValueTotal + vatAmount;
+
+    return {
+      subtotal: Math.round(subtotalValue * 100) / 100,
+      levies: leviesMap,
+      grandTotal: Math.round(grandTotalValue * 100) / 100,
+    };
+  }, [taxSettings]);
+
+  const loadNextInvoiceNumber = useCallback(async () => {
+    if (invoiceNumberReserved) {
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/api/counter/invoice/next/`);
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json().catch(() => ({}));
+      if (data?.next_number) {
+        setInvoiceNumber(data.next_number);
+      }
+    } catch (error) {
+      console.warn('Failed to load next invoice number', error);
+    }
+  }, [API_BASE, invoiceNumberReserved]);
+
+  const ensureInvoiceNumberReserved = useCallback(async () => {
+    if (invoiceNumberReserved && invoiceNumber) {
+      return { number: invoiceNumber, reserved: true };
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: 'POST' });
+      if (!response.ok) {
+        throw new Error(`Failed to reserve invoice number (${response.status})`);
+      }
+      const data = await response.json().catch(() => ({}));
+      const nextNumber = data?.next_number || invoiceNumber || 'INV000';
+      setInvoiceNumber(nextNumber);
+      setInvoiceNumberReserved(true);
+      return { number: nextNumber, reserved: true };
+    } catch (error) {
+      console.warn('Could not reserve invoice number', error);
+      setInvoiceNumberReserved(false);
+      await loadNextInvoiceNumber();
+      return { number: invoiceNumber, reserved: false, error };
+    }
+  }, [API_BASE, invoiceNumber, invoiceNumberReserved, loadNextInvoiceNumber]);
+
+  useEffect(() => {
+    const loadTaxConfig = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/invoices/api/config/`);
+        if (!response.ok) {
+          throw new Error(`Failed to load tax config (${response.status})`);
+        }
+        const data = await response.json().catch(() => ({}));
+        const settings = data?.tax_settings;
+        if (settings && typeof settings === 'object') {
+          const normalized = {};
+          Object.entries(settings).forEach(([key, rate]) => {
+            const cleanedKey = String(key).trim() || key;
+            normalized[cleanedKey] = Number(rate) || 0;
+          });
+          if (Object.keys(normalized).length) {
+            setTaxSettings(normalized);
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load tax settings', error);
+      }
+      setTaxSettings({ ...DEFAULT_TAX_SETTINGS });
+    };
+
+    loadTaxConfig();
+  }, [API_BASE]);
+
+  useEffect(() => {
+    loadNextInvoiceNumber();
+  }, [loadNextInvoiceNumber]);
+
+  useEffect(() => {
+    const calculateTotals = async () => {
+      const payloadItems = buildItemsPayload();
+      const localTotals = computeLocalTotals(payloadItems);
+      const issueDate = formData.issue_date || new Date().toISOString().split('T')[0];
+
+      try {
+        const response = await fetch(`${API_BASE}/invoices/api/calculate-preview/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_name: 'Preview Customer',
+            issue_date: issueDate,
+            items_payload: JSON.stringify(payloadItems),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to calculate totals (${response.status})`);
+        }
+
+        const data = await response.json().catch(() => ({}));
+        const leviesData = data?.levies || {};
+        const normalizedLevies = { ...localTotals.levies };
+        Object.entries(leviesData).forEach(([name, amount]) => {
+          normalizedLevies[name] = Number(amount) || 0;
+        });
+
+        const subtotalValue = Number(data?.subtotal);
+        const grandTotalValue = Number(data?.grand_total);
+
+        setCalculations({
+          subtotal: Number.isFinite(subtotalValue) ? subtotalValue : localTotals.subtotal,
+          levies: normalizedLevies,
+          grandTotal: Number.isFinite(grandTotalValue) ? grandTotalValue : localTotals.grandTotal,
+        });
+      } catch (error) {
+        console.warn('Failed to calculate totals', error);
+        setCalculations(localTotals);
+      }
+    };
+
+    calculateTotals();
+  }, [API_BASE, buildItemsPayload, computeLocalTotals, formData.issue_date]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -100,17 +249,23 @@ const Invoice = () => {
   };
 
   const handleItemChange = (index, field, value) => {
-    const newItems = [...items];
-    newItems[index][field] = value;
-    
-    // Recalculate total for this item
-    if (field === 'quantity' || field === 'unit_cost') {
-      const qty = parseFloat(newItems[index].quantity) || 0;
-      const cost = parseFloat(newItems[index].unit_cost) || 0;
-      newItems[index].total = qty * cost;
-    }
-    
-    setItems(newItems);
+    setItems((prevItems) => {
+      if (!prevItems[index]) {
+        return prevItems;
+      }
+
+      const updated = [...prevItems];
+      const current = { ...updated[index], [field]: value };
+
+      if (field === 'quantity' || field === 'unit_price') {
+        const qty = parseFloat(field === 'quantity' ? value : current.quantity) || 0;
+        const price = parseFloat(field === 'unit_price' ? value : current.unit_price) || 0;
+        current.total = Math.round(qty * price * 100) / 100;
+      }
+
+      updated[index] = current;
+      return updated;
+    });
   };
 
   const addItem = () => {
@@ -118,7 +273,7 @@ const Invoice = () => {
       showToast('Maximum 10 items allowed', 'error');
       return;
     }
-    setItems([...items, { description: '', quantity: 1, unit_cost: 0, total: 0 }]);
+    setItems(prev => [...prev, { description: '', quantity: 0, unit_price: 0, total: 0 }]);
   };
 
   const removeItem = (index) => {
@@ -127,10 +282,10 @@ const Invoice = () => {
   };
 
   const togglePreview = () => {
-    setIsPreviewMode(!isPreviewMode);
+    setIsPreviewMode((prev) => !prev);
   };
 
-  const buildPdfPayload = (format) => {
+  const buildPdfPayload = (format, documentNumber) => {
     const previewElement = document.getElementById('invoice-preview');
     if (!previewElement) {
       throw new Error('Preview element not found');
@@ -147,7 +302,7 @@ const Invoice = () => {
     wrapper.appendChild(clone);
 
     const normalizedFormat = format === 'jpeg' ? 'jpeg' : 'pdf';
-    const safeBase = String(invoiceNumber || 'invoice').trim().replace(/\s+/g, '_');
+    const safeBase = String(documentNumber || invoiceNumber || 'invoice').trim().replace(/\s+/g, '_');
     const extension = normalizedFormat === 'jpeg' ? 'jpg' : 'pdf';
 
     return {
@@ -158,8 +313,8 @@ const Invoice = () => {
     };
   };
 
-  const downloadInvoice = async (format = 'pdf') => {
-    const payload = buildPdfPayload(format);
+  const downloadInvoice = async (format = 'pdf', documentNumber = invoiceNumber) => {
+    const payload = buildPdfPayload(format, documentNumber);
     const normalizedFormat = payload.format === 'jpeg' ? 'jpeg' : 'pdf';
 
     const response = await fetch(`${API_BASE}/api/pdf/render/`, {
@@ -178,12 +333,15 @@ const Invoice = () => {
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
-    link.download = payload.filename;
     document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    try {
+      link.href = url;
+      link.download = payload.filename;
+      link.click();
+    } finally {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }
   };
 
   const handleDownload = async () => {
@@ -196,19 +354,36 @@ const Invoice = () => {
       return;
     }
 
-    const wasInPreview = isPreviewMode;
     const normalizedFormat = chosenFormat === 'jpeg' ? 'jpeg' : 'pdf';
+    const wasInPreview = isPreviewMode;
     setIsDownloading(true);
 
     try {
+      const reservation = await ensureInvoiceNumberReserved();
+      const activeNumber = reservation?.number || invoiceNumber;
+
       if (!wasInPreview) {
         setIsPreviewMode(true);
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      } else {
+        await new Promise((resolve) => requestAnimationFrame(() => resolve()));
       }
 
-      await downloadInvoice(normalizedFormat);
+      if (reservation?.number && reservation.number !== invoiceNumber) {
+        setInvoiceNumber(reservation.number);
+        await new Promise((resolve) => setTimeout(resolve, 60));
+      }
+
+      await downloadInvoice(normalizedFormat, activeNumber);
+
       const label = normalizedFormat === 'jpeg' ? 'JPEG' : 'PDF';
-      showToast(`Invoice downloaded as ${label}!`, 'success');
+      if (reservation?.reserved) {
+        showToast(`Invoice downloaded as ${label}!`, 'success');
+      } else {
+        showToast(`Invoice downloaded as ${label}! However, a new number could not be reserved.`, 'warning');
+      }
+      setInvoiceNumberReserved(false);
+      await loadNextInvoiceNumber();
     } catch (error) {
       console.error('Download error:', error);
       showToast(error.message || 'Failed to download invoice', 'error');
@@ -220,13 +395,46 @@ const Invoice = () => {
     }
   };
 
-  const formatCurrency = (value) => {
-    return parseFloat(value || 0).toFixed(2);
-  };
+  const vatKeyCandidates = Object.keys(taxSettings || {});
+  const vatKey = vatKeyCandidates.find((key) => key.trim().toUpperCase() === 'VAT')
+    || Object.keys(calculations.levies || {}).find((key) => key.trim().toUpperCase() === 'VAT')
+    || 'VAT';
+  const vatKeyUpper = vatKey.trim().toUpperCase();
+
+  const orderedLevyNames = vatKeyCandidates.filter((name) => name.trim().toUpperCase() !== vatKeyUpper);
+  const seenLevyNames = new Set(orderedLevyNames);
+  Object.keys(calculations.levies || {}).forEach((name) => {
+    const trimmed = (name || '').trim();
+    if (!trimmed || trimmed.toUpperCase() === vatKeyUpper) {
+      return;
+    }
+    if (!seenLevyNames.has(name)) {
+      orderedLevyNames.push(name);
+      seenLevyNames.add(name);
+    }
+  });
+
+  const levyRows = orderedLevyNames.map((name) => {
+    const amount = Number(calculations.levies?.[name] ?? 0);
+    return {
+      name,
+      label: formatLevyLabel(name),
+      amount: Number.isFinite(amount) ? amount : 0,
+    };
+  });
+
+  const vatAmount = Number(calculations.levies?.[vatKey] ?? 0);
+  const levyValueTotal = levyRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const levyAndValueTotal = (Number(calculations.subtotal) || 0) + levyValueTotal;
+  const vatLabel = formatLevyLabel(vatKey);
+  const noteLines = (formData.notes || '')
+    .split('\n')
+    .map((line) => line.replace(/^[•-]\s*/, '').trim())
+    .filter(Boolean);
 
   return (
     <Layout title="Invoice | Billing App">
-      <section id="invoice-module" className="module">
+      <section id="invoice-module" className={`module${isPreviewMode ? ' is-preview' : ''}`}>
         {/* Module Header */}
         <div className="module-header">
           <h2>Invoice</h2>
@@ -242,8 +450,10 @@ const Invoice = () => {
               className="button" 
               type="button"
               onClick={handleDownload}
+              disabled={isDownloading}
+              aria-busy={isDownloading}
             >
-              Download
+              {isDownloading ? 'Downloading...' : 'Download'}
             </button>
           </div>
         </div>
@@ -330,8 +540,8 @@ const Invoice = () => {
                             <td>
                               <input 
                                 type="number" 
-                                value={item.unit_cost}
-                                onChange={(e) => handleItemChange(index, 'unit_cost', e.target.value)}
+                                value={item.unit_price}
+                                onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
                                 min="0"
                                 step="0.01"
                               />
@@ -378,30 +588,31 @@ const Invoice = () => {
                     </tbody>
                   </table>
                   <div className="levies-table">
-                    <div className="levy-row">
-                      <span>NHIL (2.5%)</span>
-                      <span>{formatCurrency(calculations.nhil)}</span>
-                    </div>
-                    <div className="levy-row">
-                      <span>GETFUND (2.5%)</span>
-                      <span>{formatCurrency(calculations.getfund)}</span>
-                    </div>
-                    <div className="levy-row">
-                      <span>COVID (1%)</span>
-                      <span>{formatCurrency(calculations.covid)}</span>
-                    </div>
+                    {levyRows.length ? (
+                      levyRows.map(({ name, label, amount }) => (
+                        <div className="levy-row" key={name}>
+                          <span>{label}</span>
+                          <span>{formatCurrency(amount)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="levy-row">
+                        <span>Levies</span>
+                        <span>{formatCurrency(0)}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="levy-total-row">
                     <span>Total Levies + Value</span>
-                    <span>{formatCurrency(calculations.levy_total)}</span>
+                    <span>{formatCurrency(levyAndValueTotal)}</span>
                   </div>
                   <div className="vat-row">
-                    <span>VAT (15%)</span>
-                    <span>{formatCurrency(calculations.vat)}</span>
+                    <span>{vatLabel}</span>
+                    <span>{formatCurrency(vatAmount)}</span>
                   </div>
                   <div className="grand-total">
                     <span>Grand Total</span>
-                    <span>{formatCurrency(calculations.grand_total)}</span>
+                    <span>{formatCurrency(calculations.grandTotal)}</span>
                   </div>
                 </div>
 
@@ -461,8 +672,8 @@ const Invoice = () => {
                         return (
                           <tr key={index}>
                             <td>{item.description || '—'}</td>
-                            <td>{item.quantity || 0}</td>
-                            <td>{formatCurrency(item.unit_cost)}</td>
+                            <td>{formatQuantity(item.quantity)}</td>
+                            <td>{formatCurrency(item.unit_price)}</td>
                             <td>{formatCurrency(item.total)}</td>
                           </tr>
                         );
@@ -501,38 +712,43 @@ const Invoice = () => {
                     </tbody>
                   </table>
                   <div className="levies-table">
-                    <div className="levy-row">
-                      <span>NHIL (2.5%)</span>
-                      <span>{formatCurrency(calculations.nhil)}</span>
-                    </div>
-                    <div className="levy-row">
-                      <span>GETFUND (2.5%)</span>
-                      <span>{formatCurrency(calculations.getfund)}</span>
-                    </div>
-                    <div className="levy-row">
-                      <span>COVID (1%)</span>
-                      <span>{formatCurrency(calculations.covid)}</span>
-                    </div>
+                    {levyRows.length ? (
+                      levyRows.map(({ name, label, amount }) => (
+                        <div className="levy-row" key={`${name}-preview`}>
+                          <span>{label}</span>
+                          <span>{formatCurrency(amount)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="levy-row">
+                        <span>Levies</span>
+                        <span>{formatCurrency(0)}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="levy-total-row">
                     <span>Total Levies + Value</span>
-                    <span>{formatCurrency(calculations.levy_total)}</span>
+                    <span>{formatCurrency(levyAndValueTotal)}</span>
                   </div>
                   <div className="vat-row">
-                    <span>VAT (15%)</span>
-                    <span>{formatCurrency(calculations.vat)}</span>
+                    <span>{vatLabel}</span>
+                    <span>{formatCurrency(vatAmount)}</span>
                   </div>
                   <div className="grand-total">
                     <span>Grand Total</span>
-                    <span>{formatCurrency(calculations.grand_total)}</span>
+                    <span>{formatCurrency(calculations.grandTotal)}</span>
                   </div>
                 </div>
 
                 <section className="invoice-notes">
                   <ul>
-                    {formData.notes.split('\n').filter(line => line.trim()).map((note, index) => (
-                      <li key={index}>{note.replace(/^[•-]\s*/, '')}</li>
-                    ))}
+                    {noteLines.length ? (
+                      noteLines.map((note, index) => (
+                        <li key={index}>{note}</li>
+                      ))
+                    ) : (
+                      <li className="empty-state">Add notes to display terms.</li>
+                    )}
                   </ul>
                 </section>
 
@@ -557,7 +773,7 @@ const Invoice = () => {
 
         {/* Toast Notification */}
         {toast.visible && (
-          <div className={`module-toast module-toast-${toast.type}`} role="status" aria-live="polite">
+          <div className={`module-toast is-${toast.type}`} role="status" aria-live="polite">
             {toast.message}
           </div>
         )}
