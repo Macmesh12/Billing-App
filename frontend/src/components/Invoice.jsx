@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from './Layout';
 import '../styles/invoice.css';
+import { chooseDownloadFormat } from '../utils/formatChooser';
 
 const Invoice = () => {
   const API_BASE = "http://127.0.0.1:8765";
@@ -34,6 +35,7 @@ const Invoice = () => {
   });
 
   const [toast, setToast] = useState({ message: '', visible: false, type: 'info' });
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Reserve invoice number on mount
   useEffect(() => {
@@ -112,71 +114,109 @@ const Invoice = () => {
   };
 
   const addItem = () => {
+    if (items.length >= 10) {
+      showToast('Maximum 10 items allowed', 'error');
+      return;
+    }
     setItems([...items, { description: '', quantity: 1, unit_cost: 0, total: 0 }]);
   };
 
   const removeItem = (index) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
-    } else {
-      showToast('At least one item is required', 'warning');
-    }
+    const newItems = items.filter((_, i) => i !== index);
+    setItems(newItems);
   };
 
-
-
   const togglePreview = () => {
-    if (!formData.customer_name) {
-      showToast('Please enter customer name', 'warning');
-      return;
-    }
-    if (items.some(item => !item.description)) {
-      showToast('Please fill in all item descriptions', 'warning');
-      return;
-    }
     setIsPreviewMode(!isPreviewMode);
   };
 
-  const handleDownload = async () => {
-    // Auto-switch to preview mode if not already in preview
-    if (!isPreviewMode) {
-      setIsPreviewMode(true);
-      // Give a moment for the preview to render
-      await new Promise(resolve => setTimeout(resolve, 100));
+  const buildPdfPayload = (format) => {
+    const previewElement = document.getElementById('invoice-preview');
+    if (!previewElement) {
+      throw new Error('Preview element not found');
     }
 
+    const clone = previewElement.cloneNode(true);
+    clone.removeAttribute('hidden');
+    clone.removeAttribute('style');
+    clone.setAttribute('data-pdf-clone', 'true');
+    clone.classList.add('pdf-export');
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'pdf-export-wrapper';
+    wrapper.appendChild(clone);
+
+    const normalizedFormat = format === 'jpeg' ? 'jpeg' : 'pdf';
+    const safeBase = String(invoiceNumber || 'invoice').trim().replace(/\s+/g, '_');
+    const extension = normalizedFormat === 'jpeg' ? 'jpg' : 'pdf';
+
+    return {
+      document_type: 'invoice',
+      html: wrapper.outerHTML,
+      filename: `${safeBase}.${extension}`,
+      format: normalizedFormat,
+    };
+  };
+
+  const downloadInvoice = async (format = 'pdf') => {
+    const payload = buildPdfPayload(format);
+    const normalizedFormat = payload.format === 'jpeg' ? 'jpeg' : 'pdf';
+
+    const response = await fetch(`${API_BASE}/api/pdf/render/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: normalizedFormat === 'jpeg' ? 'image/jpeg' : 'application/pdf',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate document: ${response.status} ${response.statusText}`);
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = payload.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownload = async () => {
+    if (isDownloading) {
+      return;
+    }
+
+    const chosenFormat = await chooseDownloadFormat();
+    if (!chosenFormat) {
+      return;
+    }
+
+    const wasInPreview = isPreviewMode;
+    const normalizedFormat = chosenFormat === 'jpeg' ? 'jpeg' : 'pdf';
+    setIsDownloading(true);
+
     try {
-      const previewElement = document.getElementById('invoice-preview');
-      if (!previewElement) return;
-
-      const pdfPayload = {
-        html: previewElement.outerHTML,
-        document_type: 'invoice'
-      };
-
-      const response = await fetch(`${API_BASE}/api/pdf/render/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pdfPayload)
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `invoice_${invoiceNumber}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        showToast('PDF downloaded successfully', 'success');
-      } else {
-        showToast('Failed to generate PDF', 'error');
+      if (!wasInPreview) {
+        setIsPreviewMode(true);
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
+
+      await downloadInvoice(normalizedFormat);
+      const label = normalizedFormat === 'jpeg' ? 'JPEG' : 'PDF';
+      showToast(`Invoice downloaded as ${label}!`, 'success');
     } catch (error) {
       console.error('Download error:', error);
-      showToast('Failed to download PDF', 'error');
+      showToast(error.message || 'Failed to download invoice', 'error');
+    } finally {
+      if (!wasInPreview) {
+        setIsPreviewMode(false);
+      }
+      setIsDownloading(false);
     }
   };
 
@@ -265,48 +305,62 @@ const Invoice = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item, index) => (
-                      <tr key={index}>
-                        <td>
-                          <input 
-                            type="text" 
-                            value={item.description}
-                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                            placeholder="Item description"
-                            required
-                          />
-                        </td>
-                        <td>
-                          <input 
-                            type="number" 
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                            min="0"
-                            step="0.01"
-                          />
-                        </td>
-                        <td>
-                          <input 
-                            type="number" 
-                            value={item.unit_cost}
-                            onChange={(e) => handleItemChange(index, 'unit_cost', e.target.value)}
-                            min="0"
-                            step="0.01"
-                          />
-                        </td>
-                        <td>{formatCurrency(item.total)}</td>
-                        <td>
-                          <button 
-                            type="button" 
-                            onClick={() => removeItem(index)}
-                            className="button-remove"
-                            disabled={items.length === 1}
-                          >
-                            ×
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {[...Array(10)].map((_, index) => {
+                      const item = items[index];
+                      if (item) {
+                        return (
+                          <tr key={index}>
+                            <td>
+                              <input 
+                                type="text" 
+                                value={item.description}
+                                onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                                placeholder="Item description"
+                              />
+                            </td>
+                            <td>
+                              <input 
+                                type="number" 
+                                value={item.quantity}
+                                onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                min="0"
+                                step="0.01"
+                              />
+                            </td>
+                            <td>
+                              <input 
+                                type="number" 
+                                value={item.unit_cost}
+                                onChange={(e) => handleItemChange(index, 'unit_cost', e.target.value)}
+                                min="0"
+                                step="0.01"
+                              />
+                            </td>
+                            <td>{formatCurrency(item.total)}</td>
+                            <td>
+                              <button 
+                                type="button" 
+                                onClick={() => removeItem(index)}
+                                className="button-remove"
+                                title="Remove item"
+                              >
+                                ×
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      } else {
+                        return (
+                          <tr key={index} className="empty-row">
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                          </tr>
+                        );
+                      }
+                    })}
                   </tbody>
                 </table>
                 <button type="button" onClick={addItem} className="button button-secondary">
@@ -401,14 +455,28 @@ const Invoice = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item, index) => (
-                      <tr key={index}>
-                        <td>{item.description}</td>
-                        <td>{item.quantity}</td>
-                        <td>{formatCurrency(item.unit_cost)}</td>
-                        <td>{formatCurrency(item.total)}</td>
-                      </tr>
-                    ))}
+                    {[...Array(10)].map((_, index) => {
+                      const item = items[index];
+                      if (item) {
+                        return (
+                          <tr key={index}>
+                            <td>{item.description || '—'}</td>
+                            <td>{item.quantity || 0}</td>
+                            <td>{formatCurrency(item.unit_cost)}</td>
+                            <td>{formatCurrency(item.total)}</td>
+                          </tr>
+                        );
+                      } else {
+                        return (
+                          <tr key={index} className="empty-row">
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                          </tr>
+                        );
+                      }
+                    })}
                   </tbody>
                 </table>
 

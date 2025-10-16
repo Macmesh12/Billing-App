@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from './Layout';
 import '../styles/general.css';
 import '../styles/waybill.css';
+import { chooseDownloadFormat } from '../utils/formatChooser';
 
 const API_BASE = 'http://127.0.0.1:8765';
 
@@ -178,11 +179,18 @@ const Waybill = () => {
   const handleDownload = async () => {
     if (isSaving) return;
 
+    const chosenFormat = await chooseDownloadFormat();
+    if (!chosenFormat) {
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      await downloadWaybill('pdf');
-      showToast('Waybill downloaded as PDF!');
+      const normalizedFormat = chosenFormat === 'jpeg' ? 'jpeg' : 'pdf';
+      await downloadWaybill(normalizedFormat);
+      const label = normalizedFormat === 'jpeg' ? 'JPEG' : 'PDF';
+      showToast(`Waybill downloaded as ${label}!`);
       await incrementWaybillNumber();
     } catch (error) {
       console.error('Failed to download waybill', error);

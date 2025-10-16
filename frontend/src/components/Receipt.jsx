@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from './Layout';
 import '../styles/general.css';
 import '../styles/receipt.css';
+import { chooseDownloadFormat } from '../utils/formatChooser';
 
 const API_BASE = 'http://127.0.0.1:8765';
 
@@ -208,13 +209,19 @@ const Receipt = () => {
   const handleDownload = async () => {
     if (isSaving) return;
 
+    const chosenFormat = await chooseDownloadFormat();
+    if (!chosenFormat) {
+      return;
+    }
+
     setIsSaving(true);
 
     try {
+      const normalizedFormat = chosenFormat === 'jpeg' ? 'jpeg' : 'pdf';
       const reservation = await ensureReceiptNumberReserved();
-      await downloadReceipt('pdf');
-      
-      const successMessage = 'Receipt downloaded as PDF!';
+      await downloadReceipt(normalizedFormat);
+      const label = normalizedFormat === 'jpeg' ? 'JPEG' : 'PDF';
+      const successMessage = `Receipt downloaded as ${label}!`;
       if (reservation?.reserved) {
         showToast(successMessage);
         setReceiptNumberReserved(false);
