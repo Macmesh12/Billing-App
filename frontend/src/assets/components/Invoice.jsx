@@ -551,7 +551,7 @@ const Invoice = () => {
                               <button 
                                 type="button" 
                                 onClick={() => removeItem(index)}
-                                className="button-remove"
+                                className="btn-remove-row"
                                 title="Remove item"
                               >
                                 ×

@@ -277,7 +277,7 @@ const Receipt = () => {
             <td>
               <button
                 type="button"
-                className="button-icon"
+                className="btn-remove-row"
                 onClick={() => removeItem(i)}
                 title="Remove item"
               >
