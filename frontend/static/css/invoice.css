@@ -546,7 +546,7 @@
 
 /* Account section - yellow background, inline elements with icon placeholders */
 #invoice-preview-contact .account {
-    display: flex;
+    display: inline;
     justify-content: center;
     align-items: center;
     gap: 1.5rem;
