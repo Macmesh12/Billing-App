@@ -2,11 +2,16 @@
   "name": "billing-app-desktop",
   "version": "0.1.0",
   "main": "main.js",
+  "description": "Local-first billing app with Django backend and Electron frontend",
+  "author": "Billing App",
   "scripts": {
     "dev": "concurrently \"npm:django\" \"npm:electron\"",
     "django": "python ../backend/manage.py runserver 127.0.0.1:8765",
     "electron": "wait-on http://127.0.0.1:8765 && electron .",
-    "package": "electron-builder"
+    "package": "electron-builder",
+    "package:win": "electron-builder --win",
+    "package:mac": "electron-builder --mac",
+    "package:linux": "electron-builder --linux"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
@@ -16,12 +21,57 @@
   },
   "build": {
     "appId": "com.billingapp.desktop",
+    "productName": "Billing App",
+    "copyright": "Copyright © 2025",
     "files": [
       "**/*",
-      "!node_modules/.cache/**"
+      "!node_modules/.cache/**",
+      "!backend/.venv/**",
+      "!backend/**/__pycache__/**",
+      "!backend/**/*.pyc"
+    ],
+    "asarUnpack": [
+      "backend/**/*",
+      "app/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "app.asar.unpacked/backend",
+        "filter": [
+          "**/*",
+          "!.venv/**",
+          "!**/__pycache__/**",
+          "!**/*.pyc",
+          "!*.log"
+        ]
+      }
     ],
     "directories": {
       "output": "dist"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "icon": "build/icons"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icons/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icons/icon.icns",
+      "category": "public.app-category.business"
     }
   }
 }
