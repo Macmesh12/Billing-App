@@ -1,13 +1,65 @@
+/* ============================================
+   WAYBILL MODULE - MAIN JAVASCRIPT
+   ============================================
+   This file handles all waybill functionality including:
+   - Shipped item management (add, edit, remove)
+   - Delivery information tracking
+   - Preview mode toggling
+   - Form validation and submission
+   - PDF/JPEG export functionality
+   - API integration for saving waybills
+   ============================================ */
+
+// IIFE (Immediately Invoked Function Expression) to encapsulate module logic
+// This prevents polluting the global namespace
 (function () {
-    // IIFE for waybill module
+    // ============================================
+    // GLOBAL HELPERS AND CONFIGURATION
+    // ============================================
+    
+    // Import helper functions from global BillingApp object (defined in main.js)
     const helpers = window.BillingApp || {};
-    // Get global helpers
+    
+    /**
+     * Preview Toggle Helper
+     * Switches between edit and preview modes
+     * @type {Function}
+     */
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
-    // Fallback for togglePreview
+    
+    /**
+     * Download Format Chooser
+     * Shows dialog to select PDF or JPEG format
+     * @type {Function}
+     * @returns {Promise<string|null>} - Returns "pdf", "jpeg", or null if cancelled
+     */
+    const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
+    
+    /**
+     * Parse Number Helper
+     * Safely converts strings to numbers
+     * @type {Function}
+     * @param {string|number} value - Value to parse
+     * @returns {number} Parsed number
+     */
     const parseNumber = typeof helpers.parseNumber === "function" ? helpers.parseNumber : (value) => Number.parseFloat(value || 0) || 0;
-    // Fallback for parseNumber
+    
+    /**
+     * Currency Formatter
+     * Formats numbers to currency strings (e.g., 1234.5 -> "1234.50")
+     * @type {Function}
+     * @param {number} value - Number to format
+     * @returns {string} Formatted currency string
+     */
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
-    // Fallback for formatCurrency
+    
+    /**
+     * Quantity Formatter
+     * Formats quantities, showing decimals only when needed
+     * @type {Function}
+     * @param {number} value - Quantity to format
+     * @returns {string} Formatted quantity string
+     */
     const formatQuantity = typeof helpers.formatQuantity === "function"
         ? helpers.formatQuantity
         : (value) => {
@@ -16,22 +68,33 @@
             return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2);
         };
 
+    // ============================================
+    // MODULE INITIALIZATION
+    // ============================================
+    
+    /**
+     * Module Identification
+     * Used to identify this specific module in the DOM
+     */
     const moduleId = "waybill-module";
-    // Module ID
     const moduleEl = document.getElementById(moduleId);
-    // Module element
     const form = document.getElementById("waybill-form");
-    // Form element
+    
+    // Exit early if required elements are not found
     if (!moduleEl || !form) return;
-    // Exit if elements not found
 
+    /**
+     * API Configuration
+     * Base URL for backend API calls
+     */
     const config = window.BILLING_APP_CONFIG || {};
-    // Global config
     const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
-    // API base URL
 
+    /**
+     * DOM Element References
+     * Cached references to frequently accessed DOM elements
+     */
     const elements = {
-        // DOM elements object
         itemsPayload: document.getElementById("waybill-items-payload"),
         itemsTableBody: document.querySelector("#waybill-items-table tbody"),
         previewRowsContainers: document.querySelectorAll(".js-waybill-preview-rows"),
@@ -53,8 +116,11 @@
         previewContactEls: document.querySelectorAll(".js-waybill-preview-contact"),
     };
 
+    /**
+     * Form Input References
+     * References to form input fields
+     */
     const inputs = {
-        // Input elements object
         issueDate: document.getElementById("waybill-issue-date"),
         customer: document.getElementById("waybill-customer"),
         destination: document.getElementById("waybill-destination"),
@@ -66,25 +132,49 @@
         contact: document.getElementById("waybill-contact"),
     };
 
+    /**
+     * Application State
+     * Central state management for waybill module
+     */
     const state = {
-        // State object
-        items: [],
-        waybillId: null,
-        waybillNumber: "WB-NEW",
-        isSaving: false,
+        items: [],                  // Array of shipped items
+        waybillId: null,            // Database ID of current waybill (null for new)
+        waybillNumber: "WB-NEW",    // Current waybill number
+        isSaving: false,            // Flag to prevent duplicate save operations
     };
 
+    // ============================================
+    // HELPER FUNCTIONS AND UTILITIES
+    // ============================================
+
+    /**
+     * Set Text Content Helper
+     * Sets text content for single element or NodeList
+     * @param {HTMLElement|NodeList} target - Element or list of elements
+     * @param {string} text - Text content to set
+     */
     function setText(target, text) {
         if (!target) return;
+        
+        // Handle NodeList or HTMLCollection
         if (typeof target.length === "number" && !target.nodeType) {
             Array.from(target).forEach((node) => {
                 if (node) node.textContent = text;
             });
             return;
         }
+        
+        // Handle single element
         target.textContent = text;
     }
 
+    /**
+     * Value or Placeholder Helper
+     * Returns field value or placeholder if empty
+     * @param {HTMLInputElement} field - Input field element
+     * @param {string} fallback - Default value if no value or placeholder
+     * @returns {string} Field value, placeholder, or fallback
+     */
     function valueOrPlaceholder(field, fallback = "—") {
         if (!field) return fallback;
         const value = (field.value || "").trim();
@@ -93,6 +183,12 @@
         return fallback;
     }
 
+    /**
+     * Format Date for Display
+     * Converts date string to human-readable format (e.g., "15 October 2025")
+     * @param {string} value - Date string (ISO format or other parseable format)
+     * @returns {string} Formatted date string or fallback
+     */
     function formatDisplayDate(value) {
         if (!value) return "—";
         const date = new Date(value);
@@ -104,20 +200,35 @@
         }).format(date);
     }
 
+    /**
+     * Show Toast Notification
+     * Displays a temporary notification message
+     * @param {string} message - Message to display
+     * @param {string} tone - Tone/style of toast ("success", "error", "warning")
+     */
     function showToast(message, tone = "success") {
-        // Function to show toast
         const el = elements.toast;
         if (!el) return;
+        
         el.textContent = message;
         el.className = `module-toast is-${tone}`;
         el.hidden = false;
+        
+        // Auto-hide after 4 seconds
         setTimeout(() => {
             el.hidden = true;
         }, 4000);
     }
 
+    /**
+     * API Call Helper
+     * Makes HTTP requests to backend API with error handling
+     * @param {string} path - API endpoint path
+     * @param {Object} options - Fetch options (method, headers, body, etc.)
+     * @returns {Promise<Object|null>} Parsed JSON response or null for 204
+     * @throws {Error} On HTTP error status
+     */
     async function callApi(path, options = {}) {
-        // API call function
         const response = await fetch(`${API_BASE}${path}`, {
             headers: {
                 "Content-Type": "application/json",
@@ -125,23 +236,39 @@
             },
             ...options,
         });
+        
+        // Handle error responses
         if (!response.ok) {
             let detail = await response.json().catch(() => ({}));
             const message = detail.errors ? JSON.stringify(detail.errors) : `${response.status} ${response.statusText}`;
             throw new Error(message);
         }
+        
+        // Handle no-content responses
         if (response.status === 204) return null;
+        
         return response.json();
     }
 
+    // ============================================
+    // RENDERING FUNCTIONS
+    // ============================================
+
+    /**
+     * Update Preview Items
+     * Renders shipped items in preview mode
+     * Always renders exactly 10 rows for consistent layout
+     */
     function updatePreviewItems() {
         const previewBodies = elements.previewRowsContainers;
         if (!previewBodies || !previewBodies.length) return;
+        
+        // Update all preview containers (may be multiple in waybill layout)
         previewBodies.forEach((container) => {
             if (!container) return;
             container.innerHTML = "";
             
-            // Always render 10 rows
+            // Render exactly 10 rows for consistent spacing
             for (let index = 0; index < 10; index++) {
                 const item = state.items[index];
                 const previewRow = document.createElement("tr");
@@ -232,106 +359,98 @@
         togglePreview(moduleId, true);
     }
 
-    async function downloadWaybillPdf() {
-        // Download waybill as PDF
-        if (
-            typeof window.jspdf === "undefined" ||
-            typeof window.jspdf.jsPDF === "undefined" ||
-            typeof window.html2canvas !== "function"
-        ) {
-            showToast("PDF generator not available", "error");
-            return;
-        }
-        
-        syncPreview();
-        
-        const previewEl = document.getElementById("waybill-preview");
-        if (!previewEl) {
-            showToast("Preview element not found", "error");
-            return;
-        }
+    function buildWaybillPayload(previewEl, format) {
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+        clone.classList.add("pdf-export");
+        clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
+        clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
 
-        // Create a wrapper for PDF export with exact preview styling
-        const exportWrapper = document.createElement("div");
-        exportWrapper.className = "module is-preview pdf-export-wrapper";
-        exportWrapper.setAttribute("aria-hidden", "true");
-        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
-        
-    const clone = previewEl.cloneNode(true);
-    clone.removeAttribute("hidden");
-    clone.setAttribute("data-pdf-clone", "true");
-        
-        // The preview element itself is the document
-        exportWrapper.appendChild(clone);
-        document.body.appendChild(exportWrapper);
+        const wrapper = document.createElement("div");
+        wrapper.className = "pdf-export-wrapper";
+        wrapper.appendChild(clone);
 
-        let filename = state.waybillNumber || "waybill";
-        if (!filename.toLowerCase().endsWith(".pdf")) {
-            filename = `${filename}.pdf`;
-        }
+        const normalizedFormat = format === "jpeg" ? "jpeg" : "pdf";
+        const safeBase = String(state.waybillNumber || "waybill").trim().replace(/\s+/g, "_");
+        const extension = normalizedFormat === "jpeg" ? "jpg" : "pdf";
 
+        return {
+            document_type: "waybill",
+            html: wrapper.outerHTML,
+            filename: `${safeBase}.${extension}`,
+            format: normalizedFormat,
+        };
+    }
+
+    async function downloadWaybillDocument(format) {
         try {
-            showToast("Generating PDF...", "info");
+            syncPreview();
 
-            const A4_PX_WIDTH = 794;
-            const A4_PX_HEIGHT = 1122;
-            clone.style.width = A4_PX_WIDTH + "px";
-            clone.style.maxWidth = A4_PX_WIDTH + "px";
-
-            const canvas = await window.html2canvas(clone, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: "#ffffff",
-                logging: false,
-                width: A4_PX_WIDTH,
-                height: Math.max(A4_PX_HEIGHT, clone.scrollHeight),
-            });
-
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
-                compress: true,
-            });
-
-            const imgData = canvas.toDataURL("image/png");
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            let renderWidth = pdfWidth;
-            let renderHeight = (canvas.height * renderWidth) / canvas.width;
-
-            if (renderHeight > pdfHeight) {
-                const ratio = pdfHeight / renderHeight;
-                renderHeight = pdfHeight;
-                renderWidth = renderWidth * ratio;
+            const previewEl = document.getElementById("waybill-preview");
+            if (!previewEl) {
+                throw new Error("Preview element not found");
             }
 
-            const offsetX = (pdfWidth - renderWidth) / 2;
-            const offsetY = (pdfHeight - renderHeight) / 2;
+            const payload = buildWaybillPayload(previewEl, format);
+            const normalizedFormat = payload.format === "jpeg" ? "jpeg" : "pdf";
 
-            pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
-            pdf.save(filename);
-            showToast("PDF downloaded successfully!");
+            console.log("Sending render request to:", `${API_BASE}/api/pdf/render/`);
+            console.log("Requested format:", normalizedFormat);
+            console.log("Payload size:", JSON.stringify(payload).length, "bytes");
+
+            const response = await fetch(`${API_BASE}/api/pdf/render/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: normalizedFormat === "jpeg" ? "image/jpeg" : "application/pdf",
+                },
+                body: JSON.stringify(payload),
+            }).catch(err => {
+                console.error("Fetch failed:", err);
+                throw new Error(`Network error: ${err.message}. Make sure Django server is running on ${API_BASE}`);
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("Render error response:", errorText);
+                throw new Error(`Failed to generate document: ${response.status} ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = payload.filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("PDF generation error:", error);
-            showToast("Failed to generate PDF: " + error.message, "error");
-        } finally {
-            document.body.removeChild(exportWrapper);
+            console.error("Download document error:", error);
+            throw error;
         }
     }
 
     async function handleSave() {
-        // Handle PDF download
+        // Handle document download
         if (state.isSaving) return;
+
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
-            await downloadWaybillPdf();
-            // Increment the counter after successful PDF download
-            await incrementWaybillNumber();
+            const chosenFormat = await chooseDownloadFormat();
+            if (!chosenFormat) {
+                return;
+            }
+            const normalizedFormat = chosenFormat === "jpeg" ? "jpeg" : "pdf";
+            await downloadWaybillDocument(normalizedFormat);
+            const label = normalizedFormat === "jpeg" ? "JPEG" : "PDF";
+            showToast(`Waybill downloaded as ${label}!`);
+        } catch (error) {
+            console.error("Failed to download waybill", error);
+            showToast(error.message || "Failed to download waybill", "error");
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");

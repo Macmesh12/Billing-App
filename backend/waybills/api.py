@@ -37,7 +37,11 @@ def create_waybill(request: HttpRequest) -> HttpResponse:
         return _cors(JsonResponse({"errors": form.errors}, status=HTTPStatus.BAD_REQUEST))
     waybill = form.save()
     # Save waybill
-    return _cors(JsonResponse({"id": waybill.pk, "waybill_number": waybill.waybill_number}, status=HTTPStatus.CREATED))
+    return _cors(JsonResponse({
+        "id": waybill.pk,
+        "waybill_number": waybill.waybill_number,
+        "document_number": waybill.waybill_number,
+    }, status=HTTPStatus.CREATED))
 
 
 @csrf_exempt
@@ -54,6 +58,7 @@ def get_waybill(request: HttpRequest, pk: int) -> HttpResponse:
         data = {
             "id": waybill.pk,
             "waybill_number": waybill.waybill_number,
+            "document_number": waybill.waybill_number,
             "customer_name": waybill.customer_name,
             "issue_date": waybill.issue_date.isoformat() if getattr(waybill, "issue_date", None) else "",
             "destination": waybill.destination,
@@ -74,5 +79,6 @@ def get_waybill(request: HttpRequest, pk: int) -> HttpResponse:
         return _cors(JsonResponse({
             "id": waybill.pk,
             "waybill_number": waybill.waybill_number,
+            "document_number": waybill.waybill_number,
         }))
     return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
