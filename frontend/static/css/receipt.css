@@ -112,9 +112,10 @@
 
 .logo-placeholder {
     display: block; /* Make it a block element */
-    width: 300px; /* Fixed width for logo */
-    height: 170px; /* Fixed height for logo */
-    object-fit: contain; /* Scale image to fit without distortion */
+    max-width: 300px; /* allow responsive scaling */
+    width: 100%;
+    height: auto; /* preserve aspect ratio */
+    object-fit: contain; /* scale image to fit without distortion */
 }
 
 .receipt-body {

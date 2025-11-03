@@ -399,8 +399,21 @@ textarea {
 }
 
 /* PREVIEW MODE: A4 size (210mm × 297mm) - Print ready */
-.is-preview .document,
+.is-preview .document {
+    /* In-app preview: take the module's available space so the preview
+       looks like the 'page' filling the workspace rather than a fixed
+       A4 tile. This makes the preview cover the whole module area.
+    */
+    width: 100%;
+    min-height: calc(100vh - 260px);
+    max-height: none;
+    padding: 15mm 20mm;
+    overflow: auto;
+    font-size: 0.95rem;
+}
+
 .pdf-export-wrapper .document {
+    /* PDF export still uses fixed A4 dimensions for accurate output */
     width: 210mm;
     height: 297mm;
     max-height: 297mm;

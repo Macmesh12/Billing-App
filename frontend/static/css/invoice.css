@@ -5,6 +5,28 @@
    including edit form, preview, and PDF export layouts.
    ============================================ */
 
+/* EDIT MODE: document sizing - keep consistent with receipt/waybill base */
+.invoice-document {
+    width: 297mm;
+    min-height: 420mm;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 15mm 20mm;
+    box-sizing: border-box;
+    font-size: 1.1rem;
+}
+
+/* PREVIEW / PDF export sizing: match receipt & waybill preview (A4 portrait) */
+.is-preview .invoice-document,
+.pdf-export-wrapper .invoice-document {
+    width: 210mm;
+    height: 297mm;
+    max-height: 297mm;
+    padding: 8mm 10mm;
+    overflow: hidden;
+    font-size: 0.9rem;
+}
+
 /* Invoice letterhead container with YELLOW theme */
 .invoice-letterhead {
     display: flex;
@@ -24,10 +46,11 @@
 /* Logo centered in letterhead - middle of all sides */
 .logo-placeholder {
     display: block;
-    width: 300px;
-    height:  270px;
+    max-width: 300px; /* allow responsive scaling */
+    width: 100%;
+    height: auto; /* preserve aspect ratio */
     margin: auto;
-    object-fit: contain;
+    object-fit: contain; /* ensure image fits without distortion */
 }
 
 /* Preview mode compact letterhead */
@@ -41,8 +64,9 @@
 
 .is-preview .logo-placeholder,
 .pdf-export-wrapper .logo-placeholder {
-    width: 200px;
-    height: 140px;
+    max-width: 200px; /* smaller cap for preview/export */
+    width: auto;
+    height: auto; /* keep natural aspect ratio */
 }
 
 /* Letterhead metadata container - holds customer info and invoice details */
@@ -500,8 +524,9 @@
     background: #eab308; /* Yellow theme maintained */
 }
 .module.is-preview .logo-placeholder {
-    width: 200px; /* Smaller logo in preview */
-    height: 170px; /* Maintain aspect ratio */
+    max-width: 200px; /* Smaller cap in preview */
+    width: auto;
+    height: auto; /* Keep natural aspect ratio */
 }
 
 /* ============================================

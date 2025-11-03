@@ -92,8 +92,9 @@
 
 .logo-placeholder {
     display: block;
-    width: 220px; /* Match invoice/receipt logo scale to save space */
-    height: 140px;
+    max-width: 220px; /* match invoice/receipt scale but allow responsive sizing */
+    width: 100%;
+    height: auto; /* preserve aspect ratio */
     object-fit: contain;
 }
 
