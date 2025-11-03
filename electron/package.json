@@ -24,7 +24,7 @@
     "wait-on": "^7.0.1"
   },
   "dependencies": {
-    "electron-updater": "^5.4.0"
+    "electron-updater": "^6.1.4"
   },
   "build": {
     "appId": "com.billingapp.desktop",
