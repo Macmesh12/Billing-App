@@ -19,6 +19,7 @@ class DocumentCounter(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
+        app_label = 'invoices'  # Explicit app label required for models outside app directory
         verbose_name = "Document Counter"
         verbose_name_plural = "Document Counters"
     

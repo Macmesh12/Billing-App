@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "invoices",
+    "billing_app.invoices",  # Use full path for nested app
     "receipts",
     "waybills",
 ]

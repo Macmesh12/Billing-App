@@ -308,9 +308,9 @@
 }
 .signature-right {
     display: flex;
-    flex-direction: column;
+    flex-direction: ve;
     gap: 0.4rem;
-    margin-top: 30px;
+    margin-top: 10px;
 }
 
 /* Bold customer and issued by names */
