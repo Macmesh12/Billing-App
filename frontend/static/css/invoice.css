@@ -33,16 +33,16 @@
 /* Preview mode compact letterhead */
 .is-preview .invoice-letterhead,
 .pdf-export-wrapper .invoice-letterhead {
-    padding: 0.5rem 0.8rem;
-    margin-bottom: 0.4rem;
-    min-height: 120px;
-    gap: 0.8rem;
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.3rem;
+    min-height: 90px;
+    gap: 0.5rem;
 }
 
 .is-preview .logo-placeholder,
 .pdf-export-wrapper .logo-placeholder {
-    width: 200px;
-    height: 140px;
+    width: 160px;
+    height: 110px;
 }
 
 /* Letterhead metadata container - holds customer info and invoice details */
@@ -121,29 +121,6 @@
     font-size: 0.95rem; /* Slightly larger than body text */
     font-weight: 700; /* Bold weight */
     color: var(--text); /* Use theme text color */
-    margin: 0; /* No margins */
-}
-
-/* PDF Export Wrapper - Hidden container for generating PDF */
-/* This element is positioned off-screen and used by html2pdf.js to render the invoice */
-.pdf-export-wrapper {
-    position: fixed; /* Fixed position to keep it off-screen */
-    left: -9999px; /* Position far left off-screen */
-    top: 0; /* Top of viewport */
-    width: 210mm; /* A4 width (portrait) */
-    min-height: 297mm; /* A4 height (portrait) */
-    padding: 12mm 14mm; /* Margins for printed document */
-    background: #ffffff; /* White background for PDF */
-    color: var(--text); /* Theme text color */
-    box-shadow: none; /* No shadows in PDF */
-    z-index: -1; /* Behind all other content */
-}
-
-/* Remove visual effects from document inside PDF export wrapper */
-.pdf-export-wrapper .document {
-    width: 100%; /* Full width of wrapper */
-    box-shadow: none; /* No shadows */
-    border: none; /* No borders */
     margin: 0; /* No margins */
 }
 
@@ -500,8 +477,8 @@
     background: #eab308; /* Yellow theme maintained */
 }
 .module.is-preview .logo-placeholder {
-    width: 200px; /* Smaller logo in preview */
-    height: 170px; /* Maintain aspect ratio */
+    width: 250px; /* Smaller logo in preview */
+    height: 200px; /* Maintain aspect ratio */
 }
 
 /* ============================================
@@ -546,10 +523,10 @@
 
 /* Account section - yellow background, inline elements with icon placeholders */
 #invoice-preview-contact .account {
-    display: flex;
+    display: inline ;
     justify-content: center;
     align-items: center;
-    gap: 1.5rem;
+    gap: 2rem;
     flex-wrap: wrap;
     width: 100%;
     padding: 0.6rem 1rem;
@@ -618,3 +595,4 @@
         max-width: 100%;
     }
 }
+

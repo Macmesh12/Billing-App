@@ -24,10 +24,12 @@
                 const response = await fetch(`${API_BASE}/api/counter/counts/`);
                 if (response.ok) {
                     const counts = await response.json();
-                    // Animate the count display
-                    animateCount(elements.invoicesCount, counts.invoices || 0);
-                    animateCount(elements.receiptsCount, counts.receipts || 0);
-                    animateCount(elements.waybillsCount, counts.waybills || 0);
+                    const invoiceTotal = counts.invoice ?? counts.invoices ?? 0;
+                    const receiptTotal = counts.receipt ?? counts.receipts ?? 0;
+                    const waybillTotal = counts.waybill ?? counts.waybills ?? 0;
+                    animateCount(elements.invoicesCount, invoiceTotal);
+                    animateCount(elements.receiptsCount, receiptTotal);
+                    animateCount(elements.waybillsCount, waybillTotal);
                 }
             } catch (error) {
                 console.warn('Failed to load document counts', error);

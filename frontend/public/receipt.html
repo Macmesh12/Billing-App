@@ -36,7 +36,7 @@
             <div class="module-actions">
                 <button id="receipt-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
                 <button id="receipt-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="receipt-submit" class="button" type="button">Download PDF</button>
+                <button id="receipt-submit" class="button" type="button">Download</button>
             </div>
         </div>
 
@@ -44,10 +44,11 @@
             <!-- A4 Workspace Container -->
             <div class="a4-workspace">
             <form id="receipt-form" class="document receipt-document document-editable" novalidate>
+                <input type="hidden" id="receipt-document-number" name="document_number">
                 <div class="receipt-letterhead">
                     <div class="letterhead-left">
                         <h3>RECEIPT</h3>
-                        <p>No.: <span id="receipt-number">REC-NEW</span></p>
+                        <p>No.: <span id="receipt-number">REC000</span></p>
                         <label class="field-block">
                             <span>Date</span>
                             <input type="date" id="receipt-issue-date" name="issue_date" required>
@@ -102,18 +103,17 @@
 
                 <section class="receipt-signature">
                     <div class="signature-left">
-                        <label class="field-block">
-                            <span>Creative Director</span>
+                       <label class="field-block">
+                            <span>Issued By: </span>
+                            <input type="text" id="receipt-issued-by" name="issued_by" placeholder="Issued by" required>
+                        </label>
                     </div>
                     <div class="signature-right">
                         <label class="field-block">
                             <span>Customer Name</span>
                             <input type="text" id="receipt-customer-name" name="customer_name" placeholder="Client name" required>
                         </label>
-                         <label class="field-block">
-                            <span>Issued By: </span>
-                            <input type="text" id="receipt-issued-by" name="issued_by" placeholder="Issued by" required>
-                        </label>
+                         
                     </div>
                 </section>
             </form>
@@ -122,7 +122,7 @@
                 <div class="receipt-letterhead">
                     <div class="letterhead-left">
                         <h3>RECEIPT</h3>
-                        <p>No.: <span class="js-receipt-preview-number">REC-NEW</span></p>
+                        <p>No.: <span class="js-receipt-preview-number">REC000</span></p>
                         <p class="receipt-date">Date: <span class="js-receipt-preview-date">—</span></p>
                     </div>
                     <div class="letterhead-right">
@@ -165,28 +165,28 @@
 
                 <section class="receipt-signature">
                     <div class="signature-left">
-                        <p><strong>Creative Director:</strong> <span class="js-receipt-preview-approved-by">Raphael Quame Agbeshie</span></p>
+                        <p><strong>Creative Director</strong></p>
                         <div class="signature-block">
                             <img src="/assets/sign.png" alt="Creative Director Signature" class="signature-image">
                         </div>
                     </div>
                     <div class="signature-right">
                         <p><strong>Customer Name:</strong> <span class="js-receipt-preview-customer-name">—</span></p>
-                        <p style="margin-top: 1.5rem;"><strong>Issued By:</strong> <span class="js-receipt-preview-issued-by">—</span></p>
+                        <p style="margin-top: 1rem;"><strong>Issued By:</strong> <span class="js-receipt-preview-issued-by">—</span></p>
                     </div>
                 </section>
 
                 <section id="receipt-preview-contact">
                     <div class="contact-wrapper">
-                        <p class="email">
-                            <span>Email: spaquelsmultimedia@gmail.com</span>
-                            <span>Website: www.spaquelsmultimedia.org</span>
-                        </p>
                         <p class="account">
                             <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
                             <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
                             <span>0540673202</span>
                             <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                        </p>
+                         <p class="email">
+                            <span>Email: spaquelsmultimedia@gmail.com</span>
+                            <span>Website: www.spaquelsmultimedia.org</span>
                         </p>
                     </div>
                 </section>
@@ -202,8 +202,6 @@
 </footer>
 
 <script src="../static/js/main.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" referrerpolicy="no-referrer"></script>
 <script src="../static/js/receipt.js" defer></script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {

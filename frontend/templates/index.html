@@ -1,3 +1,30 @@
+<!--
+============================================
+DASHBOARD/HOME PAGE - BILLING APP
+============================================
+This is the main landing page (dashboard) that provides:
+1. Overview of document counts (invoices, receipts, waybills)
+2. Quick access to document editors
+3. Summary statistics
+
+KEY FEATURES:
+- Real-time document counters fetched via JavaScript
+- Quick action cards with navigation to editors
+- Responsive layout for desktop and mobile
+- Clean, modern UI matching the app's design system
+
+STRUCTURE:
+- Dashboard Hero: Welcome message and description
+- Document Counters: Three cards showing counts
+- Quick Actions: Navigation cards to each document type
+
+DEPENDENCIES:
+- base.html: Base template with header and navigation
+- general.css: Global app styles
+- home.css: Dashboard-specific styles
+- home.js: Counter fetching and UI updates
+============================================
+-->
 {% extends 'base.html' %}
 {% load static %}
 
@@ -9,12 +36,22 @@
 {% endblock %}
 
 {% block content %}
+<!-- ============================================
+     DASHBOARD HERO SECTION
+     ============================================
+     Welcome message and app description
+     ============================================ -->
 <section class="dashboard-hero">
     <h2>Track invoices, receipts, and logistics from one workspace.</h2>
     <p>View document counts and access editors below.</p>
 </section>
 
-<!-- Document Counters Section -->
+<!-- ============================================
+     DOCUMENT COUNTERS SECTION
+     ============================================
+     Displays count of each document type.
+     Counters are populated by home.js on page load.
+     ============================================ -->
 <section class="dashboard-counters" aria-label="Document counters">
     <article class="counter-card">
         <span class="counter-value" id="invoices-count">0</span>
@@ -32,32 +69,43 @@
     </article>
 </section>
 
-<!-- Quick Actions Section -->
+<!-- ============================================
+     QUICK ACTIONS SECTION
+     ============================================
+     Navigation cards to open each document editor.
+     Each card includes label, button, and icon.
+     ============================================ -->
 <section class="dashboard-actions" aria-label="Quick actions">
+    <!-- Invoice Action Card -->
     <article class="action-card">
         <span class="action-label">Invoice</span>
         <a class="button" href="{% url 'invoice-form' %}">
             Open Editor
+            <!-- Right arrow icon -->
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
         </a>
     </article>
 
+    <!-- Receipt Action Card -->
     <article class="action-card">
         <span class="action-label">Receipt</span>
         <a class="button" href="{% url 'receipt-form' %}">
             Open Editor
+            <!-- Right arrow icon -->
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
         </a>
     </article>
 
+    <!-- Waybill Action Card -->
     <article class="action-card">
         <span class="action-label">Waybill</span>
         <a class="button" href="{% url 'waybill-form' %}">
             Open Editor
+            <!-- Right arrow icon -->
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
             </svg>
@@ -67,5 +115,6 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Dashboard-specific JavaScript: Fetches and displays document counters -->
 <script src="{% static 'js/home.js' %}"></script>
 {% endblock %}
