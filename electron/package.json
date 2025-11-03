@@ -23,6 +23,9 @@
     "electron-builder": "^24.13.3",
     "wait-on": "^7.0.1"
   },
+  "dependencies": {
+    "electron-updater": "^5.4.0"
+  },
   "build": {
     "appId": "com.billingapp.desktop",
     "productName": "BillingApp",
