@@ -398,20 +398,29 @@
         elements.itemsTable?.addEventListener("input", (event) => {
             const input = event.target;
             if (!input.matches("[data-index]")) return;
-            
+
             const index = Number(input.getAttribute("data-index"));
             const field = input.getAttribute("data-field");
             const value = input.value;
-            
+
             if (state.items[index]) {
                 state.items[index][field] = value;
-                
-                // Calculate total
+
+                // Calculate total for this row
                 const qty = Number(state.items[index].quantity) || 0;
                 const price = Number(state.items[index].unit_price) || 0;
                 state.items[index].total = qty * price;
-                
-                renderItems();
+
+                // Update the total cell in-place to avoid re-rendering the whole table
+                const rowEl = input.closest('tr');
+                if (rowEl) {
+                    const totalCell = rowEl.querySelector('.total-cell');
+                    if (totalCell) totalCell.textContent = formatCurrency(state.items[index].total || 0);
+                }
+
+                // Recalculate totals and update preview rows without rebuilding input elements
+                calculateTotals();
+                renderPreviewItems();
             }
         });
 
