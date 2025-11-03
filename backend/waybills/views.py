@@ -1,3 +1,13 @@
+"""
+Waybill views module.
+
+This module provides Django views for waybill operations:
+- WaybillView: Form view for creating/editing waybills
+- WaybillDetailView: Display view for viewing waybill details
+- waybill_pdf: Generate and download waybill as PDF
+
+All views integrate with the template system to render waybill documents.
+"""
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse

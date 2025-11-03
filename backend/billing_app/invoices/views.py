@@ -1,3 +1,14 @@
+"""
+Invoice views module.
+
+This module provides Django views for invoice operations:
+- InvoiceView: Form view for creating/editing invoices
+- InvoiceDetailView: Display view for viewing invoice details
+- invoice_pdf: Generate and download invoice as PDF
+- invoice_calculate_preview: API endpoint for calculating totals
+
+All views integrate with the template system to render invoice documents.
+"""
 import json
 from http import HTTPStatus
 

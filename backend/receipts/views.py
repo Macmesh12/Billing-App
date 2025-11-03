@@ -1,3 +1,13 @@
+"""
+Receipt views module.
+
+This module provides Django views for receipt operations:
+- ReceiptView: Form view for creating/editing receipts
+- ReceiptDetailView: Display view for viewing receipt details
+- receipt_pdf: Generate and download receipt as PDF
+
+All views integrate with the template system to render receipt documents.
+"""
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
