@@ -1,138 +1,241 @@
-{#
-Waybill template (frontend/templates/waybill.html)
-Context:
- - form: form fields for editable waybill
- - waybill: optional model instance used for preview/PDF
-#}
-{% extends 'base.html' %}
+<!--
+============================================
+WAYBILL PAGE - BILLING APP
+============================================
+This HTML file contains the structure for the waybill/delivery note module.
+It has two modes:
+1. EDIT MODE - Form for entering waybill data
+2. PREVIEW MODE - Read-only view for reviewing before save
+
+KEY FEATURES:
+- Dynamic line item management (add/remove rows)
+- Real-time calculation of item totals
+- Client-side PDF/JPEG generation (A4 size)
+- Server API integration for saving waybills
+- Preview mode with delivery and receiver details
+- Signature blocks for dispatch and receiving parties
+
+STRUCTURE:
+- App Header: Navigation bar
+- Module Header: Title and action buttons (Preview/Download/Back)
+- Module Body:
+  * Edit Form: Editable waybill with inputs and tables
+  * Preview Document: Read-only view matching PDF output
+
+DEPENDENCIES:
+- general.css: Global app styles
+- waybill.css: Waybill-specific styles
+- waybill.js: All waybill logic and interactions
+============================================
+-->
 {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waybill | Billing App</title>
+    
+    <!-- Google Fonts: Inter font family -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{% static 'css/general.css' %}"> <!-- Global styles -->
+    <link rel="stylesheet" href="{% static 'css/waybill.css' %}"> <!-- Waybill-specific styles -->
+    
+    <!-- Global Configuration: API base URL for backend calls -->
+    <script>
+        window.BILLING_APP_CONFIG = {
+            apiBaseUrl: window.location.origin // Use current origin
+        };
+    </script>
+</head>
+<body class="billing-app">
+<!-- ============================================
+     APP HEADER - NAVIGATION BAR
+     ============================================ -->
+<header class="app-header">
+    <div class="app-brand">
+        <h1>Billing App</h1>
+    </div>
+    <!-- Primary navigation links -->
+    <nav class="app-nav" aria-label="Primary">
+        <a class="nav-link" href="/">Dashboard</a>
+        <a class="nav-link" href="/invoice.html">Invoice</a>
+        <a class="nav-link" href="/receipt.html">Receipt</a>
+        <a class="nav-link active" href="/waybill.html">Waybill</a> <!-- Current page -->
+    </nav>
+</header>
 
-{% block title %}Waybill | Billing App{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/waybill.css' %}">
-{% endblock %}
-
-{% block content %}
-<section id="waybill-module" class="module{% if preview %} is-preview{% endif %}">
-    <div class="module-header">
-        <h2>Waybill</h2>
-        <div class="module-actions">
-            {% if waybill %}
-                <a href="{% url 'waybill-pdf' waybill.pk %}" class="button" target="_blank" rel="noopener">Download PDF</a>
-            {% endif %}
-            {% if not preview %}
+<!-- ============================================
+     MAIN CONTENT AREA
+     ============================================ -->
+<main class="app-main">
+    <!-- Waybill module container -->
+    <section id="waybill-module" class="module" data-document-type="waybill">
+        
+        <!-- ============================================
+             MODULE HEADER - Title and Action Buttons
+             ============================================ -->
+        <div class="module-header">
+            <h2>Waybill</h2>
+            <div class="module-actions">
+                <button id="waybill-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
                 <button id="waybill-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="waybill-submit" class="button" type="submit" form="waybill-form">Save Waybill</button>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="module-body">
-    <form id="waybill-form" class="document waybill document-editable" method="post" action="{% url 'waybill-form' %}" {% if preview %}hidden{% endif %}>
-            {% csrf_token %}
-            <header class="document-header">
-                <div>
-                    <h3>WAYBILL</h3>
-                    <p>No.: {{ waybill.waybill_number|default:"WB-NEW" }}</p>
-                    <p>Date: {{ form.issue_date }}</p>
-                </div>
-                <div class="sender-receiver">
-                    <p><strong>Customer:</strong> {{ form.customer_name }}</p>
-                    <p><strong>Destination:</strong> {{ form.destination }}</p>
-                </div>
-            </header>
-
-            <section class="sender-receiver">
-                <p><strong>Driver:</strong> {{ form.driver_name }}</p>
-                <p><strong>Receiver:</strong> {{ form.receiver_name }}</p>
-            </section>
-
-            <input type="hidden" id="waybill-items-payload" name="items_payload" value='{{ form.items_payload.value|default:"[]" }}'>
-
-            <table class="document-items" id="waybill-items-table">
-                <thead>
-                    <tr>
-                        <th>Description of Goods</th>
-                        <th>Quantity</th>
-                        <th>Unit Price</th>
-                        <th>Total</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-            <button type="button" id="waybill-add-item" class="button button-secondary">Add Item</button>
-
-            <section class="document-footer">
-                <div>
-                    <p><strong>Driver Signature:</strong></p>
-                    <div class="signature-line"></div>
-                </div>
-                <div>
-                    <p><strong>Receiver Signature:</strong></p>
-                    <div class="signature-line"></div>
-                </div>
-            </section>
-        </form>
-
-        <article id="waybill-preview" class="document waybill" {% if not preview %}hidden{% endif %}>
-            <header class="document-header">
-                <div>
-                    <h3>WAYBILL</h3>
-                    <p>No.: {{ waybill.waybill_number|default:"WB-NEW" }}</p>
-                    <p>Date: {{ waybill.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
-                </div>
-                <div class="sender-receiver">
-                    <p><strong>Customer:</strong> {{ waybill.customer_name|default:form.customer_name.value }}</p>
-                    <p><strong>Destination:</strong> {{ waybill.destination|default:form.destination.value }}</p>
-                </div>
-            </header>
-
-            {% if not preview %}
-            <div class="preview-actions">
-                <button class="button button-secondary" data-exit-preview>Back to Edit</button>
+                <button id="waybill-submit" class="button" type="button">Download</button>
             </div>
-            {% endif %}
+        </div>
 
-            <table class="document-items">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Quantity</th>
-                        <th>Unit Price</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody id="waybill-preview-rows">
-                    {% if waybill %}
-                        {% for item in waybill.items %}
-                            <tr>
-                                <td>{{ item.description }}</td>
-                                <td>{{ item.quantity|floatformat:2 }}</td>
-                                <td>{{ item.unit_price|floatformat:2 }}</td>
-                                <td>{{ item.total|floatformat:2 }}</td>
-                            </tr>
-                        {% endfor %}
-                    {% endif %}
-                </tbody>
-            </table>
-
-            <section class="document-footer">
-                <div>
-                    <p><strong>Driver:</strong> {{ waybill.driver_name|default:form.driver_name.value }}</p>
-                    <div class="signature-line">Driver Signature</div>
+        <!-- ============================================
+             MODULE BODY - Edit Form and Preview
+             ============================================ -->
+        <div class="module-body">
+            
+            <!-- ============================================
+                 EDIT MODE - Waybill Form
+                 ============================================
+                 This form is visible by default and allows
+                 the user to enter waybill/delivery data
+                 ============================================ -->
+            <form id="waybill-form" class="document waybill-document document-editable" novalidate>
+                <!-- Hidden field to store document number -->
+                <input type="hidden" id="waybill-document-number" name="document_number">
+                
+                <!-- Letterhead: Logo and basic waybill info -->
+                <div class="waybill-letterhead">
+                    <div class="letterhead-left">
+                        <h3 class="title">WAYBILL</h3>
+                        <!-- Waybill number (generated by server) -->
+                        <p>No.: <span id="waybill-number">WAY000</span></p>
+                        <!-- Issue date input (inline styled for better appearance) -->
+                        <p class="waybill-date">Date: <input type="date" id="waybill-issue-date" name="issue_date" required style="display: inline; width: auto; border: none; background: transparent;"></p>
+                    </div>
+                    <div class="letterhead-right">
+                        <!-- Company logo -->
+                        <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
+                    </div>
                 </div>
-                <div>
-                    <p><strong>Receiver:</strong> {{ waybill.receiver_name|default:form.receiver_name.value }}</p>
-                    <div class="signature-line">Receiver Signature</div>
-                </div>
-            </section>
-        </article>
-    </div>
-</section>
-{% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/waybill.js' %}"></script>
-{% endblock %}
+                <!-- Hidden field to store items as JSON payload -->
+                <input type="hidden" id="waybill-items-payload" name="items_payload" value="[]">
+
+                <!-- ============================================
+                     LINE ITEMS TABLE
+                     ============================================ -->
+                <table class="document-items" id="waybill-items-table">
+                    <thead>
+                        <tr>
+                            <th class="description">Description</th>
+                            <th>Qty</th>
+                            <th>Unit Price (GHC)</th>
+                            <th>Amount (GHC)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <!-- Button to add new line items -->
+                <button type="button" id="waybill-add-item" class="button button-secondary">Add Item</button>
+
+                <div class="waybill-signature-grid">
+                    <div class="signature-card">
+                        <span class="signature-title">Delivered By</span>
+                        <label class="field-block">
+                            <input type="text" id="waybill-driver" name="driver_name" placeholder="Dispatch officer" required>
+                        </label>
+                        <div class="signature-line">Signature</div>
+                    </div>
+                    <div class="signature-card">
+                        <span class="signature-title">Received By</span>
+                        <label class="field-block">
+                            <input type="text" id="waybill-receiver" name="receiver_name" placeholder="Receiving officer" required>
+                        </label>
+                        <div class="signature-line">Signature</div>
+                    </div>
+                </div>
+
+                <section class="waybill-contact-bar">
+                    <input type="text" id="waybill-contact" placeholder="DELIVERED BY SPAQUELS &bull; CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719" aria-label="Waybill contact information">
+                </section>
+            </form>
+
+            <article id="waybill-preview" class="document waybill-document" hidden>
+                <div class="waybill-letterhead">
+                    <div class="letterhead-left">
+                        <h3>WAYBILL</h3>
+                        <p>No.: <span class="js-waybill-preview-number">WAY000</span></p>
+                        <p class="waybill-date">Date: <span class="js-waybill-preview-date">—</span></p>
+                    </div>
+                    <div class="letterhead-right">
+                        <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
+                    </div>
+                </div>
+                
+
+                <table class="document-items">
+                    <thead>
+                        <tr>
+                            <th class="description">Description</th>
+                            <th>Qty</th>
+                            <th>Unit Price (GHC)</th>
+                            <th>Amount (GHC)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="js-waybill-preview-rows"></tbody>
+                </table>
+
+                <div class="waybill-signature-grid">
+                    <div class="signature-card">
+                        <span class="signature-title">Delivered By</span>
+                        <div class="field-block">
+                            <p class="js-waybill-preview-driver" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
+                        </div>
+                       
+                        <div class="signature-line">Signature</div>
+                    </div>
+                    <div class="signature-card">
+                        <span class="signature-title">Received By</span>
+                        <div class="field-block">
+                            <p class="js-waybill-preview-receiver" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
+                        </div>
+                       
+                        <div class="signature-line">Signature</div>
+                    </div>
+                </div>
+
+                <section id="waybill-preview-contact">
+                    <div class="contact-wrapper">
+                       
+                        <p class="account">
+                            <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
+                            <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
+                            <span>0540673202</span>
+                            <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                        </p>
+                         <p class="email">
+                            <span>Email: spaquelsmultimedia@gmail.com</span>
+                            <span>Website: www.spaquelsmultimedia.org</span>
+                        </p>
+                    </div>
+                </section>
+            </article>
+        </div>
+        <div class="module-toast" id="waybill-toast" role="status" aria-live="polite" hidden></div>
+    </section>
+</main>
+
+<footer class="app-footer">
+    <p>&copy; <span id="waybill-current-year"></span> Billing App. All rights reserved.</p>
+</footer>
+
+<script src="{% static 'js/main.js' %}" defer></script>
+<script src="{% static 'js/waybill.js' %}" defer></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("waybill-current-year").textContent = new Date().getFullYear();
+    });
+</script>
+</body>
+</html>

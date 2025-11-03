@@ -36,16 +36,17 @@
             <div class="module-actions">
                 <button id="waybill-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
                 <button id="waybill-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="waybill-submit" class="button" type="button">Download PDF</button>
+                <button id="waybill-submit" class="button" type="button">Download</button>
             </div>
         </div>
 
         <div class="module-body">
             <form id="waybill-form" class="document waybill-document document-editable" novalidate>
+                <input type="hidden" id="waybill-document-number" name="document_number">
                 <div class="waybill-letterhead">
                     <div class="letterhead-left">
                         <h3 class="title">WAYBILL</h3>
-                        <p>No.: <span id="waybill-number">WB-NEW</span></p>
+                        <p>No.: <span id="waybill-number">WAY000</span></p>
                         <p class="waybill-date">Date: <input type="date" id="waybill-issue-date" name="issue_date" required style="display: inline; width: auto; border: none; background: transparent;"></p>
                     </div>
                     <div class="letterhead-right">
@@ -72,24 +73,14 @@
                     <div class="signature-card">
                         <span class="signature-title">Delivered By</span>
                         <label class="field-block">
-                            <span>Name</span>
                             <input type="text" id="waybill-driver" name="driver_name" placeholder="Dispatch officer" required>
-                        </label>
-                        <label class="field-block">
-                            <span>Date</span>
-                            <input type="text" id="waybill-delivery-date" placeholder="Same as delivery date" aria-label="Delivery signature date">
                         </label>
                         <div class="signature-line">Signature</div>
                     </div>
                     <div class="signature-card">
                         <span class="signature-title">Received By</span>
                         <label class="field-block">
-                            <span>Name</span>
                             <input type="text" id="waybill-receiver" name="receiver_name" placeholder="Receiving officer" required>
-                        </label>
-                        <label class="field-block">
-                            <span>Date</span>
-                            <input type="text" id="waybill-received-date" placeholder="Date of receipt" aria-label="Receipt signature date">
                         </label>
                         <div class="signature-line">Signature</div>
                     </div>
@@ -99,20 +90,17 @@
                     <input type="text" id="waybill-contact" placeholder="DELIVERED BY SPAQUELS &bull; CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719" aria-label="Waybill contact information">
                 </section>
             </form>
-
             <article id="waybill-preview" class="document waybill-document" hidden>
                 <div class="waybill-letterhead">
                     <div class="letterhead-left">
                         <h3>WAYBILL</h3>
-                        <p>No.: <span class="js-waybill-preview-number">WB-NEW</span></p>
+                        <p>No.: <span class="js-waybill-preview-number">WAY000</span></p>
                         <p class="waybill-date">Date: <span class="js-waybill-preview-date">—</span></p>
                     </div>
                     <div class="letterhead-right">
                         <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
                     </div>
                 </div>
-                
-
                 <table class="document-items">
                     <thead>
                         <tr>
@@ -129,32 +117,23 @@
                     <div class="signature-card">
                         <span class="signature-title">Delivered By</span>
                         <div class="field-block">
-                            <span>Name</span>
                             <p class="js-waybill-preview-driver" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
                         </div>
-                        <div class="field-block">
-                            <span>Date</span>
-                            <p class="js-waybill-preview-delivery-date" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
-                        </div>
+                       
                         <div class="signature-line">Signature</div>
                     </div>
                     <div class="signature-card">
                         <span class="signature-title">Received By</span>
                         <div class="field-block">
-                            <span>Name</span>
                             <p class="js-waybill-preview-receiver" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
                         </div>
-                        <div class="field-block">
-                            <span>Date</span>
-                            <p class="js-waybill-preview-received-date" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
-                        </div>
+                       
                         <div class="signature-line">Signature</div>
                     </div>
                 </div>
 
                 <section id="waybill-preview-contact">
                     <div class="contact-wrapper">
-                       
                         <p class="account">
                             <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
                             <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
@@ -178,8 +157,6 @@
 </footer>
 
 <script src="../static/js/main.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" referrerpolicy="no-referrer"></script>
 <script src="../static/js/waybill.js" defer></script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {

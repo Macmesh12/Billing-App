@@ -4,6 +4,8 @@
     // Get global helpers
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
     // Fallback for togglePreview
+    const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
+    // Format chooser fallback
     const parseNumber = typeof helpers.parseNumber === "function" ? helpers.parseNumber : (value) => Number.parseFloat(value || 0) || 0;
     // Fallback for parseNumber
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
@@ -232,106 +234,98 @@
         togglePreview(moduleId, true);
     }
 
-    async function downloadWaybillPdf() {
-        // Download waybill as PDF
-        if (
-            typeof window.jspdf === "undefined" ||
-            typeof window.jspdf.jsPDF === "undefined" ||
-            typeof window.html2canvas !== "function"
-        ) {
-            showToast("PDF generator not available", "error");
-            return;
-        }
-        
-        syncPreview();
-        
-        const previewEl = document.getElementById("waybill-preview");
-        if (!previewEl) {
-            showToast("Preview element not found", "error");
-            return;
-        }
+    function buildWaybillPayload(previewEl, format) {
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+        clone.classList.add("pdf-export");
+        clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
+        clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
 
-        // Create a wrapper for PDF export with exact preview styling
-        const exportWrapper = document.createElement("div");
-        exportWrapper.className = "module is-preview pdf-export-wrapper";
-        exportWrapper.setAttribute("aria-hidden", "true");
-        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
-        
-    const clone = previewEl.cloneNode(true);
-    clone.removeAttribute("hidden");
-    clone.setAttribute("data-pdf-clone", "true");
-        
-        // The preview element itself is the document
-        exportWrapper.appendChild(clone);
-        document.body.appendChild(exportWrapper);
+        const wrapper = document.createElement("div");
+        wrapper.className = "pdf-export-wrapper";
+        wrapper.appendChild(clone);
 
-        let filename = state.waybillNumber || "waybill";
-        if (!filename.toLowerCase().endsWith(".pdf")) {
-            filename = `${filename}.pdf`;
-        }
+        const normalizedFormat = format === "jpeg" ? "jpeg" : "pdf";
+        const safeBase = String(state.waybillNumber || "waybill").trim().replace(/\s+/g, "_");
+        const extension = normalizedFormat === "jpeg" ? "jpg" : "pdf";
 
+        return {
+            document_type: "waybill",
+            html: wrapper.outerHTML,
+            filename: `${safeBase}.${extension}`,
+            format: normalizedFormat,
+        };
+    }
+
+    async function downloadWaybillDocument(format) {
         try {
-            showToast("Generating PDF...", "info");
+            syncPreview();
 
-            const A4_PX_WIDTH = 794;
-            const A4_PX_HEIGHT = 1122;
-            clone.style.width = A4_PX_WIDTH + "px";
-            clone.style.maxWidth = A4_PX_WIDTH + "px";
-
-            const canvas = await window.html2canvas(clone, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: "#ffffff",
-                logging: false,
-                width: A4_PX_WIDTH,
-                height: Math.max(A4_PX_HEIGHT, clone.scrollHeight),
-            });
-
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
-                compress: true,
-            });
-
-            const imgData = canvas.toDataURL("image/png");
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            let renderWidth = pdfWidth;
-            let renderHeight = (canvas.height * renderWidth) / canvas.width;
-
-            if (renderHeight > pdfHeight) {
-                const ratio = pdfHeight / renderHeight;
-                renderHeight = pdfHeight;
-                renderWidth = renderWidth * ratio;
+            const previewEl = document.getElementById("waybill-preview");
+            if (!previewEl) {
+                throw new Error("Preview element not found");
             }
 
-            const offsetX = (pdfWidth - renderWidth) / 2;
-            const offsetY = (pdfHeight - renderHeight) / 2;
+            const payload = buildWaybillPayload(previewEl, format);
+            const normalizedFormat = payload.format === "jpeg" ? "jpeg" : "pdf";
 
-            pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
-            pdf.save(filename);
-            showToast("PDF downloaded successfully!");
+            console.log("Sending render request to:", `${API_BASE}/api/pdf/render/`);
+            console.log("Requested format:", normalizedFormat);
+            console.log("Payload size:", JSON.stringify(payload).length, "bytes");
+
+            const response = await fetch(`${API_BASE}/api/pdf/render/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: normalizedFormat === "jpeg" ? "image/jpeg" : "application/pdf",
+                },
+                body: JSON.stringify(payload),
+            }).catch(err => {
+                console.error("Fetch failed:", err);
+                throw new Error(`Network error: ${err.message}. Make sure Django server is running on ${API_BASE}`);
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("Render error response:", errorText);
+                throw new Error(`Failed to generate document: ${response.status} ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = payload.filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("PDF generation error:", error);
-            showToast("Failed to generate PDF: " + error.message, "error");
-        } finally {
-            document.body.removeChild(exportWrapper);
+            console.error("Download document error:", error);
+            throw error;
         }
     }
 
     async function handleSave() {
-        // Handle PDF download
+        // Handle document download
         if (state.isSaving) return;
+
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
-            await downloadWaybillPdf();
-            // Increment the counter after successful PDF download
-            await incrementWaybillNumber();
+            const chosenFormat = await chooseDownloadFormat();
+            if (!chosenFormat) {
+                return;
+            }
+            const normalizedFormat = chosenFormat === "jpeg" ? "jpeg" : "pdf";
+            await downloadWaybillDocument(normalizedFormat);
+            const label = normalizedFormat === "jpeg" ? "JPEG" : "PDF";
+            showToast(`Waybill downloaded as ${label}!`);
+        } catch (error) {
+            console.error("Failed to download waybill", error);
+            showToast(error.message || "Failed to download waybill", "error");
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");

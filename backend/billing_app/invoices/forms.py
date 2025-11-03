@@ -7,10 +7,11 @@ from .models import Invoice
 
 class InvoiceForm(forms.ModelForm):
     items_payload = forms.CharField(widget=forms.HiddenInput(), required=False)
+    document_number = forms.CharField(widget=forms.HiddenInput(), required=False)
 
     class Meta:
         model = Invoice
-        fields = ["customer_name", "issue_date", "classification"]
+        fields = ["customer_name", "issue_date", "classification", "document_number"]
         widgets = {
             "issue_date": forms.DateInput(attrs={"type": "date"}),
         }
@@ -19,11 +20,15 @@ class InvoiceForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields["items_payload"].initial = json.dumps(self.instance.items or [])
+            self.fields["document_number"].initial = self.instance.document_number
 
     def save(self, commit=True):
         instance: Invoice = super().save(commit=False)
         items = self.cleaned_data.get("items_payload") or "[]"
         instance.items = self._parse_items(items)
+        document_number = self.cleaned_data.get("document_number")
+        if document_number:
+            instance.document_number = document_number
         if commit:
             instance.save()
         return instance
