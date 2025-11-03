@@ -25,9 +25,10 @@
   },
   "build": {
     "appId": "com.billingapp.desktop",
-    "productName": "Billing App",
+    "productName": "BillingApp",
     "copyright": "Copyright © 2025",
     "publish": null,
+    "icon": "build/icon.png",
     "files": [
       "**/*",
       "!node_modules/.cache/**",
