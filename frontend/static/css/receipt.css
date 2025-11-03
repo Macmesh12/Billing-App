@@ -279,7 +279,8 @@
 .receipt-payment-info {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    margin-top: 20px;
+    gap: 1.5rem;
     padding: 0.8rem;
     background: rgba(239,246,255,0.5);
     border-radius: 8px;
@@ -294,22 +295,22 @@
 .receipt-signature {
     display: flex;
     justify-content: space-between;
-    margin-top: 0.8rem;
-    margin-bottom: 0.6rem;
+    margin-top: 10%;
+  
 }
 
-.signature-left,
-.signature-right {
+.signature-left {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
-    margin-top: auto;
+    gap: 0.1rem;
+  
 }
 .signature-right {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
-    margin-top: 30px;
+    gap: 0.2rem;
+    margin-right: 30px;
+
 }
 
 /* Bold customer and issued by names */
@@ -382,10 +383,10 @@
 
 /* Account section - yellow background, inline elements with icon placeholders */
 #receipt-preview-contact .account {
-    display: flex;
+    display: inline;
     justify-content: center;
     align-items: center;
-    gap: 1.5rem;
+    gap: 2rem;
     flex-wrap: wrap;
     width: 100%;
     padding: 0.6rem 1rem;
