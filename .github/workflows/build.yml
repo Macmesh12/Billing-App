@@ -28,23 +28,11 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install GTK3 runtime (required by WeasyPrint)
-        run: |
-          choco install gtk-runtime -y
-        shell: powershell
-      
       - name: Install Python dependencies
         run: |
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      
-      - name: Run Django migrations
-        run: |
-          cd backend
-          python manage.py migrate
-        env:
-          PATH: C:\gtk3\bin;${{ env.PATH }}
       
       - name: Install Node dependencies
         run: |

@@ -7,11 +7,6 @@ from .forms import WaybillForm
 from .models import Waybill
 from .services import numbering
 
-try:
-    from weasyprint import HTML
-except ImportError:  # pragma: no cover
-    HTML = None
-
 
 class WaybillView(FormView):
     template_name = "waybill.html"
@@ -46,7 +41,10 @@ def waybill_pdf(request: HttpRequest, pk: int) -> HttpResponse:
         {"waybill": waybill, "preview": True, "form": WaybillForm(instance=waybill)},
     ).content.decode("utf-8")
 
-    if HTML is None:
+    # Lazy import to avoid loading GTK libraries at module import time
+    try:
+        from weasyprint import HTML
+    except (ImportError, OSError):  # OSError for missing GTK libraries
         response = HttpResponse(html_string, content_type="text/html")
         response["X-WeasyPrint-Disabled"] = "1"
         return response
