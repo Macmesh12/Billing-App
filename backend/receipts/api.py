@@ -37,7 +37,11 @@ def create_receipt(request: HttpRequest) -> HttpResponse:
         return _cors(JsonResponse({"errors": form.errors}, status=HTTPStatus.BAD_REQUEST))
     receipt = form.save()
     # Save receipt
-    return _cors(JsonResponse({"id": receipt.pk, "receipt_number": receipt.receipt_number}, status=HTTPStatus.CREATED))
+    return _cors(JsonResponse({
+        "id": receipt.pk,
+        "receipt_number": receipt.receipt_number,
+        "document_number": receipt.receipt_number,
+    }, status=HTTPStatus.CREATED))
 
 
 @csrf_exempt
@@ -54,6 +58,7 @@ def get_receipt(request: HttpRequest, pk: int) -> HttpResponse:
         data = {
             "id": receipt.pk,
             "receipt_number": receipt.receipt_number,
+            "document_number": receipt.receipt_number,
             "received_from": receipt.received_from,
             "issue_date": receipt.issue_date.isoformat() if getattr(receipt, "issue_date", None) else "",
             "amount": float(getattr(receipt, "amount", 0)),
@@ -74,5 +79,6 @@ def get_receipt(request: HttpRequest, pk: int) -> HttpResponse:
         return _cors(JsonResponse({
             "id": receipt.pk,
             "receipt_number": receipt.receipt_number,
+            "document_number": receipt.receipt_number,
         }))
     return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))

@@ -169,17 +169,15 @@
     display: grid;
     flex-direction: space-between;
     grid-template-columns: repeat(2, 1fr);
-    gap: 18rem;
+    gap: 14rem;
     margin-bottom: 0.6rem;
-    margin-top: 0.6rem;
+    margin-top: 4rem;
 }
 
 .signature-card {
     display: grid;
     gap: 2rem;
     padding: 0.5rem 0.7rem;
-    border-radius: 6px;
-    box-shadow: inset 0 0 0 1px rgba(31,111,235,0.08);
 }
 
 .signature-title {
