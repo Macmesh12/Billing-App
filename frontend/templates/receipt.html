@@ -37,7 +37,7 @@ Editable layout matches the preview layout so users can type directly into the d
                 <div class="logo-placeholder">Your Logo</div>
                 <div>
                     <h3>RECEIPT</h3>
-                    <p>No.: {{ receipt.receipt_number|default:"REC-NEW" }}</p>
+                    <p>No.: {{ receipt.receipt_number|default:"" }}</p>
                     <p>Date: {{ form.issue_date }}</p>
                 </div>
             </header>
@@ -60,7 +60,7 @@ Editable layout matches the preview layout so users can type directly into the d
                 <div class="logo-placeholder">Your Logo</div>
                 <div>
                     <h3>RECEIPT</h3>
-                    <p>No.: {{ receipt.receipt_number|default:"REC-NEW" }}</p>
+                    <p>No.: {{ receipt.receipt_number|default:"" }}</p>
                     <p>Date: {{ receipt.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
                 </div>
             </header>

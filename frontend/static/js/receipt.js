@@ -60,7 +60,7 @@
     const state = {
         // State object
         receiptId: null,
-        receiptNumber: "REC-NEW",
+        receiptNumber: "",
         isSaving: false,
         items: [],
     };

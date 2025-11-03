@@ -39,7 +39,7 @@ The same template can be rendered server-side for PDF export when 'preview' cont
             <header class="document-header">
                 <div>
                     <h3>INVOICE</h3>
-                    <p class="document-number">Invoice No.: {{ invoice.invoice_number|default:"INV-NEW" }}</p>
+                        <p class="document-number">Invoice No.: {{ invoice.invoice_number|default:"" }}</p>
                 </div>
                 <div class="document-meta">
                     <p><strong>Date:</strong> {{ form.issue_date }}</p>
@@ -80,7 +80,7 @@ The same template can be rendered server-side for PDF export when 'preview' cont
         <div id="invoice-preview" class="document" {% if not preview %}hidden{% endif %}>
             <header class="document-header">
                 <h3>INVOICE</h3>
-                <p class="document-number">Invoice No.: {{ invoice.invoice_number|default:"INV-NEW" }}</p>
+                <p class="document-number">Invoice No.: {{ invoice.invoice_number|default:"" }}</p>
                 <p class="document-date">Date: {{ invoice.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
             </header>
             {% if not preview %}

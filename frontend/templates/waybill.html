@@ -34,7 +34,7 @@ Context:
             <header class="document-header">
                 <div>
                     <h3>WAYBILL</h3>
-                    <p>No.: {{ waybill.waybill_number|default:"WB-NEW" }}</p>
+                    <p>No.: {{ waybill.waybill_number|default:"" }}</p>
                     <p>Date: {{ form.issue_date }}</p>
                 </div>
                 <div class="sender-receiver">
@@ -80,7 +80,7 @@ Context:
             <header class="document-header">
                 <div>
                     <h3>WAYBILL</h3>
-                    <p>No.: {{ waybill.waybill_number|default:"WB-NEW" }}</p>
+                    <p>No.: {{ waybill.waybill_number|default:"" }}</p>
                     <p>Date: {{ waybill.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
                 </div>
                 <div class="sender-receiver">

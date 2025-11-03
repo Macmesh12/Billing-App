@@ -70,7 +70,7 @@
         // State object
         items: [],
         waybillId: null,
-        waybillNumber: "WB-NEW",
+        waybillNumber: "",
         isSaving: false,
     };
 
