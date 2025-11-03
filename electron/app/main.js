@@ -121,6 +121,23 @@ async function startDjango() {
 
   const { cmd, prefix, shell } = resolvePython();
 
+  // If packaged, check for a bundled backend binary produced by PyInstaller.
+  // If present we'll prefer invoking that binary directly instead of running
+  // `python manage.py ...` so end users don't need a system Python/venv.
+  let bundledBackendBinary = null;
+  if (app.isPackaged) {
+    try {
+      const fs = require('fs');
+      const candidateBase = path.join(process.resourcesPath, 'app.asar.unpacked', 'backend');
+      const winExe = path.join(candidateBase, 'billing-backend.exe');
+      const unixExe = path.join(candidateBase, 'billing-backend');
+      if (fs.existsSync(winExe)) bundledBackendBinary = winExe;
+      else if (fs.existsSync(unixExe)) bundledBackendBinary = unixExe;
+    } catch (e) {
+      // ignore
+    }
+  }
+
   // Use unpacked backend in packaged builds
   const backendCwd = app.isPackaged
     ? path.join(process.resourcesPath, 'app.asar.unpacked', 'backend')
@@ -166,15 +183,28 @@ async function startDjango() {
   // If packaged, run migrations synchronously before starting the server.
   if (app.isPackaged) {
     try {
-      const migrateArgs = [...prefix, 'manage.py', 'migrate', '--noinput'];
-      const result = spawnSync(cmd, migrateArgs, {
-        cwd: backendCwd,
-        stdio: 'inherit',
-        shell: shell || false,
-        env,
-      });
-      if (result && result.status !== 0) {
-        console.error('Django migrate exited with code', result.status);
+      if (bundledBackendBinary) {
+        // The bundled binary supports a --migrate flag.
+        const result = spawnSync(bundledBackendBinary, ['--migrate'], {
+          cwd: backendCwd,
+          stdio: 'inherit',
+          shell: false,
+          env,
+        });
+        if (result && result.status !== 0) {
+          console.error('Bundled backend migrate exited with code', result.status);
+        }
+      } else {
+        const migrateArgs = [...prefix, 'manage.py', 'migrate', '--noinput'];
+        const result = spawnSync(cmd, migrateArgs, {
+          cwd: backendCwd,
+          stdio: 'inherit',
+          shell: shell || false,
+          env,
+        });
+        if (result && result.status !== 0) {
+          console.error('Django migrate exited with code', result.status);
+        }
       }
     } catch (err) {
       console.error('Failed to run Django migrations before start', err);
@@ -215,14 +245,26 @@ async function startDjango() {
   // Expose the port to other parts of the app
   app.__internalDjangoPort = selectedPort;
 
-  const args = [...prefix, 'manage.py', 'runserver', `127.0.0.1:${selectedPort}`];
-  console.log(`[billing-app] Starting internal Django: ${cmd} ${args.join(' ')}, cwd=${backendCwd}`);
-  djangoProcess = spawn(cmd, args, {
-    cwd: backendCwd,
-    stdio: 'inherit',
-    shell: shell || false,
-    env: env,
-  });
+  // Start backend: prefer bundled binary when available.
+  if (bundledBackendBinary) {
+    const runArgs = ['--runserver', `127.0.0.1:${selectedPort}`];
+    console.log(`[billing-app] Starting bundled backend: ${bundledBackendBinary} ${runArgs.join(' ')}, cwd=${backendCwd}`);
+    djangoProcess = spawn(bundledBackendBinary, runArgs, {
+      cwd: backendCwd,
+      stdio: 'inherit',
+      shell: false,
+      env: env,
+    });
+  } else {
+    const args = [...prefix, 'manage.py', 'runserver', `127.0.0.1:${selectedPort}`];
+    console.log(`[billing-app] Starting internal Django: ${cmd} ${args.join(' ')}, cwd=${backendCwd}`);
+    djangoProcess = spawn(cmd, args, {
+      cwd: backendCwd,
+      stdio: 'inherit',
+      shell: shell || false,
+      env: env,
+    });
+  }
   djangoProcess.on('error', (err) => {
     console.error('Failed to start Django:', err);
     try { dialog.showErrorBox('Backend Error', `Failed to start Django: ${err.message}`); } catch (e) {}

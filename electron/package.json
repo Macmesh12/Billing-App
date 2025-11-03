@@ -9,9 +9,9 @@
     "django": "python ../backend/manage.py runserver 127.0.0.1:8765",
     "electron": "wait-on http://127.0.0.1:8765 && electron .",
     "package": "electron-builder",
-    "package:win": "electron-builder --win",
+    "package:win": "electron-builder --win nsis",
     "package:mac": "electron-builder --mac",
-    "package:linux": "electron-builder --linux"
+    "package:linux": "electron-builder --linux deb"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
@@ -45,6 +45,12 @@
           "!**/*.pyc",
           "!*.log"
         ]
+      }
+      ,
+      {
+        "from": "backend_dist",
+        "to": "app.asar.unpacked/backend",
+        "filter": ["**/*"]
       }
     ],
     "directories": {
