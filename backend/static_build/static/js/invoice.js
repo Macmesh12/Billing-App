@@ -178,18 +178,6 @@
         isSaving: false,
     };
 
-    // Increment document number helper: preserves prefix and zero-padding
-    function incrementDocumentNumber(numStr) {
-        if (!numStr || typeof numStr !== 'string') return numStr;
-        const m = numStr.match(/^(.*?)(\d+)$/);
-        if (!m) return numStr;
-        const prefix = m[1] || '';
-        const digits = m[2] || '0';
-        const n = parseInt(digits, 10) + 1;
-        const padded = n.toString().padStart(digits.length, '0');
-        return prefix + padded;
-    }
-
     const levyValueMap = new Map();
     // Map to store levy value elements for quick updates
     const previewLevyValueMap = new Map();
@@ -732,7 +720,7 @@
             const response = await fetch(`${API_BASE}/api/counter/invoice/next/`);
             if (response.ok) {
                 const data = await response.json();
-                state.invoiceNumber = incrementDocumentNumber(data.next_number);
+                state.invoiceNumber = data.next_number;
                 elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
                 elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
             }
@@ -747,7 +735,7 @@
             const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: "POST" });
             if (response.ok) {
                 const data = await response.json();
-                state.invoiceNumber = incrementDocumentNumber(data.next_number);
+                state.invoiceNumber = data.next_number;
                 elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
                 elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
             }

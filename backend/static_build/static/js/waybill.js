@@ -74,18 +74,6 @@
         isSaving: false,
     };
 
-    // Increment document number helper: preserves prefix and zero-padding
-    function incrementDocumentNumber(numStr) {
-        if (!numStr || typeof numStr !== 'string') return numStr;
-        const m = numStr.match(/^(.*?)(\d+)$/);
-        if (!m) return numStr;
-        const prefix = m[1] || '';
-        const digits = m[2] || '0';
-        const n = parseInt(digits, 10) + 1;
-        const padded = n.toString().padStart(digits.length, '0');
-        return prefix + padded;
-    }
-
     function setText(target, text) {
         if (!target) return;
         if (typeof target.length === "number" && !target.nodeType) {
@@ -453,7 +441,7 @@
             const response = await fetch(`${API_BASE}/api/counter/waybill/next/`);
             if (response.ok) {
                 const data = await response.json();
-                state.waybillNumber = incrementDocumentNumber(data.next_number);
+                state.waybillNumber = data.next_number;
                 elements.number && (elements.number.textContent = state.waybillNumber);
                 setText(elements.previewNumberEls, state.waybillNumber);
             }
@@ -468,7 +456,7 @@
             const response = await fetch(`${API_BASE}/api/counter/waybill/next/`, { method: "POST" });
             if (response.ok) {
                 const data = await response.json();
-                state.waybillNumber = incrementDocumentNumber(data.next_number);
+                state.waybillNumber = data.next_number;
                 elements.number && (elements.number.textContent = state.waybillNumber);
                 setText(elements.previewNumberEls, state.waybillNumber);
             }

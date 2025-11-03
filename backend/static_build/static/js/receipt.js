@@ -65,18 +65,6 @@
         items: [],
     };
 
-    // Increment document number helper: preserves prefix and zero-padding
-    function incrementDocumentNumber(numStr) {
-        if (!numStr || typeof numStr !== 'string') return numStr;
-        const m = numStr.match(/^(.*?)(\d+)$/);
-        if (!m) return numStr;
-        const prefix = m[1] || '';
-        const digits = m[2] || '0';
-        const n = parseInt(digits, 10) + 1;
-        const padded = n.toString().padStart(digits.length, '0');
-        return prefix + padded;
-    }
-
     function setText(target, text) {
         if (!target) return;
         if (typeof target.length === "number" && !target.nodeType) {
@@ -466,7 +454,7 @@
             const response = await fetch(`${API_BASE}/api/counter/receipt/next/`);
             if (response.ok) {
                 const data = await response.json();
-                state.receiptNumber = incrementDocumentNumber(data.next_number);
+                state.receiptNumber = data.next_number;
                 elements.number && (elements.number.textContent = state.receiptNumber);
                 setText(elements.previewNumberEls, state.receiptNumber);
             }
@@ -481,7 +469,7 @@
             const response = await fetch(`${API_BASE}/api/counter/receipt/next/`, { method: "POST" });
             if (response.ok) {
                 const data = await response.json();
-                state.receiptNumber = incrementDocumentNumber(data.next_number);
+                state.receiptNumber = data.next_number;
                 elements.number && (elements.number.textContent = state.receiptNumber);
                 setText(elements.previewNumberEls, state.receiptNumber);
             }
