@@ -1,11 +1,14 @@
 """
 API endpoints for document counter management
 """
-import json
 from http import HTTPStatus
 from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from billing_app.invoices.models import DocumentCounter
+from billing_app.services.counter_store import (
+    get_document_counts,
+    peek_document_number,
+    reserve_document_number,
+)
 
 
 def _cors(response: HttpResponse) -> HttpResponse:
@@ -26,12 +29,11 @@ def get_next_invoice_number(request: HttpRequest) -> HttpResponse:
         return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
     
     if request.method == "GET":
-        instance = DocumentCounter.get_instance()
-        next_number = f"INV-{instance.invoice_counter:04d}"
+        next_number = peek_document_number("invoice")
         return _cors(JsonResponse({"next_number": next_number}))
     
     elif request.method == "POST":
-        next_number = DocumentCounter.get_next_invoice_number()
+        next_number = reserve_document_number("invoice")
         return _cors(JsonResponse({"next_number": next_number}))
     
     return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
@@ -47,12 +49,11 @@ def get_next_receipt_number(request: HttpRequest) -> HttpResponse:
         return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
     
     if request.method == "GET":
-        instance = DocumentCounter.get_instance()
-        next_number = f"REC-{instance.receipt_counter:04d}"
+        next_number = peek_document_number("receipt")
         return _cors(JsonResponse({"next_number": next_number}))
     
     elif request.method == "POST":
-        next_number = DocumentCounter.get_next_receipt_number()
+        next_number = reserve_document_number("receipt")
         return _cors(JsonResponse({"next_number": next_number}))
     
     return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
@@ -68,12 +69,11 @@ def get_next_waybill_number(request: HttpRequest) -> HttpResponse:
         return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
     
     if request.method == "GET":
-        instance = DocumentCounter.get_instance()
-        next_number = f"WB-{instance.waybill_counter:04d}"
+        next_number = peek_document_number("waybill")
         return _cors(JsonResponse({"next_number": next_number}))
     
     elif request.method == "POST":
-        next_number = DocumentCounter.get_next_waybill_number()
+        next_number = reserve_document_number("waybill")
         return _cors(JsonResponse({"next_number": next_number}))
     
     return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
@@ -88,7 +88,7 @@ def get_document_counts(request: HttpRequest) -> HttpResponse:
         return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
     
     if request.method == "GET":
-        counts = DocumentCounter.get_current_counts()
+        counts = get_document_counts()
         return _cors(JsonResponse(counts))
     
     return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))

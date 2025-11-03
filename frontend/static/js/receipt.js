@@ -1,25 +1,41 @@
+/* ============================================
+   RECEIPT MODULE - MAIN JAVASCRIPT
+   ============================================
+   This file handles all receipt functionality including:
+   - Receipt data entry and validation
+   - Line item management for multi-item receipts
+   - Preview mode toggling
+   - PDF/JPEG export functionality
+   - API integration for saving receipts
+   - Receipt number management and reservation
+   ============================================ */
+
+// IIFE (Immediately Invoked Function Expression) to encapsulate module logic
+// This prevents polluting the global namespace
 (function () {
-    // IIFE for receipt module
+    // ============================================
+    // HELPER FUNCTIONS AND UTILITIES
+    // ============================================
+    
+    // Get helper functions from global BillingApp object (defined in main.js)
     const helpers = window.BillingApp || {};
-    // Get global helpers
+    
+    // Extract helper functions with fallbacks if not available
     const togglePreview = typeof helpers.togglePreview === "function" ? helpers.togglePreview : () => {};
-    // Fallback for togglePreview
+    const chooseDownloadFormat = typeof helpers.chooseDownloadFormat === "function" ? helpers.chooseDownloadFormat : async () => "pdf";
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
-    // Fallback for formatCurrency
 
+    // Module identification
     const moduleId = "receipt-module";
-    // Module ID
     const moduleEl = document.getElementById(moduleId);
-    // Module element
     const form = document.getElementById("receipt-form");
-    // Form element
+    
+    // Exit early if required elements are not found
     if (!moduleEl || !form) return;
-    // Exit if elements not found
 
+    // Configuration setup
     const config = window.BILLING_APP_CONFIG || {};
-    // Global config
     const API_BASE = config.apiBaseUrl || "http://127.0.0.1:8765";
-    // API base URL
 
     const elements = {
         // DOM elements object
@@ -61,21 +77,71 @@
         // State object
         receiptId: null,
         receiptNumber: "REC-NEW",
+        receiptNumberReserved: false,
         isSaving: false,
         items: [],
     };
 
+    function setReceiptNumber(value, { reserved = false } = {}) {
+        if (!value) {
+            return;
+        }
+        state.receiptNumber = value;
+        state.receiptNumberReserved = reserved;
+        if (elements.number) {
+            elements.number.textContent = state.receiptNumber;
+        }
+        setText(elements.previewNumberEls, state.receiptNumber);
+    }
+
+    async function ensureReceiptNumberReserved() {
+        if (state.receiptNumberReserved && state.receiptNumber) {
+            return { number: state.receiptNumber, reserved: true };
+        }
+        try {
+            const response = await fetch(`${API_BASE}/api/counter/receipt/next/`, { method: "POST" });
+            if (!response.ok) {
+                throw new Error(`Failed to reserve receipt number (${response.status})`);
+            }
+            const data = await response.json().catch(() => ({}));
+            if (data?.next_number) {
+                setReceiptNumber(data.next_number, { reserved: true });
+            }
+            return { number: state.receiptNumber, reserved: true };
+        } catch (error) {
+            console.warn("Could not reserve receipt number", error);
+            state.receiptNumberReserved = false;
+            if (!state.receiptNumber) {
+                await loadNextReceiptNumber();
+            }
+            return { number: state.receiptNumber, reserved: false, error };
+        }
+    }
+
+    /**
+     * Set text content for single element or collection of elements
+     * @param {Element|NodeList|Array} target - Element(s) to update
+     * @param {string} text - Text content to set
+     */
     function setText(target, text) {
         if (!target) return;
+        // Check if target is a collection (NodeList or Array)
         if (typeof target.length === "number" && !target.nodeType) {
             Array.from(target).forEach((node) => {
                 if (node) node.textContent = text;
             });
             return;
         }
+        // Single element
         target.textContent = text;
     }
 
+    /**
+     * Get field value or its placeholder as fallback
+     * @param {HTMLInputElement} field - Input field element
+     * @param {string} fallback - Default value if field is empty
+     * @returns {string} Field value, placeholder, or fallback
+     */
     function valueOrPlaceholder(field, fallback = "—") {
         if (!field) return fallback;
         const value = (field.value || "").trim();
@@ -84,6 +150,11 @@
         return fallback;
     }
 
+    /**
+     * Format date string for display using British date format
+     * @param {string} value - Date string (ISO format)
+     * @returns {string} Formatted date (e.g., "15 October 2025")
+     */
     function formatDisplayDate(value) {
         if (!value) return "—";
         const date = new Date(value);
@@ -95,20 +166,31 @@
         }).format(date);
     }
 
+    /**
+     * Display toast notification message
+     * @param {string} message - Message to display
+     * @param {string} tone - Tone/type: 'success', 'error', or 'warning'
+     */
     function showToast(message, tone = "success") {
-        // Function to show toast
         const el = elements.toast;
         if (!el) return;
         el.textContent = message;
         el.className = `module-toast is-${tone}`;
         el.hidden = false;
+        // Auto-hide after 4 seconds
         setTimeout(() => {
             el.hidden = true;
         }, 4000);
     }
 
+    /**
+     * Make API call with error handling
+     * @param {string} path - API endpoint path
+     * @param {Object} options - Fetch options (method, body, headers, etc.)
+     * @returns {Promise<Object|null>} JSON response or null for 204 status
+     * @throws {Error} When API request fails
+     */
     async function callApi(path, options = {}) {
-        // API call function
         const url = `${API_BASE}${path}`;
         const response = await fetch(url, {
             headers: {
@@ -117,22 +199,34 @@
             },
             ...options,
         });
+        
+        // Handle error responses
         if (!response.ok) {
             let detail = await response.json().catch(() => ({}));
             const message = detail.errors ? JSON.stringify(detail.errors) : `${response.status} ${response.statusText}`;
             throw new Error(message);
         }
+        
+        // Return null for no-content responses
         if (response.status === 204) return null;
         return response.json();
     }
 
+    /**
+     * Calculate receipt totals including amount paid and balance
+     * @returns {Object} Object with total, amountPaid, and balance properties
+     */
     function calculateTotals() {
-        // Calculate total amount from items
+        // Sum all line item totals
         const total = state.items.reduce((sum, item) => sum + (item.total || 0), 0);
+        
+        // Get amount paid from input field
         const amountPaid = Number(inputs.amountPaid?.value) || 0;
+        
+        // Calculate remaining balance
         const balance = total - amountPaid;
         
-        // Update displays
+        // Update display elements with formatted currency
         if (displays.totalDisplay) {
             displays.totalDisplay.textContent = `GH₵ ${formatCurrency(total)}`;
         }
@@ -143,20 +237,24 @@
         return { total, amountPaid, balance };
     }
 
+    /**
+     * Render receipt line items in the editable table
+     * Always displays exactly 10 rows, showing empty placeholders for unused rows
+     */
     function renderItems() {
-        // Render items in the table - always show 10 rows
         const tbody = elements.itemsTable?.querySelector("tbody");
         if (!tbody) return;
         
+        // Clear existing rows
         tbody.innerHTML = "";
         
-        // Render up to 10 rows
+        // Render exactly 10 rows (filled or empty)
         for (let index = 0; index < 10; index++) {
             const item = state.items[index] || {};
             const row = document.createElement("tr");
             
             if (index < state.items.length) {
-                // Row with data and inputs
+                // Row with data and editable inputs
                 row.innerHTML = `
                     <td><input type="text" value="${item.description || ""}" data-index="${index}" data-field="description" placeholder="Item description"></td>
                     <td><input type="number" value="${item.quantity || 0}" data-index="${index}" data-field="quantity" min="0" step="1"></td>
@@ -242,106 +340,113 @@
         togglePreview(moduleId, true);
     }
 
-    async function downloadReceiptPdf() {
-        // Download receipt as PDF
-        if (
-            typeof window.jspdf === "undefined" ||
-            typeof window.jspdf.jsPDF === "undefined" ||
-            typeof window.html2canvas !== "function"
-        ) {
-            showToast("PDF generator not available", "error");
-            return;
-        }
-        
-        syncPreview();
-        
-        const previewEl = document.getElementById("receipt-preview");
-        if (!previewEl) {
-            showToast("Preview element not found", "error");
-            return;
-        }
+    function buildReceiptPayload(previewEl, format) {
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+        clone.classList.add("pdf-export");
+        clone.querySelectorAll("[data-exit-preview]").forEach((el) => el.remove());
+        clone.querySelectorAll(".preview-actions").forEach((el) => el.remove());
 
-        // Create a wrapper for PDF export with exact preview styling
-        const exportWrapper = document.createElement("div");
-        exportWrapper.className = "module is-preview pdf-export-wrapper";
-        exportWrapper.setAttribute("aria-hidden", "true");
-        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
-        
-    const clone = previewEl.cloneNode(true);
-    clone.removeAttribute("hidden");
-    clone.setAttribute("data-pdf-clone", "true");
-        
-        // The preview element itself is the document
-        exportWrapper.appendChild(clone);
-        document.body.appendChild(exportWrapper);
+        const wrapper = document.createElement("div");
+        wrapper.className = "pdf-export-wrapper";
+        wrapper.appendChild(clone);
 
-        let filename = state.receiptNumber || "receipt";
-        if (!filename.toLowerCase().endsWith(".pdf")) {
-            filename = `${filename}.pdf`;
-        }
+        const normalizedFormat = format === "jpeg" ? "jpeg" : "pdf";
+        const safeBase = String(state.receiptNumber || "receipt").trim().replace(/\s+/g, "_");
+        const extension = normalizedFormat === "jpeg" ? "jpg" : "pdf";
 
+        return {
+            document_type: "receipt",
+            html: wrapper.outerHTML,
+            filename: `${safeBase}.${extension}`,
+            format: normalizedFormat,
+        };
+    }
+
+    async function downloadReceiptDocument(format) {
         try {
-            showToast("Generating PDF...", "info");
+            syncPreview();
 
-            const A4_PX_WIDTH = 794;
-            const A4_PX_HEIGHT = 1122;
-            clone.style.width = A4_PX_WIDTH + "px";
-            clone.style.maxWidth = A4_PX_WIDTH + "px";
-
-            const canvas = await window.html2canvas(clone, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: "#ffffff",
-                logging: false,
-                width: A4_PX_WIDTH,
-                height: Math.max(A4_PX_HEIGHT, clone.scrollHeight),
-            });
-
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
-                compress: true,
-            });
-
-            const imgData = canvas.toDataURL("image/png");
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            let renderWidth = pdfWidth;
-            let renderHeight = (canvas.height * renderWidth) / canvas.width;
-
-            if (renderHeight > pdfHeight) {
-                const ratio = pdfHeight / renderHeight;
-                renderHeight = pdfHeight;
-                renderWidth = renderWidth * ratio;
+            const previewEl = document.getElementById("receipt-preview");
+            if (!previewEl) {
+                throw new Error("Preview element not found");
             }
 
-            const offsetX = (pdfWidth - renderWidth) / 2;
-            const offsetY = (pdfHeight - renderHeight) / 2;
+            const payload = buildReceiptPayload(previewEl, format);
+            const normalizedFormat = payload.format === "jpeg" ? "jpeg" : "pdf";
 
-            pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
-            pdf.save(filename);
-            showToast("PDF downloaded successfully!");
+            console.log("Sending render request to:", `${API_BASE}/api/pdf/render/`);
+            console.log("Requested format:", normalizedFormat);
+            console.log("Payload size:", JSON.stringify(payload).length, "bytes");
+
+            const response = await fetch(`${API_BASE}/api/pdf/render/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: normalizedFormat === "jpeg" ? "image/jpeg" : "application/pdf",
+                },
+                body: JSON.stringify(payload),
+            }).catch(err => {
+                console.error("Fetch failed:", err);
+                throw new Error(`Network error: ${err.message}. Make sure Django server is running on ${API_BASE}`);
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("Render error response:", errorText);
+                throw new Error(`Failed to generate document: ${response.status} ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = payload.filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("PDF generation error:", error);
-            showToast("Failed to generate PDF: " + error.message, "error");
-        } finally {
-            document.body.removeChild(exportWrapper);
+            console.error("Download document error:", error);
+            throw error;
         }
     }
 
     async function handleSave() {
-        // Handle PDF download
+        // Handle document download
         if (state.isSaving) return;
+
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
-            await downloadReceiptPdf();
-            // Increment the counter after successful PDF download
-            await incrementReceiptNumber();
+            const chosenFormat = await chooseDownloadFormat();
+            if (!chosenFormat) {
+                return;
+            }
+            syncPreview();
+            const reservation = await ensureReceiptNumberReserved();
+            const normalizedFormat = chosenFormat === "jpeg" ? "jpeg" : "pdf";
+            await downloadReceiptDocument(normalizedFormat);
+            const label = normalizedFormat === "jpeg" ? "JPEG" : "PDF";
+            const successMessage = `Receipt downloaded as ${label}!`;
+            if (reservation?.reserved) {
+                showToast(successMessage);
+                if (!state.receiptId) {
+                    state.receiptNumberReserved = false;
+                    await loadNextReceiptNumber();
+                }
+            } else {
+                showToast(`${successMessage} However, a new number could not be reserved.`, "warning");
+                if (!state.receiptId) {
+                    state.receiptNumberReserved = false;
+                    await loadNextReceiptNumber();
+                }
+            }
+        } catch (error) {
+            console.error("Failed to download receipt", error);
+            showToast(error.message || "Failed to download receipt", "error");
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
@@ -360,9 +465,7 @@
         try {
             const data = await callApi(`/receipts/api/${id}/`);
             state.receiptId = data.id;
-            state.receiptNumber = data.receipt_number || state.receiptNumber;
-            elements.number && (elements.number.textContent = state.receiptNumber);
-            setText(elements.previewNumberEls, state.receiptNumber);
+            setReceiptNumber(data.receipt_number || state.receiptNumber, { reserved: true });
             if (inputs.receivedFrom) inputs.receivedFrom.value = data.received_from || "";
             if (inputs.amount) inputs.amount.value = data.amount ?? "";
             if (inputs.paymentMethod) inputs.paymentMethod.value = data.payment_method || "";
@@ -450,31 +553,17 @@
 
     async function loadNextReceiptNumber() {
         // Load the next receipt number from the counter API
+        if (state.receiptNumberReserved || state.receiptId) {
+            return;
+        }
         try {
             const response = await fetch(`${API_BASE}/api/counter/receipt/next/`);
             if (response.ok) {
                 const data = await response.json();
-                state.receiptNumber = data.next_number;
-                elements.number && (elements.number.textContent = state.receiptNumber);
-                setText(elements.previewNumberEls, state.receiptNumber);
+                setReceiptNumber(data.next_number || state.receiptNumber, { reserved: false });
             }
         } catch (error) {
             console.warn("Failed to load next receipt number", error);
-        }
-    }
-
-    async function incrementReceiptNumber() {
-        // Increment the receipt number counter after successful PDF download
-        try {
-            const response = await fetch(`${API_BASE}/api/counter/receipt/next/`, { method: "POST" });
-            if (response.ok) {
-                const data = await response.json();
-                state.receiptNumber = data.next_number;
-                elements.number && (elements.number.textContent = state.receiptNumber);
-                setText(elements.previewNumberEls, state.receiptNumber);
-            }
-        } catch (error) {
-            console.warn("Failed to increment receipt number", error);
         }
     }
 
