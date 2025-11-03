@@ -75,7 +75,11 @@ def create_invoice(request: HttpRequest) -> HttpResponse:
         return _cors(JsonResponse({"errors": form.errors}, status=HTTPStatus.BAD_REQUEST))
     invoice = form.save()
     # Save invoice
-    return _cors(JsonResponse({"id": invoice.pk, "invoice_number": invoice.invoice_number}, status=HTTPStatus.CREATED))
+    return _cors(JsonResponse({
+        "id": invoice.pk,
+        "invoice_number": invoice.invoice_number,
+        "document_number": invoice.invoice_number,
+    }, status=HTTPStatus.CREATED))
 
 
 @csrf_exempt
@@ -92,6 +96,7 @@ def get_invoice(request: HttpRequest, pk: int) -> HttpResponse:
         data = {
             "id": invoice.pk,
             "invoice_number": invoice.invoice_number,
+            "document_number": invoice.invoice_number,
             "customer_name": invoice.customer_name,
             "classification": invoice.classification,
             "issue_date": invoice.issue_date.isoformat() if getattr(invoice, "issue_date", None) else "",
@@ -113,6 +118,7 @@ def get_invoice(request: HttpRequest, pk: int) -> HttpResponse:
         return _cors(JsonResponse({
             "id": invoice.pk,
             "invoice_number": invoice.invoice_number,
+            "document_number": invoice.invoice_number,
         }))
     return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
 

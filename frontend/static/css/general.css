@@ -18,6 +18,11 @@
     --primary: #eab308;
 }
 
+@page {
+    size: A4 portrait;
+    margin: 5mm;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -238,7 +243,7 @@ textarea {
 .is-preview .document-items td,
 .pdf-export-wrapper .document-items th,
 .pdf-export-wrapper .document-items td {
-    border: 2px solid #000000;
+    border: 1px solid rgba(16,24,40,0.12);
     font-weight: 600;
     text-align: center;
     padding: 0.4rem 0.5rem;
@@ -386,27 +391,40 @@ textarea {
     margin-top: 0.5rem;
 }
 
-/* EDIT MODE: A3 size (297mm × 420mm) - Large and readable */
+/* Unified A3 canvas (297mm × 420mm) for edit mode */
+
+/* A3 workspace container - centers the document like MS Word */
+.a4-workspace {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
 .document {
     width: 297mm;
     min-height: 420mm;
-    margin: 0 auto;
+    margin: auto auto;
     background: #ffffff;
     padding: 15mm 20mm;
     box-sizing: border-box;
-    font-size: 1.1rem;
-    /* No borders, no shadows - pure white canvas like MS Word */
+    font-size: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
 }
 
-/* PREVIEW MODE: A4 size (210mm × 297mm) - Print ready */
+/* Preview mode / PDF - A4 size */
 .is-preview .document,
 .pdf-export-wrapper .document {
     width: 210mm;
-    height: 297mm;
-    max-height: 297mm;
-    padding: 8mm 10mm;
-    overflow: auto;
-    font-size: 0.9rem;
+    min-height: 297mm;
+    padding: 12mm 15mm;
+    margin: 0;
+    background: #ffffff;
+    box-shadow: none;
+    border: none;
+    overflow: visible;
 }
 
 .is-preview .document h3,
@@ -425,7 +443,7 @@ textarea {
 
 .is-preview .document p,
 .pdf-export-wrapper .document p {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     margin-bottom: 0.3rem;
 }
 
@@ -601,6 +619,14 @@ textarea {
     display: none;
 }
 
+.module.is-preview .document:not(.document-editable) {
+    display: block;
+}
+
+.module:not(.is-preview) .document:not(.document-editable) {
+    display: none;
+}
+
 /* In preview, hide only the Preview toggle; keep Back to Edit and Download visible */
 .module.is-preview .module-actions [id$="-preview-toggle"] {
     display: none;
@@ -682,97 +708,113 @@ input:disabled, textarea:disabled, select:disabled {
     transform: none;
     box-shadow: none;
 }
+.app-footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+    border-top: 1px solid rgba(0,0,0,0.05);
+    margin-top: 3rem;
+}
 
 /* ============================================
-   PDF EXPORT OPTIMIZATIONS
-   ============================================
-   Ensures PDF output matches preview exactly
+   PDF export alignment
    ============================================ */
 
 .pdf-export-wrapper {
-    background: white;
-    width: 210mm !important;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: transparent;
 }
 
-.pdf-export-wrapper .document {
-    width: 210mm !important;
-    height: 297mm !important;
-    max-height: 297mm !important;
-    padding: 8mm 10mm !important;
-    margin: 0 !important;
-    background: white !important;
-    box-shadow: none !important;
-    border: none !important;
-    overflow: visible !important;
+.pdf-export-wrapper .document,
+.pdf-export .document {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 12mm 11mm;
+    margin: 0;
+    background: #ffffff;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
 }
 
-/* Ensure all text is crisp and black in PDF */
 .pdf-export-wrapper .document * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
-/* Preserve backgrounds in PDF */
-.pdf-export-wrapper .invoice-letterhead,
-.pdf-export-wrapper .receipt-letterhead,
-.pdf-export-wrapper .waybill-letterhead {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    background: #eab308 !important;
-}
-
-/* Ensure borders are preserved */
-.pdf-export-wrapper .document-items th,
-.pdf-export-wrapper .document-items td {
-    border: 2px solid #000000 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-
-/* Page break controls */
-.pdf-export-wrapper .document-items,
-.pdf-export-wrapper .invoice-letterhead,
-.pdf-export-wrapper .receipt-letterhead,
-.pdf-export-wrapper .waybill-letterhead {
+.pdf-export-wrapper .document section,
+.pdf-export-wrapper .document table {
     page-break-inside: avoid;
     break-inside: avoid;
 }
 
-/* Enhanced form field responsiveness and accessibility */
-input, textarea, select {
-    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+/* ============================================
+   Download format modal
+   ============================================ */
+
+.download-format-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    padding: 1.5rem;
 }
 
-input::placeholder,
-textarea::placeholder {
-    color: rgba(85, 96, 112, 0.65);
+.download-format-backdrop.is-hidden {
+    display: none;
 }
 
-input:focus, textarea:focus, select:focus {
+.download-format-dialog {
+    width: min(360px, 100%);
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 2rem 1.75rem 1.5rem;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+    text-align: center;
+}
+
+.download-format-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+}
+
+.download-format-description {
+    margin: 0;
+    color: rgba(15, 23, 42, 0.68);
+    font-size: 0.95rem;
+}
+
+.download-format-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.download-format-actions .button {
+    flex: 1 1 0;
+}
+
+.download-format-cancel {
+    margin-top: 1.25rem;
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+}
+
+.download-format-cancel:hover,
+.download-format-cancel:focus {
+    text-decoration: underline;
     outline: none;
-    border-color: rgba(31,111,235,0.35);
-    box-shadow: 0 0 0 4px rgba(31,111,235,0.12);
-    background: #fff;
-}
-
-input[aria-invalid="true"],
-textarea[aria-invalid="true"],
-select[aria-invalid="true"],
-.is-invalid {
-    border-color: rgba(239,68,68,0.55) !important;
-    box-shadow: 0 0 0 3px rgba(239,68,68,0.18) !important;
-}
-
-input:disabled, textarea:disabled, select:disabled {
-    background: rgba(245,247,250,0.8);
-    color: rgba(85,96,112,0.7);
-    cursor: not-allowed;
-}
-
-.button[disabled], .button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
 }

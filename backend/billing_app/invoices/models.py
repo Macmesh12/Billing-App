@@ -1,7 +1,10 @@
 from decimal import Decimal
+
 from django.db import models
 from django.db import transaction
 from django.utils import timezone
+
+from billing_app.services.counter_store import reserve_document_number
 
 from .services import calculator, numbering
 
@@ -36,7 +39,7 @@ class DocumentCounter(models.Model):
         current = instance.invoice_counter
         instance.invoice_counter += 1
         instance.save()
-        return f"INV-{current:04d}"
+        return f"INV{current:03d}"
     
     @classmethod
     @transaction.atomic
@@ -46,7 +49,7 @@ class DocumentCounter(models.Model):
         current = instance.receipt_counter
         instance.receipt_counter += 1
         instance.save()
-        return f"REC-{current:04d}"
+        return f"REC{current:03d}"
     
     @classmethod
     @transaction.atomic
@@ -56,7 +59,7 @@ class DocumentCounter(models.Model):
         current = instance.waybill_counter
         instance.waybill_counter += 1
         instance.save()
-        return f"WB-{current:04d}"
+        return f"WAY{current:03d}"
     
     @classmethod
     def get_current_counts(cls):
@@ -80,6 +83,7 @@ class Invoice(models.Model):
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     levies = models.JSONField(default=dict, blank=True)
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    document_number = models.CharField(max_length=32, unique=True, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -88,6 +92,8 @@ class Invoice(models.Model):
 
     @property
     def invoice_number(self) -> str:
+        if self.document_number:
+            return self.document_number
         return numbering.format_invoice_number(self.pk)
 
     def recalculate(self) -> None:
@@ -97,6 +103,8 @@ class Invoice(models.Model):
         self.grand_total = totals.grand_total
 
     def save(self, *args, **kwargs):
+        if not self.document_number:
+            self.document_number = reserve_document_number("invoice")
         self.recalculate()
         super().save(*args, **kwargs)
 
