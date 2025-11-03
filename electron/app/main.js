@@ -47,10 +47,18 @@ async function startDjango() {
   const resolvePython = () => {
     // In packaged apps, prefer a bundled interpreter if present
     if (app.isPackaged) {
+      const fs = require('fs');
       if (process.platform === 'win32') {
-        // Prefer venv layout: python\Scripts\python.exe
+        // Try app.asar.unpacked/python first (our bundled venv)
+        const unpackedVenv = path.join(process.resourcesPath, 'app.asar.unpacked', 'python', 'Scripts', 'python.exe');
+        try {
+          if (fs.existsSync(unpackedVenv)) {
+            console.log('[billing-app] Using bundled Python venv:', unpackedVenv);
+            return { cmd: unpackedVenv, prefix: [], shell: false };
+          }
+        } catch {}
+        // Legacy: check process.resourcesPath/python
         const bundledVenv = path.join(process.resourcesPath, 'python', 'Scripts', 'python.exe');
-        const fs = require('fs');
         try {
           if (fs.existsSync(bundledVenv)) {
             return { cmd: bundledVenv, prefix: [], shell: false };
@@ -64,8 +72,15 @@ async function startDjango() {
         } catch {}
       }
       if (process.platform !== 'win32') {
-        const fs = require('fs');
-        // Prefer venv layout: python/bin/python3
+        // Try app.asar.unpacked/python first (our bundled venv)
+        const unpackedVenv = path.join(process.resourcesPath, 'app.asar.unpacked', 'python', 'bin', 'python');
+        try {
+          if (fs.existsSync(unpackedVenv)) {
+            console.log('[billing-app] Using bundled Python venv:', unpackedVenv);
+            return { cmd: unpackedVenv, prefix: [], shell: false };
+          }
+        } catch {}
+        // Legacy: check process.resourcesPath/python
         const bundled3 = path.join(process.resourcesPath, 'python', 'bin', 'python3');
         try {
           if (fs.existsSync(bundled3)) {

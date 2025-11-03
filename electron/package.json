@@ -33,11 +33,13 @@
       "!node_modules/.cache/**",
       "!backend/.venv/**",
       "!backend/**/__pycache__/**",
-      "!backend/**/*.pyc"
+      "!backend/**/*.pyc",
+      "!python/**"
     ],
     "asarUnpack": [
       "backend/**/*",
-      "app/**/*"
+      "app/**/*",
+      "python/**/*"
     ],
     "extraResources": [
       {
@@ -50,11 +52,10 @@
           "!**/*.pyc",
           "!*.log"
         ]
-      }
-      ,
+      },
       {
-        "from": "backend_dist",
-        "to": "app.asar.unpacked/backend",
+        "from": "python",
+        "to": "app.asar.unpacked/python",
         "filter": ["**/*"]
       }
     ],

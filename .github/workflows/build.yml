@@ -28,11 +28,13 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install Python dependencies
+      - name: Create portable Python venv for bundling
         run: |
-          cd backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          cd electron
+          python -m venv python
+          python\Scripts\pip install --upgrade pip
+          python\Scripts\pip install -r ..\backend\requirements.txt
+        shell: cmd
       
       - name: Install Node dependencies
         run: |
@@ -76,16 +78,12 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install Python dependencies
+      - name: Create portable Python venv for bundling
         run: |
-          cd backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      
-      - name: Run Django migrations
-        run: |
-          cd backend
-          python manage.py migrate
+          cd electron
+          python -m venv python
+          python/bin/pip install --upgrade pip
+          python/bin/pip install -r ../backend/requirements.txt
       
       - name: Install Node dependencies
         run: |
@@ -127,16 +125,12 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install Python dependencies
+      - name: Create portable Python venv for bundling
         run: |
-          cd backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      
-      - name: Run Django migrations
-        run: |
-          cd backend
-          python manage.py migrate
+          cd electron
+          python -m venv python
+          python/bin/pip install --upgrade pip
+          python/bin/pip install -r ../backend/requirements.txt
       
       - name: Install Node dependencies
         run: |
