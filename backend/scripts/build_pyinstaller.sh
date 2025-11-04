@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Minimal PyInstaller build script for CI (Linux). Produces a onedir build
-# at backend/dist/billing-backend which we then copy into the electron packaging
-# workspace.
+# at backend/dist/billing-backend for standalone distribution.
 set -euo pipefail
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT_DIR"
