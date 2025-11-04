@@ -1,0 +1,4 @@
+- [x] Phase 1: Ensure PyInstaller installed and entry script ready for packaging
+- [x] Phase 2: Verify Tauri project structure and configuration for sidecar binary
+- [x] Phase 3: Implement frontend JS logic to spawn Django sidecar and consume port
+- [x] Phase 4: Document build/deployment steps and ensure commands ready
