@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "my-desktop-app",
+  "productName": "Billing App",
   "version": "0.1.0",
   "identifier": "com.billing.desktop",
   "build": {
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "my-desktop-app",
+        "title": "Billing App",
         "width": 800,
         "height": 600
       }
@@ -40,15 +40,7 @@
   },
   "plugins": {
     "shell": {
-      "scope": [
-        {
-          "name": "django-app",
-          "cmd": "django-app"
-        }
-      ],
-      "sidecar": [
-        "binaries/django-app"
-      ]
+      "open": true
     }
   }
 }
