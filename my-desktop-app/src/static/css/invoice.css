@@ -549,12 +549,19 @@
 }
 
 /* Email section - gray background, inline elements */
+/* Email row: keep items on a single line, allow horizontal scrolling if needed */
 #invoice-preview-contact .email {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 2rem;
-    flex-wrap: wrap;
+    gap: 1.25rem;
+    flex-wrap: nowrap; /* prevent wrapping */
+    white-space: nowrap;
+    overflow-x: auto; /* scroll when content overflows */
+    -webkit-overflow-scrolling: touch;
+    /* Hide scrollbar but keep scrolling functional */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     width: 100%;
     padding: 0.6rem 1rem;
     background: #d1d5db; /* Gray background */
@@ -565,17 +572,25 @@
 }
 
 #invoice-preview-contact .email span {
-    display: inline;
+    display: inline-block;
     white-space: nowrap;
 }
 
+#invoice-preview-contact .account::-webkit-scrollbar {
+    display: none;
+}
+
 /* Account section - yellow background, inline elements with icon placeholders */
+/* Account row: single horizontal line, horizontal scroll on overflow */
 #invoice-preview-contact .account {
-    display: inline;
+    display: flex;
     justify-content: center;
     align-items: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+    gap: 1rem;
+    flex-wrap: nowrap; /* keep items on one line */
+    white-space: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     width: 100%;
     padding: 0.6rem 1rem;
     background: #fbbf24; /* Yellow background */
@@ -586,7 +601,7 @@
 }
 
 #invoice-preview-contact .account span {
-    display: inline;
+    display: inline-block;
     white-space: nowrap;
 }
 

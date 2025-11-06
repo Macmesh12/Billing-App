@@ -453,7 +453,7 @@
             const response = await fetch(`${API_BASE}/api/counter/waybill/next/`);
             if (response.ok) {
                 const data = await response.json();
-                state.waybillNumber = incrementDocumentNumber(data.next_number);
+                state.waybillNumber = data.next_number;
                 elements.number && (elements.number.textContent = state.waybillNumber);
                 setText(elements.previewNumberEls, state.waybillNumber);
             }
@@ -468,7 +468,7 @@
             const response = await fetch(`${API_BASE}/api/counter/waybill/next/`, { method: "POST" });
             if (response.ok) {
                 const data = await response.json();
-                state.waybillNumber = incrementDocumentNumber(data.next_number);
+                state.waybillNumber = data.next_number;
                 elements.number && (elements.number.textContent = state.waybillNumber);
                 setText(elements.previewNumberEls, state.waybillNumber);
             }

@@ -466,7 +466,7 @@
             const response = await fetch(`${API_BASE}/api/counter/receipt/next/`);
             if (response.ok) {
                 const data = await response.json();
-                state.receiptNumber = incrementDocumentNumber(data.next_number);
+                state.receiptNumber = data.next_number;
                 elements.number && (elements.number.textContent = state.receiptNumber);
                 setText(elements.previewNumberEls, state.receiptNumber);
             }
@@ -481,7 +481,7 @@
             const response = await fetch(`${API_BASE}/api/counter/receipt/next/`, { method: "POST" });
             if (response.ok) {
                 const data = await response.json();
-                state.receiptNumber = incrementDocumentNumber(data.next_number);
+                state.receiptNumber = data.next_number;
                 elements.number && (elements.number.textContent = state.receiptNumber);
                 setText(elements.previewNumberEls, state.receiptNumber);
             }

@@ -4,9 +4,11 @@ from django.urls import include, path
 # Import URL utilities
 from django.views.generic import TemplateView
 # Import generic template view
+from django.views.decorators.csrf import csrf_exempt
 
 # Lazy import to avoid premature model loading
 def get_counter_view(view_name):
+    @csrf_exempt
     def lazy_view(request):
         from billing_app import counter_api
         return getattr(counter_api, view_name)(request)

@@ -321,13 +321,19 @@
     white-space: nowrap;
 }
 
-/* Account section - yellow background, inline elements with icon placeholders */
+/* Account section - keep everything on a single horizontal line; allow horizontal scroll on overflow */
 #waybill-preview-contact .account {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+    gap: 1rem;
+    flex-wrap: nowrap; /* prevent wrapping */
+    white-space: nowrap;
+    overflow-x: auto; /* allow horizontal scroll if needed */
+    -webkit-overflow-scrolling: touch;
+    /* Hide scrollbar but keep scrolling functional */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
     width: 100%;
     padding: 0.6rem 1rem;
     background: #fbbf24; /* Yellow background */
@@ -337,8 +343,12 @@
     margin: 0;
 }
 
+#waybill-preview-contact .account::-webkit-scrollbar {
+    display: none;
+}
+
 #waybill-preview-contact .account span {
-    display: inline;
+    display: inline-block;
     white-space: nowrap;
 }
 

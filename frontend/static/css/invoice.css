@@ -569,24 +569,27 @@
     white-space: nowrap;
 }
 
-/* Account section - yellow background, inline elements with icon placeholders */
+/* Account row: force single-line layout and allow horizontal scrolling on overflow */
 #invoice-preview-contact .account {
-    display: inline;
+    display: flex;
     justify-content: center;
     align-items: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    width: 100%;
-    padding: 0.6rem 1rem;
-    background: #fbbf24; /* Yellow background */
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #1f2937; /* Dark text for readability */
-    margin: 0;
+    gap: 1rem;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Hide scrollbar but keep horizontal scrolling */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#invoice-preview-contact .account::-webkit-scrollbar {
+    display: none;
 }
 
 #invoice-preview-contact .account span {
-    display: inline;
+    display: inline-block;
     white-space: nowrap;
 }
 

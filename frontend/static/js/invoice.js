@@ -732,7 +732,7 @@
             const response = await fetch(`${API_BASE}/api/counter/invoice/next/`);
             if (response.ok) {
                 const data = await response.json();
-                state.invoiceNumber = incrementDocumentNumber(data.next_number);
+                state.invoiceNumber = data.next_number;
                 elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
                 elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
             }
@@ -747,7 +747,7 @@
             const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: "POST" });
             if (response.ok) {
                 const data = await response.json();
-                state.invoiceNumber = incrementDocumentNumber(data.next_number);
+                state.invoiceNumber = data.next_number;
                 elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
                 elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
             }

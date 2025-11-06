@@ -361,33 +361,41 @@
 }
 
 /* Email section - gray background, inline elements */
+/* Email row: enforce single-line layout and allow horizontal scrolling */
 #receipt-preview-contact .email {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 2rem;
-    flex-wrap: wrap;
-    width: 100%;
-    padding: 0.6rem 1rem;
-    background: #d1d5db; /* Gray background */
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #1f2937; /* Dark gray text */
-    margin: 0;
+    gap: 1.25rem;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Hide scrollbar while allowing horizontal scroll */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#receipt-preview-contact .account::-webkit-scrollbar {
+    display: none;
 }
 
 #receipt-preview-contact .email span {
-    display: inline;
+    display: inline-block;
     white-space: nowrap;
 }
 
 /* Account section - yellow background, inline elements with icon placeholders */
+/* Account row: single horizontal line with horizontal scrolling on overflow */
 #receipt-preview-contact .account {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+    gap: 1rem;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     width: 100%;
     padding: 0.6rem 1rem;
     background: #fbbf24; /* Yellow background */
@@ -398,7 +406,7 @@
 }
 
 #receipt-preview-contact .account span {
-    display: inline;
+    display: inline-block;
     white-space: nowrap;
 }
 

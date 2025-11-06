@@ -74,6 +74,18 @@
         isSaving: false,
     };
 
+    // Increment document number helper: preserves prefix and zero-padding
+    function incrementDocumentNumber(numStr) {
+        if (!numStr || typeof numStr !== 'string') return numStr;
+        const m = numStr.match(/^(.*?)(\d+)$/);
+        if (!m) return numStr;
+        const prefix = m[1] || '';
+        const digits = m[2] || '0';
+        const n = parseInt(digits, 10) + 1;
+        const padded = n.toString().padStart(digits.length, '0');
+        return prefix + padded;
+    }
+
     function setText(target, text) {
         if (!target) return;
         if (typeof target.length === "number" && !target.nodeType) {
