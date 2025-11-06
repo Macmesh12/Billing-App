@@ -1,0 +1,71 @@
+(() => {
+    document.addEventListener("DOMContentLoaded", () => {
+        // Setup action card hover effects
+        const actionCards = document.querySelectorAll(".action-card");
+        actionCards.forEach((card) => {
+            const link = card.querySelector("a");
+            if (!link) return;
+            link.addEventListener("focus", () => card.style.transform = "translateY(-4px)");
+            link.addEventListener("blur", () => card.style.transform = "");
+        });
+
+        // Load counts into dashboard counters
+        const config = window.BILLING_APP_CONFIG || {};
+
+        const elements = {
+            invoicesCount: document.getElementById('invoice-count'),
+            receiptsCount: document.getElementById('receipt-count'),
+            waybillsCount: document.getElementById('waybill-count'),
+        };
+        async function loadCounts() {
+            // Determine API base; prefer the Django port exposed by Tauri
+            const apiBase = window.DJANGO_PORT ? `http://127.0.0.1:${window.DJANGO_PORT}` : (config.apiBaseUrl || (window.location ? window.location.origin : "http://127.0.0.1:8765"));
+
+            // If the Django sidecar hasn't reported a port yet, wait for it and then retry
+            if (!window.DJANGO_PORT) {
+                window.addEventListener('django-port-ready', () => {
+                    // Delay slightly to allow backend to be ready
+                    setTimeout(loadCounts, 250);
+                }, { once: true });
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiBase}/api/counter/counts/`);
+                if (response.ok) {
+                    const counts = await response.json();
+                    // Animate the count display
+                    animateCount(elements.invoicesCount, counts.invoices || 0);
+                    animateCount(elements.receiptsCount, counts.receipts || 0);
+                    animateCount(elements.waybillsCount, counts.waybills || 0);
+                }
+            } catch (error) {
+                console.warn('Failed to load document counts', error);
+                // Set to 0 if failed
+                if (elements.invoicesCount) elements.invoicesCount.textContent = '0';
+                if (elements.receiptsCount) elements.receiptsCount.textContent = '0';
+                if (elements.waybillsCount) elements.waybillsCount.textContent = '0';
+            }
+        }
+
+        function animateCount(element, target) {
+            if (!element) return;
+            const duration = 800; // ms
+            const start = 0;
+            const increment = target / (duration / 16); // 60fps
+            let current = start;
+
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = target.toLocaleString();
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current).toLocaleString();
+                }
+            }, 16);
+        }
+
+        loadCounts();
+    });
+})();

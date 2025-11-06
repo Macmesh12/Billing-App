@@ -1,39 +1,87 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="styles.css" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
-    <script type="module" src="/main.js" defer></script>
-  </head>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Billing App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/general.css">
+    <link rel="stylesheet" href="static/css/home.css">
+    <script>
+        // In production the app will be served by the backend, so default
+        // the API base to the current origin. This avoids hardcoding a
+        // development-only URL.
+        window.BILLING_APP_CONFIG = {
+            apiBaseUrl: window.location ? window.location.origin : "http://127.0.0.1:8765"
+        };
+    </script>
+</head>
+<body class="billing-app">
+    <header class="app-header">
+        <div class="app-brand">
+            <h1>Billing App</h1>
+        </div>
+        <nav class="app-nav" aria-label="Primary">
+            <a class="nav-link" href="index.html">Dashboard</a>
+            <a class="nav-link" href="invoice.html">Invoice</a>
+            <a class="nav-link" href="receipt.html">Receipt</a>
+            <a class="nav-link" href="waybill.html">Waybill</a>
+        </nav>
+    </header>
 
-  <body>
-    <main class="container">
-      <h1>Welcome to Tauri</h1>
+    <main class="app-main">
+        <section class="dashboard-counters">
+            <article class="counter-card" onclick="window.location.href='invoice.html'" style="cursor: pointer;">
+                <span class="counter-value" id="invoice-count">0</span>
+                <span class="counter-label">Invoices</span>
+            </article>
 
-      <div class="row">
-        <a href="https://tauri.app" target="_blank">
-          <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
-        </a>
-        <a
-          href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"
-          target="_blank"
-        >
-          <img
-            src="/assets/javascript.svg"
-            class="logo vanilla"
-            alt="JavaScript logo"
-          />
-        </a>
-      </div>
-      <p>Click on the Tauri logo to learn more about the framework</p>
+            <article class="counter-card" onclick="window.location.href='receipt.html'" style="cursor: pointer;">
+                <span class="counter-value" id="receipt-count">0</span>
+                <span class="counter-label">Receipts</span>
+            </article>
 
-      <form class="row" id="greet-form">
-        <input id="greet-input" placeholder="Enter a name..." />
-        <button type="submit">Greet</button>
-      </form>
-      <p id="greet-msg"></p>
+            <article class="counter-card" onclick="window.location.href='waybill.html'" style="cursor: pointer;">
+                <span class="counter-value" id="waybill-count">0</span>
+                <span class="counter-label">Waybills</span>
+            </article>
+        </section>
     </main>
-  </body>
+
+    <footer class="app-footer">
+        <p>&copy; <span id="current-year"></span> Billing App. All rights reserved.</p>
+    </footer>
+
+    <!-- Tauri bootstrap (starts Django sidecar and exposes window.apiFetch / window.DJANGO_PORT) -->
+    <script type="module" src="/main.js" defer></script>
+
+    <!-- App scripts (use static/ paths). home.js will wait for the django-port-ready event if needed. -->
+    <script src="static/js/main.js" defer></script>
+    <script src="static/js/home.js" defer></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("current-year").textContent = new Date().getFullYear();
+        });
+    </script>
+
+    <script>
+        // Provide a default API base and update it when Tauri notifies of backend port.
+        window.BILLING_APP_CONFIG = window.BILLING_APP_CONFIG || {};
+        if (!window.BILLING_APP_CONFIG.apiBaseUrl) {
+            // Default while backend negotiates a port; home.js will retry when django-port-ready fires.
+            window.BILLING_APP_CONFIG.apiBaseUrl = "http://127.0.0.1:8765";
+        }
+
+        window.addEventListener('django-port-ready', (e) => {
+            const port = e?.detail?.port;
+            if (port) {
+                window.BILLING_APP_CONFIG.apiBaseUrl = `http://127.0.0.1:${port}`;
+                console.log('Updated BILLING_APP_CONFIG.apiBaseUrl to', window.BILLING_APP_CONFIG.apiBaseUrl);
+            }
+        });
+    </script>
+</body>
 </html>
