@@ -18,18 +18,30 @@
 
         <div class="recent-hero-actions">
             <div class="recent-controls" role="group" aria-label="Project actions">
-                <button id="project-import" class="button button-secondary" type="button">Open project file</button>
+                <!-- import button moved near the search control below -->
             </div>
         </div>
     </div>
 
-    <div class="recent-list card">
-        <p id="recent-projects-empty" class="empty-state">No recent projects</p>
-        <ul id="recent-projects-list" class="recent-projects" aria-live="polite" hidden></ul>
-    </div>
-
     <div id="project-status" class="project-status" role="status" aria-live="polite"></div>
 </section>
+
+<!-- Recent controls: search + sort (three-dots) -->
+<div class="recent-controls">
+    <input id="recent-search" class="recent-search" type="search" placeholder="Search recent files…" aria-label="Search recent files">
+    <!-- import button positioned above the end of the search field -->
+    <button id="project-import" class="button button-secondary import-btn" type="button">Open project file</button>
+    <div class="recent-actions">
+        <button id="recent-sort-toggle" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="Sort">⋯</button>
+        <ul id="recent-sort-menu" class="sort-menu" hidden>
+            <li data-sort="newest" class="sort-item">Newest</li>
+            <li data-sort="oldest" class="sort-item">Oldest</li>
+        </ul>
+    </div>
+</div>
+
+<p id="recent-projects-empty" class="empty-state">No recent projects</p>
+<ul id="recent-projects-list" class="recent-projects" aria-live="polite" hidden></ul>
 
 {# Counters and footer intentionally removed per user request #}
 

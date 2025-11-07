@@ -1,15 +1,16 @@
 /* Recents hero + project actions */
 .recent-hero {
-    text-align: center;
+    text-align: left;
     padding: 4rem 2rem 2rem;
     max-width: 680px;
-    margin: 0 auto;
+    margin: 0 0;
 }
 
 .recent-hero h2 {
     margin: 0;
     font-size: 2rem;
     letter-spacing: -0.5px;
+   
 }
 
 .recent-subtitle {
@@ -124,13 +125,15 @@
 
 /* Recent projects */
 .recent-projects {
-    max-width: 720px;
-    margin: 3rem auto 5rem;
+    /* make the recents list sit on the page/body and align left */
+    max-width: none;
+    width: 100%;
+    margin: 3rem 0 5rem; /* remove auto centering */
     padding: 0 1.5rem 1.5rem;
-    background: rgba(255,255,255,0.75);
-    border: 1px solid rgba(234,179,8,0.18);
-    border-radius: 20px;
-    box-shadow: 0 12px 30px rgba(15,23,42,0.05);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .recent-projects-header {
@@ -178,12 +181,79 @@
 }
 
 .recent-project-item {
-    background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(254,252,232,0.9));
-    border: 1px solid rgba(234,179,8,0.2);
-    border-radius: 14px;
-    padding: 1rem 1.25rem;
-    box-shadow: 0 6px 18px rgba(234,179,8,0.12);
+    /* flat list row: stack name above meta, left aligned */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0.75rem 0;
+    box-shadow: none;
+    border-bottom: 1px solid rgba(16,24,40,0.04);
 }
+
+.recent-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 1.5rem 0.75rem;
+    max-width: 100%;
+    position: relative; /* container for absolute-positioned import button */
+}
+
+.recent-search {
+    flex: 1 1 320px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgba(16,24,40,0.06);
+    border-radius: 8px;
+    background: transparent;
+}
+
+.recent-hero .import-btn {
+    margin-left: 0.75rem;
+    padding: 0.45rem 0.9rem;
+    min-width: 140px;
+    box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+}
+
+.import-btn {
+    /* default appearance when used elsewhere */
+    padding: 0.45rem 0.9rem;
+    min-width: 140px;
+}
+
+.recent-actions { position: relative; }
+.icon-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.4rem;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+}
+
+.sort-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    background: var(--card-bg, #fff);
+    border: 1px solid rgba(16,24,40,0.06);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(2,6,23,0.08);
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+    z-index: 1200;
+    min-width: 140px;
+}
+
+.sort-item {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+}
+.sort-item:hover { background: rgba(16,24,40,0.03); }
+.sort-item.active { font-weight: 700; }
 
 .recent-project-name {
     margin: 0 0 0.35rem;
@@ -198,6 +268,14 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
+}
+
+/* position the import button above the end of the search input */
+.recent-controls .import-btn {
+    position: absolute;
+    right: 1.5rem; /* align with container padding so it sits at the search end */
+    top: -50px; /* lift it 50px above the search input */
+    z-index: 30;
 }
 
 @media (max-width: 860px) {
@@ -215,6 +293,42 @@
     }
 
     .recent-projects {
-        margin: 2.5rem auto 4rem;
+        margin: 2.5rem 0 4rem;
     }
+    /* on small screens keep import button inline below the search */
+    .import-btn {
+        display: inline-block;
+        margin-left: 0;
+        width: auto;
+        box-shadow: none;
+    }
+}
+
+/* Ensure header layout aligns title and actions */
+.recent-hero-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2.5rem; /* increased gap so actions sit further right from the title */
+    max-width: 980px;
+    margin: 0 auto;
+    position: relative; /* anchor for absolute action placement */
+}
+.recent-hero .recent-hero-actions,
+.recent-hero-actions {
+    margin-left: auto; /* ensure actions are pushed to the far right */
+}
+
+/* absolutely position the import button to the far-right of the header */
+.recent-hero-header .import-btn {
+    position: absolute;
+    right: 2.5rem; /* move button further to the right */
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.recent-hero-title { text-align: left; }
+
+@media (min-width: 1200px) {
+    .recent-hero-header .import-btn { right: 4rem; }
 }

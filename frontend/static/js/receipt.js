@@ -228,6 +228,43 @@
         }
     }
 
+    function serializeReceiptItems() {
+        return state.items
+            .filter((item) => {
+                if (!item) return false;
+                const description = (item.description || "").trim();
+                const quantity = Number(item.quantity) || 0;
+                const price = Number(item.unit_price) || 0;
+                const total = Number(item.total) || 0;
+                return description || quantity || price || total;
+            })
+            .map((item) => ({
+                description: item.description || "",
+                quantity: Number(item.quantity) || 0,
+                unit_price: Number(item.unit_price) || 0,
+                total: Number(item.total) || 0,
+            }));
+    }
+
+    function buildReceiptDocumentPayload(totals) {
+        const safeTotals = totals || calculateTotals();
+        return {
+            receipt_number: state.receiptNumber,
+            issue_date: inputs.issueDate?.value || "",
+            received_from: inputs.receivedFrom?.value || "",
+            customer_name: inputs.customerName?.value || "",
+            approved_by: inputs.approvedBy?.value || "",
+            payment_method: inputs.paymentMethod?.value || "",
+            amount_paid: Number(inputs.amountPaid?.value || 0),
+            items: serializeReceiptItems(),
+            totals: {
+                total_amount: Number(safeTotals.total || 0),
+                amount_paid: Number(safeTotals.amountPaid || 0),
+                balance: Number(safeTotals.balance || 0),
+            },
+        };
+    }
+
     function syncPreview() {
         // Sync preview with form data
         setText(elements.previewNumberEls, state.receiptNumber);
@@ -247,6 +284,7 @@
         setText(elements.previewBalanceEls, `GH₵ ${formatCurrency(totals.balance)}`);
         
         renderPreviewItems();
+        return totals;
     }
 
     async function handlePreview() {
@@ -361,6 +399,47 @@
         }
     }
 
+    async function saveReceiptFile() {
+        if (state.isSaving) return;
+        if (typeof helpers.saveDocument !== "function") {
+            showToast("Save helper unavailable.", "error");
+            return;
+        }
+        state.isSaving = true;
+        elements.saveBtn?.setAttribute("disabled", "disabled");
+        elements.submitBtn?.setAttribute("disabled", "disabled");
+
+        try {
+            showToast("Saving receipt…", "info");
+            const totals = syncPreview() || calculateTotals();
+            const payload = buildReceiptDocumentPayload(totals);
+            const metadata = {
+                number: state.receiptNumber,
+                customer: inputs.customerName?.value || "",
+                amount_paid: Number(totals?.amountPaid || 0),
+                issue_date: inputs.issueDate?.value || "",
+            };
+            const result = await helpers.saveDocument({
+                type: "receipt",
+                defaultName: state.receiptNumber || "receipt",
+                data: payload,
+                metadata,
+            });
+            if (result?.cancelled) {
+                showToast("Receipt save cancelled.", "info");
+                return;
+            }
+            showToast("Receipt saved.", "success");
+        } catch (error) {
+            console.error(error);
+            showToast("Failed to save receipt.", "error");
+        } finally {
+            state.isSaving = false;
+            elements.saveBtn?.removeAttribute("disabled");
+            elements.submitBtn?.removeAttribute("disabled");
+        }
+    }
+
     function getQueryParam(name) {
         // Get URL query param
         return new URLSearchParams(window.location.search).get(name);
@@ -394,16 +473,9 @@
         elements.previewToggleBtn?.addEventListener("click", () => {
             handlePreview();
         });
-        // Save project (.billproj)
-        elements.saveBtn?.addEventListener("click", async () => {
-            try {
-                showToast("Saving project…", "info");
-                await window.BillingApp.exportProject();
-                showToast("Project saved.", "success");
-            } catch (err) {
-                console.error(err);
-                showToast("Failed to save project.", "error");
-            }
+        // Save receipt as .rec document
+        elements.saveBtn?.addEventListener("click", () => {
+            saveReceiptFile();
         });
 
         elements.submitBtn?.addEventListener("click", () => {

@@ -29,7 +29,8 @@ Context:
     </div>
 
     <div class="module-body">
-    <form id="waybill-form" class="document waybill document-editable" method="post" action="{% url 'waybill-form' %}" {% if preview %}hidden{% endif %}>
+        <div class="a4-workspace">
+        <form id="waybill-form" class="document waybill document-editable" method="post" action="{% url 'waybill-form' %}" {% if preview %}hidden{% endif %}>
             {% csrf_token %}
             <header class="document-header">
                 <div>
@@ -129,6 +130,7 @@ Context:
                 </div>
             </section>
         </article>
+        </div>
     </div>
 </section>
 {% endblock %}

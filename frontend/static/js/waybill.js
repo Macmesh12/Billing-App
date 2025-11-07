@@ -157,6 +157,59 @@
             // Always render 10 rows
             for (let index = 0; index < 10; index++) {
                 const item = state.items[index];
+
+    function computeWaybillTotals() {
+        let totalQuantity = 0;
+        let subtotal = 0;
+        state.items.forEach((item) => {
+            if (!item) return;
+            totalQuantity += parseNumber(item.quantity);
+            subtotal += parseNumber(item.total);
+        });
+        return {
+            total_quantity: totalQuantity,
+            subtotal,
+        };
+    }
+
+    function serializeWaybillItems() {
+        return state.items
+            .filter((item) => {
+                if (!item) return false;
+                const desc = (item.description || "").trim();
+                const quantity = parseNumber(item.quantity);
+                const price = parseNumber(item.unit_price);
+                const total = parseNumber(item.total);
+                return desc || quantity || price || total;
+            })
+            .map((item) => ({
+                description: item.description || "",
+                quantity: parseNumber(item.quantity),
+                unit_price: parseNumber(item.unit_price),
+                total: parseNumber(item.total),
+            }));
+    }
+
+    function buildWaybillDocumentPayload(totals) {
+        const safeTotals = totals || computeWaybillTotals();
+        return {
+            waybill_number: state.waybillNumber,
+            issue_date: inputs.issueDate?.value || "",
+            customer_name: inputs.customer?.value || "",
+            destination: inputs.destination?.value || "",
+            driver_name: inputs.driver?.value || "",
+            receiver_name: inputs.receiver?.value || "",
+            note: inputs.note?.value || "",
+            delivery_date: inputs.deliveryDate?.value || "",
+            received_date: inputs.receivedDateText?.value || "",
+            contact: inputs.contact?.value || "",
+            items: serializeWaybillItems(),
+            totals: {
+                total_quantity: Number(safeTotals.total_quantity || 0),
+                subtotal: Number(safeTotals.subtotal || 0),
+            },
+        };
+    }
                 const previewRow = document.createElement("tr");
                 
                 if (item) {
@@ -237,6 +290,7 @@
         setText(elements.previewReceivedDateEls, valueOrPlaceholder(inputs.receivedDateText, "—"));
     setText(elements.previewContactEls, valueOrPlaceholder(inputs.contact, "DELIVERED BY SPAQUELS \u2022 CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719"));
         updatePreviewItems();
+        return computeWaybillTotals();
     }
 
     async function handlePreview() {
@@ -351,6 +405,46 @@
         }
     }
 
+    async function saveWaybillFile() {
+        if (state.isSaving) return;
+        if (typeof helpers.saveDocument !== "function") {
+            showToast("Save helper unavailable.", "error");
+            return;
+        }
+        state.isSaving = true;
+        elements.saveBtn?.setAttribute("disabled", "disabled");
+        elements.submitBtn?.setAttribute("disabled", "disabled");
+
+        try {
+            showToast("Saving waybill…", "info");
+            const totals = syncPreview() || computeWaybillTotals();
+            const payload = buildWaybillDocumentPayload(totals);
+            const metadata = {
+                number: state.waybillNumber,
+                customer: inputs.customer?.value || "",
+                destination: inputs.destination?.value || "",
+            };
+            const result = await helpers.saveDocument({
+                type: "waybill",
+                defaultName: state.waybillNumber || "waybill",
+                data: payload,
+                metadata,
+            });
+            if (result?.cancelled) {
+                showToast("Waybill save cancelled.", "info");
+                return;
+            }
+            showToast("Waybill saved.", "success");
+        } catch (error) {
+            console.error(error);
+            showToast("Failed to save waybill.", "error");
+        } finally {
+            state.isSaving = false;
+            elements.saveBtn?.removeAttribute("disabled");
+            elements.submitBtn?.removeAttribute("disabled");
+        }
+    }
+
     function getQueryParam(name) {
         // Get URL query param
         return new URLSearchParams(window.location.search).get(name);
@@ -433,16 +527,9 @@
         elements.previewToggleBtn?.addEventListener("click", () => {
             handlePreview();
         });
-        // Save project (.billproj)
-        elements.saveBtn?.addEventListener("click", async () => {
-            try {
-                showToast("Saving project…", "info");
-                await window.BillingApp.exportProject();
-                showToast("Project saved.", "success");
-            } catch (err) {
-                console.error(err);
-                showToast("Failed to save project.", "error");
-            }
+        // Save waybill as .way document
+        elements.saveBtn?.addEventListener("click", () => {
+            saveWaybillFile();
         });
 
         elements.submitBtn?.addEventListener("click", () => {

@@ -93,6 +93,216 @@
             });
         },
     };
+
+    const RECENTS_STORAGE_KEY = "billingapp.recents.v1";
+    const LEGACY_RECENT_KEYS = ["billingapp.recentProjects"];
+    const RECENTS_MAX_ITEMS = 50;
+
+    const extensionForType = (type) => {
+        switch ((type || "").toLowerCase()) {
+            case "invoice":
+                return "inv";
+            case "receipt":
+                return "rec";
+            case "waybill":
+                return "way";
+            case "project":
+                return "billproj";
+            default:
+                return "dat";
+        }
+    };
+
+    const ensureExtension = (name, ext) => {
+        const safeExt = (ext || "").replace(/^\./, "").toLowerCase();
+        if (!name || !name.trim()) {
+            return `document.${safeExt || "dat"}`;
+        }
+        const trimmed = name.trim();
+        return trimmed.toLowerCase().endsWith(`.${safeExt}`) ? trimmed : `${trimmed}.${safeExt}`;
+    };
+
+    const dispatchRecentsChanged = (list) => {
+        try {
+            window.dispatchEvent(new CustomEvent("billingapp:recents-changed", { detail: list }));
+        } catch (error) {
+            console.warn("Failed to dispatch recents change", error);
+        }
+    };
+
+    const readJSON = (key) => {
+        try {
+            const raw = window.localStorage?.getItem(key);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : null;
+        } catch (error) {
+            console.warn("Failed to read", key, error);
+            return null;
+        }
+    };
+
+    const writeJSON = (key, value) => {
+        try {
+            window.localStorage?.setItem(key, JSON.stringify(value));
+        } catch (error) {
+            console.warn("Failed to write", key, error);
+        }
+    };
+
+    const migrateLegacyRecents = () => {
+        const migrated = [];
+        LEGACY_RECENT_KEYS.forEach((legacyKey) => {
+            const legacyItems = readJSON(legacyKey);
+            if (legacyItems && legacyItems.length) {
+                legacyItems.forEach((entry) => {
+                    migrated.push({
+                        name: entry?.name || "Billing project",
+                        path: entry?.path || null,
+                        type: "project",
+                        extension: "billproj",
+                        lastAction: entry?.lastAction || "export",
+                        timestamp: Number(entry?.timestamp) || Date.now(),
+                    });
+                });
+            }
+            try {
+                window.localStorage?.removeItem(legacyKey);
+            } catch (error) {
+                /* ignore */
+            }
+        });
+        return migrated;
+    };
+
+    const normalizeRecentEntry = (entry) => {
+        const type = (entry?.type || "project").toLowerCase();
+        const extension = entry?.extension || extensionForType(type);
+        return {
+            name: entry?.name || `Untitled ${type}`,
+            path: entry?.path || null,
+            type,
+            extension,
+            lastAction: entry?.lastAction || "save",
+            timestamp: Number(entry?.timestamp) || Date.now(),
+            metadata: entry?.metadata || null,
+        };
+    };
+
+    const recentsStore = (() => {
+        const load = () => {
+            let list = readJSON(RECENTS_STORAGE_KEY);
+            if (!list) {
+                const migrated = migrateLegacyRecents();
+                if (migrated.length) {
+                    migrated.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+                    writeJSON(RECENTS_STORAGE_KEY, migrated);
+                    dispatchRecentsChanged(migrated);
+                    return migrated;
+                }
+                list = [];
+            }
+            return list.map(normalizeRecentEntry);
+        };
+
+        const save = (list) => {
+            const normalized = list.map(normalizeRecentEntry);
+            writeJSON(RECENTS_STORAGE_KEY, normalized);
+            dispatchRecentsChanged(normalized);
+            return normalized;
+        };
+
+        const add = (entry) => {
+            const normalized = normalizeRecentEntry(entry);
+            const existing = load();
+            const key = normalized.path ? normalized.path.toLowerCase() : `${normalized.type}:${normalized.name}`.toLowerCase();
+            const filtered = existing.filter((item) => {
+                const itemKey = item.path ? item.path.toLowerCase() : `${item.type}:${item.name}`.toLowerCase();
+                return itemKey !== key;
+            });
+            const next = [normalized, ...filtered].slice(0, RECENTS_MAX_ITEMS);
+            save(next);
+            return normalized;
+        };
+
+        const clear = () => save([]);
+
+        return { load, save, add, clear };
+    })();
+
+    helpers.recents = {
+        load: () => recentsStore.load().slice(),
+        save: (list) => recentsStore.save(Array.isArray(list) ? list : []),
+        add: (entry) => recentsStore.add(entry),
+        clear: () => recentsStore.clear(),
+    };
+
+    helpers.recordRecent = (entry) => recentsStore.add(entry);
+
+    helpers.ensureExtension = ensureExtension;
+    helpers.extensionForType = extensionForType;
+    const sharedTextEncoder = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
+    const supportsFilePicker = () => typeof window.showSaveFilePicker === "function";
+
+    const basename = (value) => {
+        if (!value) return "";
+        return value.split(/[\\/]/).pop() || value;
+    };
+
+    const ensureUint8Array = async (data, mimeType = "application/octet-stream") => {
+        if (data instanceof Uint8Array) return data;
+        if (data instanceof ArrayBuffer) return new Uint8Array(data);
+        if (data instanceof Blob) {
+            const buffer = await data.arrayBuffer();
+            return new Uint8Array(buffer);
+        }
+        if (typeof data === "string") {
+            if (sharedTextEncoder) return sharedTextEncoder.encode(data);
+            return new TextEncoder().encode(data);
+        }
+        if (data == null) {
+            return new Uint8Array();
+        }
+        return new Uint8Array((await new Blob([data], { type: mimeType }).arrayBuffer()));
+    };
+
+    const saveWithFilePicker = async ({ blob, suggestedName, description, extension, mimeType }) => {
+        if (!supportsFilePicker()) return null;
+        const ext = (extension || "").replace(/^\./, "");
+        const suggested = ensureExtension(suggestedName || "document", ext || "dat");
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: suggested,
+                types: [
+                    {
+                        description: description || "Billing App File",
+                        accept: { [mimeType || blob.type || "application/octet-stream"]: [`.${ext}`] },
+                    },
+                ],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            return { name: handle.name || suggested };
+        } catch (error) {
+            if (error?.name === "AbortError" || error?.name === "SecurityError") {
+                return null;
+            }
+            throw error;
+        }
+    };
+
+    const downloadViaAnchor = (blob, filename) => {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+    };
+
     // Zoom controls for document workspace
     (function initZoomControls() {
     const ZOOM_STEP = 0.1;
@@ -136,12 +346,12 @@
             if (!workspace) return;
             const clamped = clamp(value);
             workspace.style.setProperty('--zoom-level', clamped);
-            // apply transform; keep transform-origin at top center so page scales uniformly
+            // apply transform; use center origin so scaled document stays centered
             workspace.style.transform = `scale(${clamped})`;
-            workspace.style.transformOrigin = 'top center';
-            // ensure the parent can scroll when scaled
+            workspace.style.transformOrigin = 'center center';
+            // prefer hiding overflow on the parent so scrollbars don't appear while zooming
             const parent = workspace.parentElement;
-            if (parent) parent.style.overflow = 'auto';
+            if (parent) parent.style.overflow = 'hidden';
         }
 
         function computeFitZoom(moduleEl, workspace) {
@@ -284,6 +494,85 @@
             bindShortcuts(moduleEl, workspace);
         });
     })();
+    helpers.saveDocument = async function ({ type, defaultName, data, metadata = {}, wrap = true }) {
+        if (!type) throw new Error("Document type is required");
+        const docType = type.toLowerCase();
+        const extension = extensionForType(docType) || "dat";
+        const timestamp = Date.now();
+        const label = docType.charAt(0).toUpperCase() + docType.slice(1);
+        const baseName = defaultName && defaultName.trim() ? defaultName.trim() : `${docType}-${new Date(timestamp).toISOString().slice(0, 10)}`;
+        const suggestedName = ensureExtension(baseName, extension);
+        const envelope = wrap === false ? data : {
+            schema_version: 1,
+            type: docType,
+            saved_at: new Date(timestamp).toISOString(),
+            metadata,
+            data,
+        };
+        const content = typeof envelope === "string" ? envelope : JSON.stringify(envelope, null, 2);
+        const mimeType = "application/json";
+        const blob = new Blob([content], { type: mimeType });
+
+        if (window.__TAURI__?.dialog?.save && window.__TAURI__?.fs?.writeBinaryFile) {
+            const { dialog, fs } = window.__TAURI__;
+            let savePath = await dialog.save({
+                defaultPath: suggestedName,
+                filters: [{ name: `${label} File`, extensions: [extension] }],
+            });
+            if (!savePath) return { cancelled: true };
+            if (!savePath.toLowerCase().endsWith(`.${extension}`)) {
+                savePath = `${savePath}.${extension}`;
+            }
+            const bytes = await ensureUint8Array(content, mimeType);
+            await fs.writeBinaryFile({ path: savePath, contents: bytes });
+            const savedName = basename(savePath) || suggestedName;
+            helpers.recordRecent({
+                name: savedName,
+                path: savePath,
+                type: docType,
+                extension,
+                lastAction: "save",
+                timestamp,
+                metadata,
+            });
+            return { path: savePath, name: savedName };
+        }
+
+        if (supportsFilePicker()) {
+            const result = await saveWithFilePicker({
+                blob,
+                suggestedName,
+                description: `${label} Document`,
+                extension,
+                mimeType,
+            });
+            if (!result) return { cancelled: true };
+            const savedName = ensureExtension(result.name, extension);
+            helpers.recordRecent({
+                name: savedName,
+                path: null,
+                type: docType,
+                extension,
+                lastAction: "save",
+                timestamp,
+                metadata,
+            });
+            return { path: null, name: savedName };
+        }
+
+        downloadViaAnchor(blob, suggestedName);
+        helpers.recordRecent({
+            name: suggestedName,
+            path: null,
+            type: docType,
+            extension,
+            lastAction: "save",
+            timestamp,
+            metadata,
+        });
+        return { path: null, name: suggestedName };
+    };
+
     // Export project helper: requests a .billproj archive from the backend
     helpers.exportProject = async function () {
         const apiBase = (window.BILLING_APP_CONFIG && window.BILLING_APP_CONFIG.apiBaseUrl) || (window.location && window.location.origin) || "";
@@ -293,34 +582,77 @@
         if (!resp.ok) throw new Error(`Export failed: ${resp.status}`);
         const arrayBuffer = await resp.arrayBuffer();
 
-        // determine filename from Content-Disposition or fallback
         const disposition = resp.headers.get("Content-Disposition") || "";
-        let filename = "BillingApp-" + new Date().toISOString().replace(/[.:]/g, "-") + ".billproj";
-        const m = disposition.match(/filename\*?=(?:UTF-8''|\")?([^;\"]+)/i);
-        if (m && m[1]) {
-            try { filename = decodeURIComponent(m[1].replace(/\"/g, "")); } catch (e) { filename = m[1].replace(/\"/g, ""); }
+        const extension = "billproj";
+        let filename = `BillingApp-${new Date().toISOString().replace(/[.:]/g, "-")}`;
+        const match = disposition.match(/filename\*?=(?:UTF-8''|\")?([^;\"]+)/i);
+        if (match && match[1]) {
+            try {
+                filename = decodeURIComponent(match[1].replace(/\"/g, ""));
+            } catch (error) {
+                filename = match[1].replace(/\"/g, "");
+            }
         }
+        const suggestedName = ensureExtension(filename, extension);
+        const mimeType = "application/x-billing-project";
+        const blob = new Blob([arrayBuffer], { type: mimeType });
+        const timestamp = Date.now();
 
-        // Tauri: use native dialog & fs if available
-        if (window.__TAURI__ && window.__TAURI__.dialog && window.__TAURI__.fs && typeof window.__TAURI__.fs.writeBinaryFile === 'function') {
+        if (window.__TAURI__?.dialog?.save && window.__TAURI__?.fs?.writeBinaryFile) {
             const { dialog, fs } = window.__TAURI__;
-            const savePath = await dialog.save({ defaultPath: filename, filters: [{ name: 'Billing Project', extensions: ['billproj'] }] });
+            let savePath = await dialog.save({
+                defaultPath: suggestedName,
+                filters: [{ name: "Billing Project", extensions: [extension] }],
+            });
             if (!savePath) return { cancelled: true };
-            await fs.writeBinaryFile({ path: savePath, contents: new Uint8Array(arrayBuffer) });
-            return { path: savePath, name: filename };
+            if (!savePath.toLowerCase().endsWith(`.${extension}`)) {
+                savePath = `${savePath}.${extension}`;
+            }
+            const contents = await ensureUint8Array(arrayBuffer, mimeType);
+            await fs.writeBinaryFile({ path: savePath, contents });
+            const savedName = basename(savePath) || suggestedName;
+            helpers.recordRecent({
+                name: savedName,
+                path: savePath,
+                type: "project",
+                extension,
+                lastAction: "export",
+                timestamp,
+            });
+            return { path: savePath, name: savedName };
         }
 
-        // Browser fallback: download blob
-        const blob = new Blob([arrayBuffer], { type: 'application/x-billing-project' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        return { path: null, name: filename };
+        if (supportsFilePicker()) {
+            const result = await saveWithFilePicker({
+                blob,
+                suggestedName,
+                description: "Billing Project",
+                extension,
+                mimeType,
+            });
+            if (!result) return { cancelled: true };
+            const savedName = ensureExtension(result.name, extension);
+            helpers.recordRecent({
+                name: savedName,
+                path: null,
+                type: "project",
+                extension,
+                lastAction: "export",
+                timestamp,
+            });
+            return { path: null, name: savedName };
+        }
+
+        downloadViaAnchor(blob, suggestedName);
+        helpers.recordRecent({
+            name: suggestedName,
+            path: null,
+            type: "project",
+            extension,
+            lastAction: "export",
+            timestamp,
+        });
+        return { path: null, name: suggestedName };
     };
 
     window.BillingApp = helpers;

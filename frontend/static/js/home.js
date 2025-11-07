@@ -1,9 +1,23 @@
 (() => {
-    const RECENT_STORAGE_KEY = "billingapp.recentProjects";
+    const helpers = window.BillingApp || {};
+    const recentsStore = helpers.recents;
+    const LEGACY_RECENT_STORAGE_KEY = "billingapp.recentProjects";
+    const TYPE_LABELS = {
+        project: "Project",
+        invoice: "Invoice",
+        receipt: "Receipt",
+        waybill: "Waybill",
+    };
+
     const state = {
         recents: [],
+        filteredRecents: [],
         isBusy: false,
         elements: {},
+        filters: {
+            search: "",
+            sort: "newest",
+        },
     };
 
     const isTauri = Boolean(window.__TAURI__);
@@ -49,9 +63,9 @@
         });
     };
 
-    const loadRecents = () => {
+    const legacyLoadRecents = () => {
         try {
-            const raw = window.localStorage?.getItem(RECENT_STORAGE_KEY);
+            const raw = window.localStorage?.getItem(LEGACY_RECENT_STORAGE_KEY);
             if (!raw) return [];
             const parsed = JSON.parse(raw);
             return Array.isArray(parsed) ? parsed : [];
@@ -61,12 +75,35 @@
         }
     };
 
-    const saveRecents = () => {
+    const legacySaveRecents = (list) => {
         try {
-            window.localStorage?.setItem(RECENT_STORAGE_KEY, JSON.stringify(state.recents));
+            window.localStorage?.setItem(LEGACY_RECENT_STORAGE_KEY, JSON.stringify(list));
         } catch (error) {
             console.warn("Failed to persist recent projects", error);
         }
+    };
+
+    const loadRecents = () => {
+        if (recentsStore?.load) {
+            try {
+                return recentsStore.load();
+            } catch (error) {
+                console.warn("Failed to load recents from shared store", error);
+            }
+        }
+        return legacyLoadRecents();
+    };
+
+    const saveRecents = (list) => {
+        if (recentsStore?.save) {
+            try {
+                recentsStore.save(Array.isArray(list) ? list : []);
+                return;
+            } catch (error) {
+                console.warn("Failed to save recents to shared store", error);
+            }
+        }
+        legacySaveRecents(Array.isArray(list) ? list : state.recents);
     };
 
     const formatTimestamp = (timestamp) => {
@@ -77,13 +114,48 @@
         }
     };
 
-    const renderRecents = () => {
+    const formatAmount = (value) => {
+        if (!Number.isFinite(value)) return null;
+        if (typeof helpers.formatCurrency === "function") {
+            return helpers.formatCurrency(value);
+        }
+        const formatter = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return formatter.format(value);
+    };
+
+    const describeAction = (entry) => {
+        const action = (entry?.lastAction || "save").toLowerCase();
+        let verb = "Saved";
+        if (action === "import") verb = "Imported";
+        else if (action === "open") verb = "Opened";
+        return `${verb} ${formatTimestamp(entry?.timestamp)}`.trim();
+    };
+
+    const buildMetadataSummaries = (entry) => {
+        const summaries = [];
+        if (!entry) return summaries;
+        const metadata = entry.metadata || {};
+        if (entry.type === "invoice") {
+            if (metadata.customer) summaries.push(`Customer: ${metadata.customer}`);
+            if (Number.isFinite(metadata.grand_total)) summaries.push(`Total: GH₵ ${formatAmount(metadata.grand_total)}`);
+        } else if (entry.type === "receipt") {
+            if (metadata.customer) summaries.push(`Customer: ${metadata.customer}`);
+            if (Number.isFinite(metadata.amount_paid)) summaries.push(`Amount paid: GH₵ ${formatAmount(metadata.amount_paid)}`);
+        } else if (entry.type === "waybill") {
+            if (metadata.customer) summaries.push(`Customer: ${metadata.customer}`);
+            if (metadata.destination) summaries.push(`Destination: ${metadata.destination}`);
+        }
+        return summaries;
+    };
+
+    function renderRecents() {
         const listEl = state.elements.recentsList;
         const emptyEl = state.elements.recentsEmpty;
         if (!listEl || !emptyEl) return;
 
         listEl.innerHTML = "";
-        if (!state.recents.length) {
+        const entries = state.filteredRecents;
+        if (!entries.length) {
             listEl.hidden = true;
             emptyEl.hidden = false;
             return;
@@ -92,42 +164,97 @@
         emptyEl.hidden = true;
         listEl.hidden = false;
 
-        state.recents.forEach((entry) => {
+        entries.forEach((entry) => {
             const li = document.createElement("li");
             li.className = "recent-project-item";
 
-            const nameEl = document.createElement("p");
-            nameEl.className = "recent-project-name";
-            nameEl.textContent = entry.name || "Untitled project";
+            const nameWrap = document.createElement("p");
+            nameWrap.className = "recent-project-name";
+
+            const nameText = document.createElement("span");
+            nameText.className = "recent-project-name-text";
+            nameText.textContent = entry?.name || "Untitled file";
+
+            const typeBadge = document.createElement("span");
+            typeBadge.className = `recent-project-type recent-project-type--${entry?.type || "project"}`;
+            typeBadge.textContent = TYPE_LABELS[entry?.type] || "File";
+
+            nameWrap.append(nameText, typeBadge);
 
             const metaEl = document.createElement("p");
             metaEl.className = "recent-project-meta";
 
             const actionSpan = document.createElement("span");
-            actionSpan.textContent = `${entry.lastAction === "export" ? "Saved" : "Opened"} ${formatTimestamp(entry.timestamp)}`;
+            actionSpan.textContent = describeAction(entry);
             metaEl.appendChild(actionSpan);
 
-            if (entry.path) {
+            if (entry?.path) {
                 const pathSpan = document.createElement("span");
+                pathSpan.className = "recent-project-path";
                 pathSpan.textContent = entry.path;
                 metaEl.appendChild(pathSpan);
             }
 
-            li.append(nameEl, metaEl);
+            buildMetadataSummaries(entry).forEach((text) => {
+                if (!text) return;
+                const metaSpan = document.createElement("span");
+                metaSpan.textContent = text;
+                metaEl.appendChild(metaSpan);
+            });
+
+            li.append(nameWrap, metaEl);
             listEl.appendChild(li);
         });
-    };
+    }
+
+    function applyFilters() {
+        const searchTerm = state.filters.search;
+        const sortOrder = state.filters.sort;
+        let filtered = state.recents.slice();
+
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            filtered = filtered.filter((entry) => {
+                const haystacks = [
+                    entry?.name?.toLowerCase?.() || "",
+                    entry?.type?.toLowerCase?.() || "",
+                    entry?.extension?.toLowerCase?.() || "",
+                    entry?.path?.toLowerCase?.() || "",
+                ];
+                const metadataValues = entry?.metadata ? Object.values(entry.metadata).map((value) => String(value).toLowerCase()) : [];
+                return [...haystacks, ...metadataValues].some((value) => value && value.includes(term));
+            });
+        }
+
+        filtered.sort((a, b) => {
+            const diff = Number(a?.timestamp || 0) - Number(b?.timestamp || 0);
+            return sortOrder === "oldest" ? diff : -diff;
+        });
+
+        state.filteredRecents = filtered;
+        renderRecents();
+    }
+
+    function setRecents(list) {
+        state.recents = Array.isArray(list) ? list.map((entry) => entry) : [];
+        applyFilters();
+    }
 
     const rememberProject = (entry) => {
+        if (recentsStore?.add) {
+            recentsStore.add(entry);
+            setRecents(loadRecents());
+            return;
+        }
         const key = entry.path || entry.name;
         const index = state.recents.findIndex((item) => (item.path || item.name) === key);
         if (index >= 0) {
             state.recents.splice(index, 1);
         }
         state.recents.unshift(entry);
-        state.recents = state.recents.slice(0, 5);
-        saveRecents();
-        renderRecents();
+        state.recents = state.recents.slice(0, 20);
+        saveRecents(state.recents);
+        setRecents(state.recents);
     };
 
     const extractFilename = (disposition) => {
@@ -155,6 +282,27 @@
 
     const exportProject = async () => {
         if (state.isBusy) return;
+        if (typeof helpers.exportProject === "function") {
+            try {
+                setBusy(true);
+                setStatus("Preparing project archive…");
+                const result = await helpers.exportProject();
+                if (!result || result.cancelled) {
+                    setStatus("Save cancelled.");
+                    return;
+                }
+                const message = result.path ? `Saved project to ${result.path}` : `Downloaded ${result.name}`;
+                setStatus(message, "success");
+                setRecents(loadRecents());
+            } catch (error) {
+                console.error(error);
+                setStatus("Failed to export project.", "error");
+            } finally {
+                setBusy(false);
+            }
+            return;
+        }
+
         const apiBase = getApiBase();
         if (!apiBase) {
             setStatus("API endpoint unavailable.", "error");
@@ -189,6 +337,8 @@
                 rememberProject({
                     name: filename,
                     path: savePath,
+                    type: "project",
+                    extension: "billproj",
                     lastAction: "export",
                     timestamp: Date.now(),
                 });
@@ -199,10 +349,13 @@
                 rememberProject({
                     name: filename,
                     path: null,
+                    type: "project",
+                    extension: "billproj",
                     lastAction: "export",
                     timestamp: Date.now(),
                 });
             }
+            setRecents(loadRecents());
         } catch (error) {
             console.error(error);
             setStatus("Failed to export project.", "error");
@@ -296,10 +449,14 @@
     };
 
     const clearRecents = () => {
-        state.recents = [];
-        saveRecents();
-        renderRecents();
-        setStatus("Recent projects cleared.");
+        if (recentsStore?.clear) {
+            recentsStore.clear();
+        } else {
+            state.recents = [];
+            saveRecents([]);
+        }
+        setRecents([]);
+        setStatus("Recent files cleared.");
     };
 
     const loadCounts = async () => {
@@ -355,14 +512,73 @@
             recentsList: document.getElementById("recent-projects-list"),
             recentsEmpty: document.getElementById("recent-projects-empty"),
             clearRecentsBtn: document.getElementById("recent-projects-clear"),
+            searchInput: document.getElementById("recent-search"),
+            sortSelect: document.getElementById("recent-sort"),
+            sortToggle: document.getElementById("recent-sort-toggle"),
+            sortMenu: document.getElementById("recent-sort-menu"),
         };
 
-        state.recents = loadRecents();
-        renderRecents();
+        setRecents(loadRecents());
 
         state.elements.exportBtn?.addEventListener("click", exportProject);
         state.elements.importBtn?.addEventListener("click", handleImportClick);
         state.elements.clearRecentsBtn?.addEventListener("click", clearRecents);
+        state.elements.searchInput?.addEventListener("input", (event) => {
+            state.filters.search = (event.target.value || "").trim().toLowerCase();
+            applyFilters();
+        });
+
+        // If a native select exists (legacy), keep it working. Otherwise wire the
+        // three-dots menu we added in the templates.
+        if (state.elements.sortSelect) {
+            state.elements.sortSelect.addEventListener("change", (event) => {
+                const value = (event.target.value || "newest").toLowerCase();
+                state.filters.sort = value === "oldest" ? "oldest" : "newest";
+                applyFilters();
+            });
+        } else if (state.elements.sortToggle && state.elements.sortMenu) {
+            const toggle = state.elements.sortToggle;
+            const menu = state.elements.sortMenu;
+            // open/close menu
+            toggle.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const open = menu.hasAttribute('hidden') ? false : true;
+                if (open) {
+                    menu.setAttribute('hidden', 'hidden');
+                    toggle.setAttribute('aria-expanded', 'false');
+                } else {
+                    menu.removeAttribute('hidden');
+                    toggle.setAttribute('aria-expanded', 'true');
+                }
+            });
+            // menu selection
+            menu.addEventListener('click', (ev) => {
+                const li = ev.target.closest('.sort-item');
+                if (!li) return;
+                const value = (li.dataset.sort || 'newest').toLowerCase();
+                state.filters.sort = value === 'oldest' ? 'oldest' : 'newest';
+                // mark active
+                menu.querySelectorAll('.sort-item').forEach((node) => node.classList.remove('active'));
+                li.classList.add('active');
+                menu.setAttribute('hidden', 'hidden');
+                toggle.setAttribute('aria-expanded', 'false');
+                applyFilters();
+            });
+            // close menu when clicking elsewhere
+            document.addEventListener('click', (ev) => {
+                if (!menu) return;
+                if (menu.hasAttribute('hidden')) return;
+                if (ev.target === toggle || toggle.contains(ev.target) || menu.contains(ev.target)) return;
+                menu.setAttribute('hidden', 'hidden');
+                toggle.setAttribute('aria-expanded', 'false');
+            });
+            // initialise active item
+            const active = menu.querySelector(`[data-sort="${state.filters.sort}"]`);
+            if (active) {
+                menu.querySelectorAll('.sort-item').forEach((n) => n.classList.remove('active'));
+                active.classList.add('active');
+            }
+        }
         state.elements.importInput?.addEventListener("change", (event) => {
             const inputEl = event.target;
             if (!inputEl || !("files" in inputEl)) {

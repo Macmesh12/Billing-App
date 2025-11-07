@@ -127,10 +127,10 @@
     max-width: 720px;
     margin: 3rem auto 5rem;
     padding: 0 1.5rem 1.5rem;
-    background: rgba(255,255,255,0.75);
-    border: 1px solid rgba(234,179,8,0.18);
-    border-radius: 20px;
-    box-shadow: 0 12px 30px rgba(15,23,42,0.05);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .recent-projects-header {
@@ -178,11 +178,12 @@
 }
 
 .recent-project-item {
-    background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(254,252,232,0.9));
-    border: 1px solid rgba(234,179,8,0.2);
-    border-radius: 14px;
-    padding: 1rem 1.25rem;
-    box-shadow: 0 6px 18px rgba(234,179,8,0.12);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0.75rem 0;
+    box-shadow: none;
+    border-bottom: 1px solid rgba(16,24,40,0.04);
 }
 
 .recent-project-name {
