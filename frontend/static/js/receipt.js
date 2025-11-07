@@ -1,4 +1,21 @@
 (function () {
+    /**
+     * DOM Ready Helper Function
+     * Ensures code runs only after the DOM is fully loaded
+     * @param {Function} callback - Function to execute when DOM is ready
+     */
+    function onReady(callback) {
+        if (document.readyState === "loading") {
+            // DOM still loading, wait for DOMContentLoaded event
+            document.addEventListener("DOMContentLoaded", callback, { once: true });
+        } else {
+            // DOM already loaded, execute immediately
+            callback();
+        }
+    }
+
+    // Execute when DOM is ready
+    onReady(() => {
     // IIFE for receipt module
     const helpers = window.BillingApp || {};
     // Get global helpers
@@ -460,6 +477,8 @@
                 return;
             }
             showToast("Receipt saved.", "success");
+            // Increment the counter after successful save
+            await incrementReceiptNumber();
         } catch (error) {
             console.error(error);
             showToast("Failed to save receipt.", "error");
@@ -611,4 +630,5 @@
         await loadExistingReceipt();
         syncPreview();
     })();
+    });
 })();

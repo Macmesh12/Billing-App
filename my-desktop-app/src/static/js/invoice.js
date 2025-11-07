@@ -778,6 +778,42 @@
     }
 
     async function loadExistingInvoice() {
+        // First, check if there's a document in sessionStorage (from loadDocument)
+        try {
+            const openDocJson = window.sessionStorage?.getItem("billingapp.openDocument");
+            if (openDocJson) {
+                window.sessionStorage?.removeItem("billingapp.openDocument");
+                const openDoc = JSON.parse(openDocJson);
+                if (openDoc.type === "invoice" && openDoc.data) {
+                    const data = openDoc.data;
+                    
+                    // Load invoice data from the opened file
+                    state.invoiceNumber = data.invoice_number || state.invoiceNumber;
+                    elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
+                    elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+                    
+                    if (inputs.customer) inputs.customer.value = data.customer_name || "";
+                    if (inputs.classification) inputs.classification.value = data.classification || "";
+                    if (inputs.issueDate && data.issue_date) inputs.issueDate.value = data.issue_date;
+                    if (inputs.companyName) inputs.companyName.value = data.company_name || "";
+                    if (inputs.companyInfo) inputs.companyInfo.value = data.company_info || "";
+                    if (inputs.clientRef) inputs.clientRef.value = data.client_reference || "";
+                    if (inputs.intro) inputs.intro.value = data.intro || "";
+                    if (inputs.notes) inputs.notes.value = data.notes || "";
+                    if (inputs.signatory) inputs.signatory.value = data.signatory || "";
+                    if (inputs.contact) inputs.contact.value = data.contact || "";
+                    
+                    const receivedItems = Array.isArray(data.items) ? data.items : [];
+                    state.items = receivedItems.length ? receivedItems : [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+                    renderItems();
+                    syncPreviewFromForm();
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn("Failed to load opened document", error);
+        }
+        
         // Function to load existing invoice data if ID in URL
         const id = getQueryParam("id");
         if (!id) {
