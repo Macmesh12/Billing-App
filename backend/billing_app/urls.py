@@ -14,6 +14,14 @@ def get_counter_view(view_name):
         return getattr(counter_api, view_name)(request)
     return lazy_view
 
+
+def get_project_view(view_name):
+    @csrf_exempt
+    def lazy_view(request):
+        from billing_app import project_api
+        return getattr(project_api, view_name)(request)
+    return lazy_view
+
 urlpatterns = [
     # URL patterns for the application
     path("", TemplateView.as_view(template_name="index.html"), name="home"),
@@ -31,4 +39,6 @@ urlpatterns = [
     path("api/counter/receipt/next/", get_counter_view("get_next_receipt_number"), name="next-receipt-number"),
     path("api/counter/waybill/next/", get_counter_view("get_next_waybill_number"), name="next-waybill-number"),
     path("api/counter/counts/", get_counter_view("get_document_counts"), name="document-counts"),
+    path("api/project/export/", get_project_view("export_project"), name="project-export"),
+    path("api/project/import/", get_project_view("import_project"), name="project-import"),
 ]

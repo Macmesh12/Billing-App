@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Billing App</title>
+    <title>Recents | Billing App</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,7 +25,7 @@
             <h1>Billing App</h1>
         </div>
         <nav class="app-nav" aria-label="Primary">
-            <a class="nav-link" href="index.html">Dashboard</a>
+            <a class="nav-link" href="index.html">Recents</a>
             <a class="nav-link" href="invoice.html">Invoice</a>
             <a class="nav-link" href="receipt.html">Receipt</a>
             <a class="nav-link" href="waybill.html">Waybill</a>
@@ -33,45 +33,31 @@
     </header>
 
     <main class="app-main">
-        <section class="dashboard-counters">
-            <article class="counter-card" onclick="window.location.href='invoice.html'" style="cursor: pointer;">
-                <span class="counter-value" id="invoice-count">0</span>
-                <span class="counter-label">Invoices</span>
-            </article>
+        <section class="recent-hero">
+            <h2>Welcome back</h2>
+            <p class="recent-subtitle">Save or reopen billing projects, then jump straight into invoices, receipts, or waybills.</p>
 
-            <article class="counter-card" onclick="window.location.href='receipt.html'" style="cursor: pointer;">
-                <span class="counter-value" id="receipt-count">0</span>
-                <span class="counter-label">Receipts</span>
-            </article>
+            <div class="project-actions" role="group" aria-label="Project actions">
+                <button id="project-export" class="button" type="button">Save project (.billproj)</button>
+                <button id="project-import" class="button button-secondary" type="button">Open project file</button>
+            </div>
 
-            <article class="counter-card" onclick="window.location.href='waybill.html'" style="cursor: pointer;">
-                <span class="counter-value" id="waybill-count">0</span>
-                <span class="counter-label">Waybills</span>
-            </article>
+            <p class="project-hint">Project archives capture invoices, receipts, waybills, and shared assets so you can carry work between devices.</p>
+            <div id="project-status" class="project-status" role="status" aria-live="polite"></div>
         </section>
     </main>
 
-    <footer class="app-footer">
-        <p>&copy; <span id="current-year"></span> Billing App. All rights reserved.</p>
-    </footer>
-
     <!-- Tauri bootstrap (starts Django sidecar and exposes window.apiFetch / window.DJANGO_PORT) -->
     <script type="module" src="/main.js" defer></script>
-
-    <!-- App scripts (use static/ paths). home.js will wait for the django-port-ready event if needed. -->
     <script src="static/js/main.js" defer></script>
     <script src="static/js/home.js" defer></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            document.getElementById("current-year").textContent = new Date().getFullYear();
-        });
-    </script>
+
+    <input id="project-import-input" type="file" accept=".billproj" hidden>
 
     <script>
         // Provide a default API base and update it when Tauri notifies of backend port.
         window.BILLING_APP_CONFIG = window.BILLING_APP_CONFIG || {};
         if (!window.BILLING_APP_CONFIG.apiBaseUrl) {
-            // Default while backend negotiates a port; home.js will retry when django-port-ready fires.
             window.BILLING_APP_CONFIG.apiBaseUrl = "http://127.0.0.1:8765";
         }
 

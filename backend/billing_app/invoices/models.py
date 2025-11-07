@@ -1,4 +1,5 @@
 from decimal import Decimal
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db import transaction
 from django.utils import timezone
@@ -78,7 +79,7 @@ class Invoice(models.Model):
     classification = models.CharField(max_length=255, blank=True)
     items = models.JSONField(default=list, blank=True)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
-    levies = models.JSONField(default=dict, blank=True)
+    levies = models.JSONField(default=dict, blank=True, encoder=DjangoJSONEncoder)
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

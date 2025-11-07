@@ -37,7 +37,8 @@
         previewRowsContainers: document.querySelectorAll(".js-waybill-preview-rows"),
         previewToggleBtn: document.getElementById("waybill-preview-toggle"),
         exitPreviewBtn: document.getElementById("waybill-exit-preview"),
-        submitBtn: document.getElementById("waybill-submit"),
+    submitBtn: document.getElementById("waybill-submit"),
+    saveBtn: document.getElementById("waybill-save"),
         addItemBtn: document.getElementById("waybill-add-item"),
         toast: document.getElementById("waybill-toast"),
         number: document.getElementById("waybill-number"),
@@ -431,6 +432,17 @@
 
         elements.previewToggleBtn?.addEventListener("click", () => {
             handlePreview();
+        });
+        // Save project (.billproj)
+        elements.saveBtn?.addEventListener("click", async () => {
+            try {
+                showToast("Saving project…", "info");
+                await window.BillingApp.exportProject();
+                showToast("Project saved.", "success");
+            } catch (err) {
+                console.error(err);
+                showToast("Failed to save project.", "error");
+            }
         });
 
         elements.submitBtn?.addEventListener("click", () => {

@@ -33,41 +33,99 @@ body.billing-app {
 }
 
 .app-header {
-    background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,0.55));
-    border-bottom: 1px solid rgba(16,24,40,0.04);
-    padding: 1.25rem 2rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 220px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.5rem 0;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    color: #ffffff;
+    z-index: 40;
 }
 
 .app-header h1 {
     margin: 0;
     font-size: 1.25rem;
     letter-spacing: -0.2px;
-    color: var(--text);
+    color: #fff;
+    padding: 0 1.25rem;
 }
 
 .app-nav {
+
+/* Left navigation layout for desktop shell */
+.app-nav {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 240px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    padding: 2.25rem 1rem;
     display: flex;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+    z-index: 40;
+}
+
+.app-header {
+    padding-left: 260px;
+}
+
+.app-nav .nav-link {
+    color: #fff;
+    font-weight: 700;
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+    width: 100%;
+}
+
+.app-nav .nav-link:hover {
+    background: rgba(255,255,255,0.06);
+}
+
+.app-main {
+    margin-left: 260px;
+}
+
+@media (max-width: 860px) {
+    .app-nav {
+        position: static;
+        width: auto;
+        flex-direction: row;
+        padding: 0;
+    }
+    .app-header { padding-left: 0; }
+    .app-main { margin-left: 0; }
+}
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 1rem;
+    padding: 0.5rem 0;
 }
 
 .nav-link {
     text-decoration: none;
-    color: var(--muted);
+    color: #ffffff;
     font-weight: 600;
+    display: block;
+    padding: 0.8rem 1.25rem;
+    border-radius: 8px;
 }
 
 .nav-link:hover {
-    color: var(--accent);
+    background: rgba(255,255,255,0.08);
 }
 
 .nav-link.active {
-    color: var(--accent);
-    border-bottom: 2px solid var(--accent);
-    padding-bottom: 0.2rem;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
 }
 
 .app-main {
@@ -96,7 +154,7 @@ body.billing-app {
 }
 
 .module-body {
-    background: #f8f9fa;
+    background: transparent;
     min-height: calc(100vh - 180px);
     padding: 2rem 0;
 }
@@ -139,9 +197,22 @@ body.billing-app {
 }
 
 .app-main {
+    /* Make the main content take the full available width to the right
+       of the fixed left navigation. Keep padding but remove max-width so
+       the workspace can stretch edge-to-edge. */
     padding: 2rem;
-    max-width: 1100px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
+    margin-left: 240px;
+    width: calc(100% - 240px);
+    box-sizing: border-box;
+}
+
+.app-footer {
+    text-align: center;
+    padding: 2.5rem 1.5rem 3rem;
+    color: var(--muted-2);
+    font-size: 0.9rem;
 }
 
 .grid {
@@ -388,14 +459,19 @@ textarea {
 
 /* EDIT MODE: A3 size (297mm × 420mm) - Large and readable */
 .document {
-    width: 297mm;
+    /* Full-bleed editable workspace: stretch from nav edge to window edge
+       Remove the white sheet background so the document feels like an
+       artboard that sits directly on the canvas. Preview/PDF rules
+       below still enforce fixed A4/A3 sizes when needed. */
+    width: 100%;
     min-height: 420mm;
-    margin: 0 auto;
-    background: #ffffff;
+    margin: 0;
+    background: transparent;
     padding: 15mm 20mm;
     box-sizing: border-box;
     font-size: 1.1rem;
-    /* No borders, no shadows - pure white canvas like MS Word */
+    border: none;
+    box-shadow: none;
 }
 
 /* PREVIEW MODE: A4 size (210mm × 297mm) - Print ready */
@@ -723,7 +799,6 @@ input:disabled, textarea:disabled, select:disabled {
 .pdf-export-wrapper .document * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    color-adjust: exact !important;
 }
 
 /* Preserve backgrounds in PDF */

@@ -33,45 +33,108 @@ body.billing-app {
 }
 
 .app-header {
-    background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,0.55));
-    border-bottom: 1px solid rgba(16,24,40,0.04);
-    padding: 1.25rem 2rem;
+    /* Left vertical navigation sidebar */
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 220px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.5rem 0;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    color: #ffffff;
+    z-index: 40;
 }
 
 .app-header h1 {
     margin: 0;
     font-size: 1.25rem;
     letter-spacing: -0.2px;
-    color: var(--text);
+    color: #fff;
+    padding: 0 1.25rem;
 }
 
 .app-nav {
+
+/* Left navigation layout: place the primary navigation on the left with yellow background */
+.app-nav {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 240px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    padding: 2.25rem 1rem;
     display: flex;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+    z-index: 40;
+}
+
+.app-header {
+    padding-left: 260px; /* make room for left nav */
+}
+
+.app-nav .nav-link {
+    color: #fff;
+    font-weight: 700;
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+    width: 100%;
+}
+
+.app-nav .nav-link:hover {
+    background: rgba(255,255,255,0.06);
+}
+
+.app-main {
+    margin-left: 260px; /* offset main content to the right of the nav */
+}
+
+@media (max-width: 860px) {
+    .app-nav {
+        position: static;
+        width: auto;
+        flex-direction: row;
+        padding: 0;
+    }
+    .app-header { padding-left: 0; }
+    .app-main { margin-left: 0; }
+}
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 1rem;
+    padding: 0.5rem 0;
 }
 
 .nav-link {
     text-decoration: none;
-    color: var(--muted);
+    color: #ffffff;
     font-weight: 600;
+    display: block;
+    padding: 0.8rem 1.25rem;
+    border-radius: 8px;
 }
 
 .nav-link:hover {
-    color: var(--accent);
+    background: rgba(255,255,255,0.08);
 }
 
 .nav-link.active {
-    color: var(--accent);
-    border-bottom: 2px solid var(--accent);
-    padding-bottom: 0.2rem;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
 }
 
 .app-main {
     padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    /* push content right to account for fixed left nav */
+    margin-left: 240px;
 }
 
 
@@ -95,10 +158,22 @@ body.billing-app {
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
+/* Make certain module headers visually longer and sticky at the top of the module */
+.module-header--long {
+    width: 100%;
+    position: sticky;
+    top: 1rem;
+    z-index: 30;
+}
+
 .module-body {
-    background: #f8f9fa;
-    min-height: calc(100vh - 180px);
-    padding: 2rem 0;
+    /* Remove the module body panel so the document sits directly on the
+       app body. Using transparent background and zero padding keeps the
+       document layout unaffected while removing the visual panel. */
+    background: transparent;
+    min-height: 0;
+    padding: 0;
+    display: contents; /* let children flow as if the wrapper didn't exist */
 }
 
 .module-header h2 {
@@ -142,6 +217,13 @@ body.billing-app {
     padding: 2rem;
     max-width: 1100px;
     margin: 0 auto;
+}
+
+.app-footer {
+    text-align: center;
+    padding: 2.5rem 1.5rem 3rem;
+    color: var(--muted-2);
+    font-size: 0.9rem;
 }
 
 .grid {
@@ -205,6 +287,20 @@ textarea {
 .document-items tbody {
     min-height: 400px;
     display: table-row-group;
+.document {
+    /* Full-bleed editable workspace: remove the white sheet and let the
+       document act as an artboard that sits directly on the page. Keep
+       internal padding for content but remove centering/margins. */
+    width: 100%;
+    min-height: 420mm;
+    margin: 0;
+    background: transparent;
+    padding: 15mm 20mm;
+    box-sizing: border-box;
+    font-size: 1.1rem;
+    border: none;
+    box-shadow: none;
+}
 }
 
 .is-preview .document-items tbody,
@@ -214,6 +310,16 @@ textarea {
 
 .document-items thead {
     background: solid #eab308;
+.app-main {
+    /* Let the main area expand to the right of the fixed nav so the
+       document (artboard) can stretch edge-to-edge. */
+    padding: 2rem;
+    max-width: none;
+    margin: 0;
+    margin-left: 240px;
+    width: calc(100% - 240px);
+    box-sizing: border-box;
+}
 }
 
 .document-items th,
@@ -723,7 +829,6 @@ input:disabled, textarea:disabled, select:disabled {
 .pdf-export-wrapper .document * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    color-adjust: exact !important;
 }
 
 /* Preserve backgrounds in PDF */
@@ -788,4 +893,216 @@ input:disabled, textarea:disabled, select:disabled {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+/* ============================================
+   NAV BAR VISUALS (user requested overrides)
+   - yellowish-white background with shadow
+   - black link text, increased spacing & font size
+   - active tab: yellow background + white text
+   ============================================ */
+
+.app-header,
+.app-nav {
+    /* soft yellow-white background for the nav and header area */
+    background: linear-gradient(180deg, #fffbea 0%, #fff7d6 100%) !important;
+    color: var(--text) !important;
+    box-shadow: 0 8px 30px rgba(16,24,40,0.08);
+}
+
+.app-brand h1 {
+    color: var(--text);
+    font-size: 1.25rem;
+}
+
+.app-nav {
+    /* increase spacing and padding between links */
+    gap: 1rem;
+    padding: 2.5rem 1.25rem;
+    align-items: flex-start;
+}
+
+.app-nav .nav-link {
+    color: var(--text);
+    font-weight: 700;
+    padding: 0.9rem 1.6rem;
+    border-radius: 10px;
+    font-size: 1.05rem;
+    letter-spacing: 0.3px;
+    width: 100%;
+}
+
+.app-nav .nav-link:hover {
+    background: rgba(234,179,8,0.08);
+}
+
+.app-nav .nav-link.active {
+    background: var(--accent) !important; /* yellow */
+    color: #ffffff !important;
+    box-shadow: 0 6px 18px rgba(234,179,8,0.12);
+}
+
+@media (max-width: 860px) {
+    .app-nav {
+        padding: 0.5rem 0.5rem;
+        gap: 0.5rem;
+    }
+    .app-nav .nav-link { font-size: 1rem; padding: 0.6rem 0.9rem; }
+}
+
+/* Recents page styling */
+.recent-hero {
+    /* Make the recents hero full-bleed so the list lives on the body
+       instead of inside a centered module. */
+    max-width: none;
+    width: 100%;
+    margin: 0 0 2rem 0;
+    padding: 1rem 2rem 2rem;
+    box-sizing: border-box;
+}
+.recent-hero-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Ensure the title area can shrink on small screens while the actions
+   remain visible and stable. Prevent long subtitles from pushing the
+   action button out of view. */
+.recent-hero-title {
+    flex: 1 1 auto;
+    min-width: 0; /* allow flex children to shrink properly */
+}
+
+.recent-hero-title h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.35rem;
+}
+
+.recent-hero-title .recent-subtitle {
+    margin: 0;
+    color: var(--muted-2);
+    font-size: 0.95rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.recent-hero-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.recent-hero-title h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.35rem;
+    letter-spacing: -0.2px;
+}
+.recent-hero-title .recent-subtitle {
+    margin: 0;
+    color: var(--muted-2);
+}
+.recent-hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.recent-list.card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: var(--shadow-soft);
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+.recent-projects {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.recent-project-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(250,250,250,0.6), rgba(255,255,255,0.6));
+    border: 1px solid rgba(16,24,40,0.04);
+}
+.recent-project-name { font-weight: 700; margin: 0; }
+.recent-project-meta { color: var(--muted); font-size: 0.85rem; margin: 0; }
+
+@media (max-width: 860px) {
+    .recent-hero-header { flex-direction: column; align-items: stretch; }
+    .recent-hero-actions { justify-content: flex-start; }
+}
+
+/* Zoom controls and scaled workspace behavior */
+.a4-workspace {
+    /* center the document and hide scrollbars so the page "fits" the module area
+       when scaled. The JS computes a fit-to-page scale and applies a transform.
+       Using flex centering keeps the page centered like an artboard.
+    */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* avoid showing scrollbars — JS will ensure the document fits */
+    position: relative;
+    --zoom-level: 1;
+    transform-origin: center center;
+    transition: transform 140ms ease;
+}
+
+.zoom-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 0.5rem;
+}
+
+.zoom-controls .zoom-btn {
+    background: transparent;
+    border: 1px solid rgba(16,24,40,0.06);
+    padding: 0.35rem 0.6rem;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    min-width: 40px;
+}
+
+.zoom-controls .zoom-display {
+    background: rgba(255,255,255,0.9);
+    border-radius: 6px;
+    padding: 0.25rem 0.45rem;
+    font-size: 0.95rem;
+    color: var(--muted-2);
+    border: 1px solid rgba(16,24,40,0.04);
+}
+
+/* Make sure zoom controls don't appear in PDF export wrapper */
+.pdf-export-wrapper .zoom-controls { display: none !important; }
+
+/* Floating toolbar for zoom controls (top-right) */
+.zoom-floating-controls {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1200;
+    background: rgba(255,255,255,0.95);
+    padding: 0.45rem 0.6rem;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(2,6,23,0.08);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+@media (max-width: 860px) {
+    .zoom-floating-controls { display: none; }
 }

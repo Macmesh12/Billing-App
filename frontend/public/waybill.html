@@ -11,18 +11,14 @@
     <link rel="stylesheet" href="../static/css/general.css">
     <link rel="stylesheet" href="../static/css/waybill.css">
     <script>
-        window.BILLING_APP_CONFIG = {
-            apiBaseUrl: window.location ? window.location.origin : "http://127.0.0.1:8765"
-        };
+        window.BILLING_APP_CONFIG = { apiBaseUrl: window.location ? window.location.origin : "http://127.0.0.1:8765" };
     </script>
 </head>
 <body class="billing-app">
 <header class="app-header">
-    <div class="app-brand">
-        <h1>Billing App</h1>
-    </div>
+    <div class="app-brand"><h1>Billing App</h1></div>
     <nav class="app-nav" aria-label="Primary">
-        <a class="nav-link" href="index.html">Dashboard</a>
+    <a class="nav-link" href="index.html">Recents</a>
         <a class="nav-link" href="invoice.html">Invoice</a>
         <a class="nav-link" href="receipt.html">Receipt</a>
         <a class="nav-link active" href="waybill.html">Waybill</a>
@@ -31,12 +27,19 @@
 
 <main class="app-main">
     <section id="waybill-module" class="module" data-document-type="waybill">
-        <div class="module-header">
+        <div class="module-header module-header--long">
             <h2>Waybill</h2>
             <div class="module-actions">
                 <button id="waybill-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
                 <button id="waybill-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="waybill-submit" class="button" type="button">Download PDF</button>
+                <button id="waybill-save" class="button button-secondary" type="button" title="Save project (.billproj)">Save</button>
+                <button id="waybill-submit" class="button" type="button" title="Download PDF" aria-label="Download PDF">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M12 3v10" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                        <path d="M7 10l5 5 5-5" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -111,7 +114,6 @@
                         <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
                     </div>
                 </div>
-                
 
                 <table class="document-items">
                     <thead>
@@ -173,18 +175,9 @@
     </section>
 </main>
 
-<footer class="app-footer">
-    <p>&copy; <span id="waybill-current-year"></span> Billing App. All rights reserved.</p>
-</footer>
-
 <script src="../static/js/main.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" referrerpolicy="no-referrer"></script>
 <script src="../static/js/waybill.js" defer></script>
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById("waybill-current-year").textContent = new Date().getFullYear();
-    });
-</script>
 </body>
 </html>

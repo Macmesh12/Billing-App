@@ -1,11 +1,69 @@
-/* Dashboard - Vertical Counter Cards with Yellow Theme */
-.dashboard-counters {
+/* Recents hero + project actions */
+.recent-hero {
+    text-align: center;
+    padding: 4rem 2rem 2rem;
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.recent-hero h2 {
+    margin: 0;
+    font-size: 2rem;
+    letter-spacing: -0.5px;
+}
+
+.recent-subtitle {
+    margin: 0.75rem 0 1.5rem;
+    color: var(--muted);
+    font-size: 1.05rem;
+}
+
+.project-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+
+.project-actions .button {
+    min-width: 220px;
+}
+
+.project-hint {
+    margin: 0;
+    color: var(--muted-2);
+    font-size: 0.95rem;
+}
+
+.project-status {
+    min-height: 1.5rem;
+    margin-top: 1.25rem;
+    font-size: 0.95rem;
+    color: var(--muted);
+    transition: color 0.2s ease;
+}
+
+.project-status.is-success {
+    color: var(--success);
+}
+
+.project-status.is-error {
+    color: var(--danger);
+}
+
+.recent-counters {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
     max-width: 500px;
     margin: 3rem auto;
     padding: 0 1.5rem;
+}
+
+.recent-counters a {
+    text-decoration: none;
+    color: inherit;
 }
 
 .counter-card {
@@ -64,12 +122,99 @@
     color: var(--muted);
 }
 
+/* Recent projects */
+.recent-projects {
+    max-width: 720px;
+    margin: 3rem auto 5rem;
+    padding: 0 1.5rem 1.5rem;
+    background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(234,179,8,0.18);
+    border-radius: 20px;
+    box-shadow: 0 12px 30px rgba(15,23,42,0.05);
+}
+
+.recent-projects-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem 0 0.5rem;
+}
+
+.recent-projects-header h3 {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+.link-button {
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.95rem;
+}
+
+.link-button:hover,
+.link-button:focus {
+    color: var(--accent-dark);
+    text-decoration: underline;
+}
+
+.recent-projects-empty {
+    margin: 0 0 1rem;
+    color: var(--muted-2);
+    font-size: 0.95rem;
+}
+
+.recent-projects-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.recent-project-item {
+    background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(254,252,232,0.9));
+    border: 1px solid rgba(234,179,8,0.2);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 6px 18px rgba(234,179,8,0.12);
+}
+
+.recent-project-name {
+    margin: 0 0 0.35rem;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.recent-project-meta {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted-2);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
 @media (max-width: 860px) {
-    .dashboard-counters {
+    .recent-counters {
         max-width: 100%;
     }
     
     .counter-card {
         padding: 1.5rem 2rem;
+    }
+
+    .project-actions .button {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .recent-projects {
+        margin: 2.5rem auto 4rem;
     }
 }

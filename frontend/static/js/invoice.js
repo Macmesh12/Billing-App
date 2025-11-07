@@ -139,7 +139,8 @@
         addItemBtn: document.getElementById("invoice-add-item"),
         previewToggleBtn: document.getElementById("invoice-preview-toggle"),
         exitPreviewBtn: document.getElementById("invoice-exit-preview"),
-        submitBtn: document.getElementById("invoice-submit"),
+    submitBtn: document.getElementById("invoice-submit"),
+    saveBtn: document.getElementById("invoice-save"),
         toast: document.getElementById("invoice-toast"),
         invoiceNumber: document.getElementById("invoice-number"),
         previewNumber: document.getElementById("invoice-preview-number"),
@@ -697,6 +698,18 @@
 
         elements.previewToggleBtn?.addEventListener("click", () => {
             handlePreviewToggle();
+        });
+
+        // Save project (.billproj)
+        elements.saveBtn?.addEventListener("click", async () => {
+            try {
+                showToast("Saving project…", "info");
+                await window.BillingApp.exportProject();
+                showToast("Project saved.", "success");
+            } catch (err) {
+                console.error(err);
+                showToast("Failed to save project.", "error");
+            }
         });
 
         elements.submitBtn?.addEventListener("click", () => {

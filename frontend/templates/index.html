@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dashboard | Billing App{% endblock %}
+{% block title %}Recents | Billing App{% endblock %}
 
 {% block extra_css %}
 {# Use Django static helper so STATIC_URL and storage backends are respected. Previously this linked to /frontend/static/... which bypasses Django's static resolving and will fail in many deployments. #}
@@ -9,61 +9,30 @@
 {% endblock %}
 
 {% block content %}
-<section class="dashboard-hero">
-    <h2>Track invoices, receipts, and logistics from one workspace.</h2>
-    <p>View document counts and access editors below.</p>
+<section class="recent-hero">
+    <div class="recent-hero-header">
+        <div class="recent-hero-title">
+            <h2>Recents</h2>
+            <p class="recent-subtitle">Your most recently saved projects. Open a project or import a new one to get started.</p>
+        </div>
+
+        <div class="recent-hero-actions">
+            <div class="recent-controls" role="group" aria-label="Project actions">
+                <button id="project-import" class="button button-secondary" type="button">Open project file</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="recent-list card">
+        <p id="recent-projects-empty" class="empty-state">No recent projects</p>
+        <ul id="recent-projects-list" class="recent-projects" aria-live="polite" hidden></ul>
+    </div>
+
+    <div id="project-status" class="project-status" role="status" aria-live="polite"></div>
 </section>
 
-<!-- Document Counters Section -->
-<section class="dashboard-counters" aria-label="Document counters">
-    <article class="counter-card">
-        <span class="counter-value" id="invoices-count">0</span>
-        <span class="counter-label">Invoices</span>
-    </article>
-    
-    <article class="counter-card">
-        <span class="counter-value" id="receipts-count">0</span>
-        <span class="counter-label">Receipts</span>
-    </article>
-    
-    <article class="counter-card">
-        <span class="counter-value" id="waybills-count">0</span>
-        <span class="counter-label">Waybills</span>
-    </article>
-</section>
+{# Counters and footer intentionally removed per user request #}
 
-<!-- Quick Actions Section -->
-<section class="dashboard-actions" aria-label="Quick actions">
-    <article class="action-card">
-        <span class="action-label">Invoice</span>
-        <a class="button" href="{% url 'invoice-form' %}">
-            Open Editor
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
-            </svg>
-        </a>
-    </article>
-
-    <article class="action-card">
-        <span class="action-label">Receipt</span>
-        <a class="button" href="{% url 'receipt-form' %}">
-            Open Editor
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
-            </svg>
-        </a>
-    </article>
-
-    <article class="action-card">
-        <span class="action-label">Waybill</span>
-        <a class="button" href="{% url 'waybill-form' %}">
-            Open Editor
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path d="M12.293 3.293a1 1 0 011.414 0l4.999 5a1 1 0 010 1.414l-4.999 5a1 1 0 11-1.414-1.414L15.585 11H3a1 1 0 110-2h12.585l-3.292-3.293a1 1 0 010-1.414z" />
-            </svg>
-        </a>
-    </article>
-</section>
 {% endblock %}
 
 {% block extra_js %}

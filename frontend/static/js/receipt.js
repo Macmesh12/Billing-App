@@ -25,7 +25,8 @@
         // DOM elements object
         previewToggleBtn: document.getElementById("receipt-preview-toggle"),
         exitPreviewBtn: document.getElementById("receipt-exit-preview"),
-        submitBtn: document.getElementById("receipt-submit"),
+    submitBtn: document.getElementById("receipt-submit"),
+    saveBtn: document.getElementById("receipt-save"),
         toast: document.getElementById("receipt-toast"),
         number: document.getElementById("receipt-number"),
         addItemBtn: document.getElementById("receipt-add-item"),
@@ -392,6 +393,17 @@
         // Attach event listeners
         elements.previewToggleBtn?.addEventListener("click", () => {
             handlePreview();
+        });
+        // Save project (.billproj)
+        elements.saveBtn?.addEventListener("click", async () => {
+            try {
+                showToast("Saving project…", "info");
+                await window.BillingApp.exportProject();
+                showToast("Project saved.", "success");
+            } catch (err) {
+                console.error(err);
+                showToast("Failed to save project.", "error");
+            }
         });
 
         elements.submitBtn?.addEventListener("click", () => {

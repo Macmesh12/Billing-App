@@ -7,6 +7,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Base directory of the project
 FRONTEND_DIR = BASE_DIR.parent / "frontend"
 # Directory for frontend assets
+PROJECT_ASSETS_DIR = BASE_DIR.parent / "assets"
+# Directory where user-managed project assets (logo, signature, etc.) live
+PROJECT_EXPORT_SCHEMA_VERSION = 1
+# Version number for .billproj serialization schema
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "development-secret-key")
 # Secret key for Django, defaults to development key
