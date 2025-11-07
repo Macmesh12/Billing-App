@@ -99,18 +99,8 @@
     const RECENTS_MAX_ITEMS = 50;
 
     const extensionForType = (type) => {
-        switch ((type || "").toLowerCase()) {
-            case "invoice":
-                return "inv";
-            case "receipt":
-                return "rec";
-            case "waybill":
-                return "way";
-            case "project":
-                return "billproj";
-            default:
-                return "dat";
-        }
+        // All documents now use .billproj extension
+        return "billproj";
     };
 
     const ensureExtension = (name, ext) => {
@@ -571,6 +561,69 @@
             metadata,
         });
         return { path: null, name: suggestedName };
+    };
+
+    // Load/open document helper: opens a saved .billproj file and navigates to appropriate page
+    helpers.loadDocument = async function (fileSource, metadata = {}) {
+        try {
+            let content;
+            let fileName = metadata?.name || "document.billproj";
+
+            // Handle different file sources
+            if (typeof fileSource === "string") {
+                // It's file content as string
+                content = fileSource;
+            } else if (fileSource instanceof Blob || fileSource instanceof File) {
+                // It's a File or Blob
+                fileName = fileSource.name || fileName;
+                const text = await fileSource.text();
+                content = text;
+            } else if (fileSource instanceof ArrayBuffer || fileSource instanceof Uint8Array) {
+                // Binary data - convert to text
+                const decoder = new TextDecoder();
+                const bytes = fileSource instanceof ArrayBuffer ? new Uint8Array(fileSource) : fileSource;
+                content = decoder.decode(bytes);
+            } else if (metadata?.path && window.__TAURI__?.fs?.readTextFile) {
+                // Tauri: read from file path
+                const { fs } = window.__TAURI__;
+                content = await fs.readTextFile(metadata.path);
+            } else {
+                throw new Error("Invalid file source");
+            }
+
+            // Parse JSON envelope
+            const envelope = JSON.parse(content);
+            const docType = envelope?.type || "invoice";
+            const data = envelope?.data || envelope;
+
+            // Navigate to the appropriate page with data
+            const pageMap = {
+                invoice: "invoice.html",
+                receipt: "receipt.html",
+                waybill: "waybill.html",
+            };
+            const targetPage = pageMap[docType] || "invoice.html";
+
+            // Store the data in sessionStorage for the target page to read
+            try {
+                window.sessionStorage?.setItem("billingapp.openDocument", JSON.stringify({
+                    type: docType,
+                    data: data,
+                    fileName: fileName,
+                    timestamp: Date.now(),
+                }));
+            } catch (error) {
+                console.warn("Failed to store document in sessionStorage", error);
+            }
+
+            // Navigate to the page
+            window.location.href = targetPage;
+
+            return { success: true, type: docType, fileName };
+        } catch (error) {
+            console.error("Failed to load document", error);
+            throw error;
+        }
     };
 
     // Export project helper: requests a .billproj archive from the backend

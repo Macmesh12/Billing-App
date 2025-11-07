@@ -167,6 +167,10 @@
         entries.forEach((entry) => {
             const li = document.createElement("li");
             li.className = "recent-project-item";
+            li.style.cursor = "pointer";
+            li.setAttribute("data-entry-type", entry?.type || "project");
+            li.setAttribute("data-entry-path", entry?.path || "");
+            li.setAttribute("data-entry-name", entry?.name || "");
 
             const nameWrap = document.createElement("p");
             nameWrap.className = "recent-project-name";
@@ -200,6 +204,11 @@
                 const metaSpan = document.createElement("span");
                 metaSpan.textContent = text;
                 metaEl.appendChild(metaSpan);
+            });
+
+            // Add double-click handler to open the file
+            li.addEventListener("dblclick", async () => {
+                await openRecentFile(entry);
             });
 
             li.append(nameWrap, metaEl);
@@ -415,6 +424,32 @@
 
     const importFromBrowserFile = async (file) => {
         if (!file) return;
+        
+        // Check if it's a single document file vs a project archive
+        const fileName = file.name.toLowerCase();
+        if (fileName.endsWith('.billproj')) {
+            // Try to detect if it's a single document or full project archive
+            try {
+                const text = await file.text();
+                const parsed = JSON.parse(text);
+                
+                // If it has a 'type' field and 'data' field, it's a single document
+                if (parsed.type && parsed.data && ['invoice', 'receipt', 'waybill'].includes(parsed.type)) {
+                    // It's a single document - load it directly
+                    if (helpers.loadDocument && typeof helpers.loadDocument === "function") {
+                        setBusy(true);
+                        setStatus("Opening document…");
+                        await helpers.loadDocument(file, { name: file.name });
+                        return;
+                    }
+                }
+            } catch (error) {
+                // If parsing fails, treat as binary archive
+                console.warn("Could not parse as JSON document, treating as binary archive", error);
+            }
+        }
+        
+        // Otherwise, treat as project archive
         const buffer = await file.arrayBuffer();
         await importArchive(buffer, { name: file.name, path: null });
     };
@@ -446,6 +481,43 @@
             return;
         }
         state.elements.importInput?.click();
+    };
+
+    const openRecentFile = async (entry) => {
+        if (state.isBusy) return;
+        if (!entry) return;
+
+        try {
+            setBusy(true);
+            setStatus("Opening file…");
+
+            // If we have a path and we're in Tauri, read the file
+            if (entry.path && isTauri && window.__TAURI__?.fs?.readTextFile) {
+                const { fs } = window.__TAURI__;
+                const content = await fs.readTextFile(entry.path);
+                
+                if (helpers.loadDocument && typeof helpers.loadDocument === "function") {
+                    await helpers.loadDocument(content, { 
+                        name: entry.name, 
+                        path: entry.path,
+                        type: entry.type 
+                    });
+                } else {
+                    setStatus("Load function not available.", "error");
+                }
+            } else if (entry.path) {
+                // Browser without file access - can't open by path
+                setStatus("Cannot open file by path in browser. Please use Import button.", "error");
+            } else {
+                // No path available
+                setStatus("File path not available. Please re-import the file.", "error");
+            }
+        } catch (error) {
+            console.error("Failed to open file", error);
+            setStatus("Failed to open file: " + (error.message || "Unknown error"), "error");
+        } finally {
+            setBusy(false);
+        }
     };
 
     const clearRecents = () => {

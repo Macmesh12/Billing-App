@@ -429,6 +429,22 @@
     margin-top: 1rem; /* Space from top */
 }
 
+/* PDF Export: Force block layout for better rendering */
+.pdf-export-wrapper .invoice-summary,
+.pdf-export-wrapper .invoice-signature {
+    display: block !important; /* Force block layout */
+    width: 100% !important; /* Full width */
+    max-width: 500px; /* Limit width */
+}
+
+.pdf-export-wrapper .invoice-signature {
+    margin: 2rem 0 2.5rem 0; /* Standard spacing */
+}
+
+.pdf-export-wrapper .invoice-summary {
+    margin: 2rem 0 2.0rem auto; /* Right-aligned */
+}
+
 /* Compact summary in preview */
 .is-preview .invoice-summary .summary-table th,
 .is-preview .invoice-summary .summary-table td {
@@ -549,19 +565,12 @@
 }
 
 /* Email section - gray background, inline elements */
-/* Email row: keep items on a single line, allow horizontal scrolling if needed */
 #invoice-preview-contact .email {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 1.25rem;
-    flex-wrap: nowrap; /* prevent wrapping */
-    white-space: nowrap;
-    overflow-x: auto; /* scroll when content overflows */
-    -webkit-overflow-scrolling: touch;
-    /* Hide scrollbar but keep scrolling functional */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    gap: 2rem;
+    flex-wrap: wrap;
     width: 100%;
     padding: 0.6rem 1rem;
     background: #d1d5db; /* Gray background */
@@ -572,32 +581,29 @@
 }
 
 #invoice-preview-contact .email span {
-    display: inline-block;
+    display: inline;
     white-space: nowrap;
 }
 
-#invoice-preview-contact .account::-webkit-scrollbar {
-    display: none;
-}
-
-/* Account section - yellow background, inline elements with icon placeholders */
-/* Account row: single horizontal line, horizontal scroll on overflow */
+/* Account row: force single-line layout and allow horizontal scrolling on overflow */
 #invoice-preview-contact .account {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 1rem;
-    flex-wrap: nowrap; /* keep items on one line */
+    flex-wrap: nowrap;
     white-space: nowrap;
     overflow-x: auto;
+    background: #eab308;
     -webkit-overflow-scrolling: touch;
-    width: 100%;
     padding: 0.6rem 1rem;
-    background: #fbbf24; /* Yellow background */
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #1f2937; /* Dark text for readability */
-    margin: 0;
+    /* Hide scrollbar but keep horizontal scrolling */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#invoice-preview-contact .account::-webkit-scrollbar {
+    display: none;
 }
 
 #invoice-preview-contact .account span {

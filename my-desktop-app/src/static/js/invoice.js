@@ -139,7 +139,8 @@
         addItemBtn: document.getElementById("invoice-add-item"),
         previewToggleBtn: document.getElementById("invoice-preview-toggle"),
         exitPreviewBtn: document.getElementById("invoice-exit-preview"),
-        submitBtn: document.getElementById("invoice-submit"),
+    submitBtn: document.getElementById("invoice-submit"),
+    saveBtn: document.getElementById("invoice-save"),
         toast: document.getElementById("invoice-toast"),
         invoiceNumber: document.getElementById("invoice-number"),
         previewNumber: document.getElementById("invoice-preview-number"),
@@ -408,6 +409,79 @@
         elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(grandTotal));
     }
 
+    function computeLocalTotals() {
+        const subtotal = state.items.reduce((sum, item) => sum + parseNumber(item.total), 0);
+        const levyBreakdown = {};
+        let levySum = 0;
+        let vatAmount = 0;
+
+        state.levies.forEach(({ name, rate, isVat }) => {
+            const amount = subtotal * Number(rate || 0);
+            levyBreakdown[name] = amount;
+            if (isVat) {
+                vatAmount = amount;
+            } else {
+                levySum += amount;
+            }
+        });
+
+        return {
+            subtotal,
+            levyTotal: levySum,
+            vat: vatAmount,
+            grandTotal: subtotal + levySum + vatAmount,
+            levies: levyBreakdown,
+        };
+    }
+
+    function serializeItems() {
+        return state.items
+            .filter((item) => {
+                if (!item) return false;
+                const desc = (item.description || "").trim();
+                const quantity = parseNumber(item.quantity);
+                const price = parseNumber(item.unit_price);
+                const total = parseNumber(item.total);
+                return desc || quantity || price || total;
+            })
+            .map((item) => ({
+                description: item.description || "",
+                quantity: parseNumber(item.quantity),
+                unit_price: parseNumber(item.unit_price),
+                total: parseNumber(item.total),
+            }));
+    }
+
+    function buildInvoiceDocumentPayload(totals) {
+        const safeTotals = totals || computeLocalTotals();
+        return {
+            invoice_number: state.invoiceNumber,
+            issue_date: inputs.issueDate?.value || "",
+            customer_name: inputs.customer?.value || "",
+            classification: inputs.classification?.value || "",
+            company_name: inputs.companyName?.value || "",
+            company_info: inputs.companyInfo?.value || "",
+            client_reference: inputs.clientRef?.value || "",
+            intro: inputs.intro?.value || "",
+            notes: inputs.notes?.value || "",
+            signatory: inputs.signatory?.value || "",
+            contact: inputs.contact?.value || "",
+            items: serializeItems(),
+            levies: state.levies.map((entry) => ({
+                name: entry.name,
+                rate: Number(entry.rate || 0),
+                isVat: Boolean(entry.isVat),
+            })),
+            totals: {
+                subtotal: Number(safeTotals.subtotal || 0),
+                levy_total: Number(safeTotals.levyTotal || 0),
+                vat: Number(safeTotals.vat || 0),
+                grand_total: Number(safeTotals.grandTotal || 0),
+            },
+            levy_breakdown: safeTotals.levies || {},
+        };
+    }
+
     function syncPreviewFromForm() {
         // Function to sync preview fields with form inputs
         elements.previewCustomer && (elements.previewCustomer.textContent = inputs.customer?.value || "—");
@@ -429,14 +503,16 @@
                 method: "POST",
                 body: JSON.stringify(payload),
             });
-            if (!result) return;
+            if (!result) return null;
             elements.subtotal && (elements.subtotal.textContent = formatCurrency(result.subtotal));
             elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(result.subtotal));
 
             let levySum = 0;
             let vatAmount = 0;
+            const levyBreakdown = {};
             Object.entries(result.levies || {}).forEach(([name, amount]) => {
                 const formattedAmount = formatCurrency(amount);
+                levyBreakdown[name] = amount;
                 if (name.trim().toUpperCase() === "VAT") {
                     vatAmount = amount;
                     elements.vat && (elements.vat.textContent = formattedAmount);
@@ -465,8 +541,17 @@
             const grandTotal = Number(result.grand_total ?? (subtotalNumber + levySum + vatAmount));
             elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(grandTotal));
             elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(grandTotal));
+
+            return {
+                subtotal: subtotalNumber,
+                levyTotal: levySum,
+                vat: vatAmount,
+                grandTotal,
+                levies: levyBreakdown,
+            };
         } catch (error) {
             console.warn("Failed to calculate preview totals", error);
+            return null;
         }
     }
 
@@ -493,7 +578,8 @@
     async function preparePreviewSnapshot() {
         renderItems();
         syncPreviewFromForm();
-        await calculateServerTotals();
+        const totals = await calculateServerTotals();
+        return totals || computeLocalTotals();
     }
 
     async function downloadInvoicePdf() {
@@ -520,9 +606,21 @@
         exportWrapper.setAttribute("aria-hidden", "true");
         exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
         
-    const clone = previewEl.cloneNode(true);
-    clone.removeAttribute("hidden");
-    clone.setAttribute("data-pdf-clone", "true");
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+        
+        // Convert image paths to absolute URLs for proper loading
+        const images = clone.querySelectorAll("img");
+        images.forEach((img) => {
+            if (img.src && !img.src.startsWith("data:")) {
+                // Ensure the image has an absolute URL
+                const absoluteUrl = new URL(img.getAttribute("src"), window.location.href).href;
+                img.setAttribute("src", absoluteUrl);
+                // Add crossorigin attribute to allow CORS
+                img.setAttribute("crossorigin", "anonymous");
+            }
+        });
         
         // The preview element itself is the document
         exportWrapper.appendChild(clone);
@@ -536,6 +634,21 @@
         try {
             showToast("Generating PDF...", "info");
 
+            // Wait for images to load
+            const imageElements = Array.from(exportWrapper.querySelectorAll("img"));
+            await Promise.all(
+                imageElements.map((img) => {
+                    return new Promise((resolve) => {
+                        if (img.complete) {
+                            resolve();
+                        } else {
+                            img.onload = resolve;
+                            img.onerror = resolve; // Continue even if image fails
+                        }
+                    });
+                })
+            );
+
             const A4_PX_WIDTH = 794; // 210mm at ~96 DPI
             const A4_PX_HEIGHT = 1122; // 297mm at ~96 DPI
             clone.style.width = A4_PX_WIDTH + "px";
@@ -544,7 +657,7 @@
             const canvas = await window.html2canvas(clone, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: false,
+                allowTaint: true, // Allow cross-origin images
                 backgroundColor: "#ffffff",
                 logging: false,
                 width: A4_PX_WIDTH,
@@ -597,6 +710,47 @@
             await incrementInvoiceNumber();
         } finally {
             state.isSaving = false;
+            elements.submitBtn?.removeAttribute("disabled");
+        }
+    }
+
+    async function saveInvoiceFile() {
+        if (state.isSaving) return;
+        if (typeof helpers.saveDocument !== "function") {
+            showToast("Save helper unavailable.", "error");
+            return;
+        }
+        state.isSaving = true;
+        elements.saveBtn?.setAttribute("disabled", "disabled");
+        elements.submitBtn?.setAttribute("disabled", "disabled");
+
+        try {
+            showToast("Saving invoice…", "info");
+            const totals = await preparePreviewSnapshot();
+            const payload = buildInvoiceDocumentPayload(totals);
+            const metadata = {
+                number: state.invoiceNumber,
+                customer: inputs.customer?.value || "",
+                issue_date: inputs.issueDate?.value || "",
+                grand_total: Number(payload?.totals?.grand_total || 0),
+            };
+            const result = await helpers.saveDocument({
+                type: "invoice",
+                defaultName: state.invoiceNumber || "invoice",
+                data: payload,
+                metadata,
+            });
+            if (result?.cancelled) {
+                showToast("Invoice save cancelled.", "info");
+                return;
+            }
+            showToast("Invoice saved.", "success");
+        } catch (error) {
+            console.error(error);
+            showToast("Failed to save invoice.", "error");
+        } finally {
+            state.isSaving = false;
+            elements.saveBtn?.removeAttribute("disabled");
             elements.submitBtn?.removeAttribute("disabled");
         }
     }
@@ -697,6 +851,11 @@
 
         elements.previewToggleBtn?.addEventListener("click", () => {
             handlePreviewToggle();
+        });
+
+        // Save invoice as .inv document
+        elements.saveBtn?.addEventListener("click", () => {
+            saveInvoiceFile();
         });
 
         elements.submitBtn?.addEventListener("click", () => {
