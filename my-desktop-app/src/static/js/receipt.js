@@ -25,7 +25,8 @@
         // DOM elements object
         previewToggleBtn: document.getElementById("receipt-preview-toggle"),
         exitPreviewBtn: document.getElementById("receipt-exit-preview"),
-        submitBtn: document.getElementById("receipt-submit"),
+    submitBtn: document.getElementById("receipt-submit"),
+    saveBtn: document.getElementById("receipt-save"),
         toast: document.getElementById("receipt-toast"),
         number: document.getElementById("receipt-number"),
         addItemBtn: document.getElementById("receipt-add-item"),
@@ -37,6 +38,7 @@
         previewAmountEls: document.querySelectorAll(".js-receipt-preview-amount-paid"),
         previewPaymentMethodEls: document.querySelectorAll(".js-receipt-preview-payment-method"),
         previewCustomerNameEls: document.querySelectorAll(".js-receipt-preview-customer-name"),
+        previewIssuedByEls: document.querySelectorAll(".js-receipt-preview-issued-by"),
         previewApprovedByEls: document.querySelectorAll(".js-receipt-preview-approved-by"),
         previewTotalAmountEls: document.querySelectorAll(".js-receipt-preview-total-amount"),
         previewBalanceEls: document.querySelectorAll(".js-receipt-preview-balance"),
@@ -46,6 +48,7 @@
         // Input elements object
         receivedFrom: document.getElementById("receipt-received-from"),
         customerName: document.getElementById("receipt-customer-name"),
+        issuedBy: document.getElementById("receipt-issued-by"),
         approvedBy: document.getElementById("receipt-approved-by"),
         issueDate: document.getElementById("receipt-issue-date"),
         amountPaid: document.getElementById("receipt-amount-paid"),
@@ -227,6 +230,43 @@
         }
     }
 
+    function serializeReceiptItems() {
+        return state.items
+            .filter((item) => {
+                if (!item) return false;
+                const description = (item.description || "").trim();
+                const quantity = Number(item.quantity) || 0;
+                const price = Number(item.unit_price) || 0;
+                const total = Number(item.total) || 0;
+                return description || quantity || price || total;
+            })
+            .map((item) => ({
+                description: item.description || "",
+                quantity: Number(item.quantity) || 0,
+                unit_price: Number(item.unit_price) || 0,
+                total: Number(item.total) || 0,
+            }));
+    }
+
+    function buildReceiptDocumentPayload(totals) {
+        const safeTotals = totals || calculateTotals();
+        return {
+            receipt_number: state.receiptNumber,
+            issue_date: inputs.issueDate?.value || "",
+            received_from: inputs.receivedFrom?.value || "",
+            customer_name: inputs.customerName?.value || "",
+            approved_by: inputs.approvedBy?.value || "",
+            payment_method: inputs.paymentMethod?.value || "",
+            amount_paid: Number(inputs.amountPaid?.value || 0),
+            items: serializeReceiptItems(),
+            totals: {
+                total_amount: Number(safeTotals.total || 0),
+                amount_paid: Number(safeTotals.amountPaid || 0),
+                balance: Number(safeTotals.balance || 0),
+            },
+        };
+    }
+
     function syncPreview() {
         // Sync preview with form data
         setText(elements.previewNumberEls, state.receiptNumber);
@@ -234,6 +274,7 @@
         setText(elements.previewDateEls, prettyDate);
         setText(elements.previewReceivedFromEls, inputs.receivedFrom?.value || "—");
         setText(elements.previewCustomerNameEls, inputs.customerName?.value || "—");
+        setText(elements.previewIssuedByEls, inputs.issuedBy?.value || "—");
         setText(elements.previewApprovedByEls, inputs.approvedBy?.value || "—");
         
         const amountPaid = Number(inputs.amountPaid?.value) || 0;
@@ -246,6 +287,7 @@
         setText(elements.previewBalanceEls, `GH₵ ${formatCurrency(totals.balance)}`);
         
         renderPreviewItems();
+        return totals;
     }
 
     async function handlePreview() {
@@ -279,9 +321,21 @@
         exportWrapper.setAttribute("aria-hidden", "true");
         exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
         
-    const clone = previewEl.cloneNode(true);
-    clone.removeAttribute("hidden");
-    clone.setAttribute("data-pdf-clone", "true");
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+        
+        // Convert image paths to absolute URLs for proper loading
+        const images = clone.querySelectorAll("img");
+        images.forEach((img) => {
+            if (img.src && !img.src.startsWith("data:")) {
+                // Ensure the image has an absolute URL
+                const absoluteUrl = new URL(img.getAttribute("src"), window.location.href).href;
+                img.setAttribute("src", absoluteUrl);
+                // Add crossorigin attribute to allow CORS
+                img.setAttribute("crossorigin", "anonymous");
+            }
+        });
         
         // The preview element itself is the document
         exportWrapper.appendChild(clone);
@@ -295,6 +349,21 @@
         try {
             showToast("Generating PDF...", "info");
 
+            // Wait for images to load
+            const imageElements = Array.from(exportWrapper.querySelectorAll("img"));
+            await Promise.all(
+                imageElements.map((img) => {
+                    return new Promise((resolve) => {
+                        if (img.complete) {
+                            resolve();
+                        } else {
+                            img.onload = resolve;
+                            img.onerror = resolve; // Continue even if image fails
+                        }
+                    });
+                })
+            );
+
             const A4_PX_WIDTH = 794;
             const A4_PX_HEIGHT = 1122;
             clone.style.width = A4_PX_WIDTH + "px";
@@ -303,7 +372,7 @@
             const canvas = await window.html2canvas(clone, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: false,
+                allowTaint: true, // Allow cross-origin images
                 backgroundColor: "#ffffff",
                 logging: false,
                 width: A4_PX_WIDTH,
@@ -360,6 +429,47 @@
         }
     }
 
+    async function saveReceiptFile() {
+        if (state.isSaving) return;
+        if (typeof helpers.saveDocument !== "function") {
+            showToast("Save helper unavailable.", "error");
+            return;
+        }
+        state.isSaving = true;
+        elements.saveBtn?.setAttribute("disabled", "disabled");
+        elements.submitBtn?.setAttribute("disabled", "disabled");
+
+        try {
+            showToast("Saving receipt…", "info");
+            const totals = syncPreview() || calculateTotals();
+            const payload = buildReceiptDocumentPayload(totals);
+            const metadata = {
+                number: state.receiptNumber,
+                customer: inputs.customerName?.value || "",
+                amount_paid: Number(totals?.amountPaid || 0),
+                issue_date: inputs.issueDate?.value || "",
+            };
+            const result = await helpers.saveDocument({
+                type: "receipt",
+                defaultName: state.receiptNumber || "receipt",
+                data: payload,
+                metadata,
+            });
+            if (result?.cancelled) {
+                showToast("Receipt save cancelled.", "info");
+                return;
+            }
+            showToast("Receipt saved.", "success");
+        } catch (error) {
+            console.error(error);
+            showToast("Failed to save receipt.", "error");
+        } finally {
+            state.isSaving = false;
+            elements.saveBtn?.removeAttribute("disabled");
+            elements.submitBtn?.removeAttribute("disabled");
+        }
+    }
+
     function getQueryParam(name) {
         // Get URL query param
         return new URLSearchParams(window.location.search).get(name);
@@ -392,6 +502,10 @@
         // Attach event listeners
         elements.previewToggleBtn?.addEventListener("click", () => {
             handlePreview();
+        });
+        // Save receipt as .rec document
+        elements.saveBtn?.addEventListener("click", () => {
+            saveReceiptFile();
         });
 
         elements.submitBtn?.addEventListener("click", () => {

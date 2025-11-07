@@ -38,6 +38,7 @@
         previewAmountEls: document.querySelectorAll(".js-receipt-preview-amount-paid"),
         previewPaymentMethodEls: document.querySelectorAll(".js-receipt-preview-payment-method"),
         previewCustomerNameEls: document.querySelectorAll(".js-receipt-preview-customer-name"),
+        previewIssuedByEls: document.querySelectorAll(".js-receipt-preview-issued-by"),
         previewApprovedByEls: document.querySelectorAll(".js-receipt-preview-approved-by"),
         previewTotalAmountEls: document.querySelectorAll(".js-receipt-preview-total-amount"),
         previewBalanceEls: document.querySelectorAll(".js-receipt-preview-balance"),
@@ -47,6 +48,7 @@
         // Input elements object
         receivedFrom: document.getElementById("receipt-received-from"),
         customerName: document.getElementById("receipt-customer-name"),
+        issuedBy: document.getElementById("receipt-issued-by"),
         approvedBy: document.getElementById("receipt-approved-by"),
         issueDate: document.getElementById("receipt-issue-date"),
         amountPaid: document.getElementById("receipt-amount-paid"),
@@ -272,6 +274,7 @@
         setText(elements.previewDateEls, prettyDate);
         setText(elements.previewReceivedFromEls, inputs.receivedFrom?.value || "—");
         setText(elements.previewCustomerNameEls, inputs.customerName?.value || "—");
+        setText(elements.previewIssuedByEls, inputs.issuedBy?.value || "—");
         setText(elements.previewApprovedByEls, inputs.approvedBy?.value || "—");
         
         const amountPaid = Number(inputs.amountPaid?.value) || 0;
@@ -318,9 +321,21 @@
         exportWrapper.setAttribute("aria-hidden", "true");
         exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
         
-    const clone = previewEl.cloneNode(true);
-    clone.removeAttribute("hidden");
-    clone.setAttribute("data-pdf-clone", "true");
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+        
+        // Convert image paths to absolute URLs for proper loading
+        const images = clone.querySelectorAll("img");
+        images.forEach((img) => {
+            if (img.src && !img.src.startsWith("data:")) {
+                // Ensure the image has an absolute URL
+                const absoluteUrl = new URL(img.getAttribute("src"), window.location.href).href;
+                img.setAttribute("src", absoluteUrl);
+                // Add crossorigin attribute to allow CORS
+                img.setAttribute("crossorigin", "anonymous");
+            }
+        });
         
         // The preview element itself is the document
         exportWrapper.appendChild(clone);
@@ -334,6 +349,21 @@
         try {
             showToast("Generating PDF...", "info");
 
+            // Wait for images to load
+            const imageElements = Array.from(exportWrapper.querySelectorAll("img"));
+            await Promise.all(
+                imageElements.map((img) => {
+                    return new Promise((resolve) => {
+                        if (img.complete) {
+                            resolve();
+                        } else {
+                            img.onload = resolve;
+                            img.onerror = resolve; // Continue even if image fails
+                        }
+                    });
+                })
+            );
+
             const A4_PX_WIDTH = 794;
             const A4_PX_HEIGHT = 1122;
             clone.style.width = A4_PX_WIDTH + "px";
@@ -342,7 +372,7 @@
             const canvas = await window.html2canvas(clone, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: false,
+                allowTaint: true, // Allow cross-origin images
                 backgroundColor: "#ffffff",
                 logging: false,
                 width: A4_PX_WIDTH,

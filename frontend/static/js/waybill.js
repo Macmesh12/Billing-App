@@ -1,4 +1,21 @@
 (function () {
+    /**
+     * DOM Ready Helper Function
+     * Ensures code runs only after the DOM is fully loaded
+     * @param {Function} callback - Function to execute when DOM is ready
+     */
+    function onReady(callback) {
+        if (document.readyState === "loading") {
+            // DOM still loading, wait for DOMContentLoaded event
+            document.addEventListener("DOMContentLoaded", callback, { once: true });
+        } else {
+            // DOM already loaded, execute immediately
+            callback();
+        }
+    }
+
+    // Execute when DOM is ready
+    onReady(() => {
     // IIFE for waybill module
     const helpers = window.BillingApp || {};
     // Get global helpers
@@ -324,9 +341,21 @@
         exportWrapper.setAttribute("aria-hidden", "true");
         exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
         
-    const clone = previewEl.cloneNode(true);
-    clone.removeAttribute("hidden");
-    clone.setAttribute("data-pdf-clone", "true");
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+        
+        // Convert image paths to absolute URLs for proper loading
+        const images = clone.querySelectorAll("img");
+        images.forEach((img) => {
+            if (img.src && !img.src.startsWith("data:")) {
+                // Ensure the image has an absolute URL
+                const absoluteUrl = new URL(img.getAttribute("src"), window.location.href).href;
+                img.setAttribute("src", absoluteUrl);
+                // Add crossorigin attribute to allow CORS
+                img.setAttribute("crossorigin", "anonymous");
+            }
+        });
         
         // The preview element itself is the document
         exportWrapper.appendChild(clone);
@@ -340,6 +369,21 @@
         try {
             showToast("Generating PDF...", "info");
 
+            // Wait for images to load
+            const imageElements = Array.from(exportWrapper.querySelectorAll("img"));
+            await Promise.all(
+                imageElements.map((img) => {
+                    return new Promise((resolve) => {
+                        if (img.complete) {
+                            resolve();
+                        } else {
+                            img.onload = resolve;
+                            img.onerror = resolve; // Continue even if image fails
+                        }
+                    });
+                })
+            );
+
             const A4_PX_WIDTH = 794;
             const A4_PX_HEIGHT = 1122;
             clone.style.width = A4_PX_WIDTH + "px";
@@ -348,7 +392,7 @@
             const canvas = await window.html2canvas(clone, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: false,
+                allowTaint: true, // Allow cross-origin images
                 backgroundColor: "#ffffff",
                 logging: false,
                 width: A4_PX_WIDTH,
@@ -582,4 +626,5 @@
         await loadNextWaybillNumber();  // Load the next number on page load
         await loadExistingWaybill();
     })();
+    });
 })();

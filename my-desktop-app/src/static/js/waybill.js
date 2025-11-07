@@ -1,4 +1,21 @@
 (function () {
+    /**
+     * DOM Ready Helper Function
+     * Ensures code runs only after the DOM is fully loaded
+     * @param {Function} callback - Function to execute when DOM is ready
+     */
+    function onReady(callback) {
+        if (document.readyState === "loading") {
+            // DOM still loading, wait for DOMContentLoaded event
+            document.addEventListener("DOMContentLoaded", callback, { once: true });
+        } else {
+            // DOM already loaded, execute immediately
+            callback();
+        }
+    }
+
+    // Execute when DOM is ready
+    onReady(() => {
     // IIFE for waybill module
     const helpers = window.BillingApp || {};
     // Get global helpers
@@ -37,7 +54,8 @@
         previewRowsContainers: document.querySelectorAll(".js-waybill-preview-rows"),
         previewToggleBtn: document.getElementById("waybill-preview-toggle"),
         exitPreviewBtn: document.getElementById("waybill-exit-preview"),
-        submitBtn: document.getElementById("waybill-submit"),
+    submitBtn: document.getElementById("waybill-submit"),
+    saveBtn: document.getElementById("waybill-save"),
         addItemBtn: document.getElementById("waybill-add-item"),
         toast: document.getElementById("waybill-toast"),
         number: document.getElementById("waybill-number"),
@@ -156,6 +174,59 @@
             // Always render 10 rows
             for (let index = 0; index < 10; index++) {
                 const item = state.items[index];
+
+    function computeWaybillTotals() {
+        let totalQuantity = 0;
+        let subtotal = 0;
+        state.items.forEach((item) => {
+            if (!item) return;
+            totalQuantity += parseNumber(item.quantity);
+            subtotal += parseNumber(item.total);
+        });
+        return {
+            total_quantity: totalQuantity,
+            subtotal,
+        };
+    }
+
+    function serializeWaybillItems() {
+        return state.items
+            .filter((item) => {
+                if (!item) return false;
+                const desc = (item.description || "").trim();
+                const quantity = parseNumber(item.quantity);
+                const price = parseNumber(item.unit_price);
+                const total = parseNumber(item.total);
+                return desc || quantity || price || total;
+            })
+            .map((item) => ({
+                description: item.description || "",
+                quantity: parseNumber(item.quantity),
+                unit_price: parseNumber(item.unit_price),
+                total: parseNumber(item.total),
+            }));
+    }
+
+    function buildWaybillDocumentPayload(totals) {
+        const safeTotals = totals || computeWaybillTotals();
+        return {
+            waybill_number: state.waybillNumber,
+            issue_date: inputs.issueDate?.value || "",
+            customer_name: inputs.customer?.value || "",
+            destination: inputs.destination?.value || "",
+            driver_name: inputs.driver?.value || "",
+            receiver_name: inputs.receiver?.value || "",
+            note: inputs.note?.value || "",
+            delivery_date: inputs.deliveryDate?.value || "",
+            received_date: inputs.receivedDateText?.value || "",
+            contact: inputs.contact?.value || "",
+            items: serializeWaybillItems(),
+            totals: {
+                total_quantity: Number(safeTotals.total_quantity || 0),
+                subtotal: Number(safeTotals.subtotal || 0),
+            },
+        };
+    }
                 const previewRow = document.createElement("tr");
                 
                 if (item) {
@@ -236,6 +307,7 @@
         setText(elements.previewReceivedDateEls, valueOrPlaceholder(inputs.receivedDateText, "—"));
     setText(elements.previewContactEls, valueOrPlaceholder(inputs.contact, "DELIVERED BY SPAQUELS \u2022 CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719"));
         updatePreviewItems();
+        return computeWaybillTotals();
     }
 
     async function handlePreview() {
@@ -269,9 +341,21 @@
         exportWrapper.setAttribute("aria-hidden", "true");
         exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
         
-    const clone = previewEl.cloneNode(true);
-    clone.removeAttribute("hidden");
-    clone.setAttribute("data-pdf-clone", "true");
+        const clone = previewEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+        
+        // Convert image paths to absolute URLs for proper loading
+        const images = clone.querySelectorAll("img");
+        images.forEach((img) => {
+            if (img.src && !img.src.startsWith("data:")) {
+                // Ensure the image has an absolute URL
+                const absoluteUrl = new URL(img.getAttribute("src"), window.location.href).href;
+                img.setAttribute("src", absoluteUrl);
+                // Add crossorigin attribute to allow CORS
+                img.setAttribute("crossorigin", "anonymous");
+            }
+        });
         
         // The preview element itself is the document
         exportWrapper.appendChild(clone);
@@ -285,6 +369,21 @@
         try {
             showToast("Generating PDF...", "info");
 
+            // Wait for images to load
+            const imageElements = Array.from(exportWrapper.querySelectorAll("img"));
+            await Promise.all(
+                imageElements.map((img) => {
+                    return new Promise((resolve) => {
+                        if (img.complete) {
+                            resolve();
+                        } else {
+                            img.onload = resolve;
+                            img.onerror = resolve; // Continue even if image fails
+                        }
+                    });
+                })
+            );
+
             const A4_PX_WIDTH = 794;
             const A4_PX_HEIGHT = 1122;
             clone.style.width = A4_PX_WIDTH + "px";
@@ -293,7 +392,7 @@
             const canvas = await window.html2canvas(clone, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: false,
+                allowTaint: true, // Allow cross-origin images
                 backgroundColor: "#ffffff",
                 logging: false,
                 width: A4_PX_WIDTH,
@@ -346,6 +445,46 @@
             await incrementWaybillNumber();
         } finally {
             state.isSaving = false;
+            elements.submitBtn?.removeAttribute("disabled");
+        }
+    }
+
+    async function saveWaybillFile() {
+        if (state.isSaving) return;
+        if (typeof helpers.saveDocument !== "function") {
+            showToast("Save helper unavailable.", "error");
+            return;
+        }
+        state.isSaving = true;
+        elements.saveBtn?.setAttribute("disabled", "disabled");
+        elements.submitBtn?.setAttribute("disabled", "disabled");
+
+        try {
+            showToast("Saving waybill…", "info");
+            const totals = syncPreview() || computeWaybillTotals();
+            const payload = buildWaybillDocumentPayload(totals);
+            const metadata = {
+                number: state.waybillNumber,
+                customer: inputs.customer?.value || "",
+                destination: inputs.destination?.value || "",
+            };
+            const result = await helpers.saveDocument({
+                type: "waybill",
+                defaultName: state.waybillNumber || "waybill",
+                data: payload,
+                metadata,
+            });
+            if (result?.cancelled) {
+                showToast("Waybill save cancelled.", "info");
+                return;
+            }
+            showToast("Waybill saved.", "success");
+        } catch (error) {
+            console.error(error);
+            showToast("Failed to save waybill.", "error");
+        } finally {
+            state.isSaving = false;
+            elements.saveBtn?.removeAttribute("disabled");
             elements.submitBtn?.removeAttribute("disabled");
         }
     }
@@ -432,6 +571,10 @@
         elements.previewToggleBtn?.addEventListener("click", () => {
             handlePreview();
         });
+        // Save waybill as .way document
+        elements.saveBtn?.addEventListener("click", () => {
+            saveWaybillFile();
+        });
 
         elements.submitBtn?.addEventListener("click", () => {
             handleSave();
@@ -483,4 +626,5 @@
         await loadNextWaybillNumber();  // Load the next number on page load
         await loadExistingWaybill();
     })();
+    });
 })();
