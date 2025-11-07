@@ -8,14 +8,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="static/css/general.css">
-    <link rel="stylesheet" href="static/css/home.css">
+    <link rel="stylesheet" href="../static/css/general.css">
+    <link rel="stylesheet" href="../static/css/home.css">
     <script>
         // In production the app will be served by the backend, so default
         // the API base to the current origin. This avoids hardcoding a
         // development-only URL.
         window.BILLING_APP_CONFIG = {
-            apiBaseUrl: window.location ? window.location.origin : "http://127.0.0.1:8765"
+            apiBaseUrl: (window.location && window.location.protocol === 'http:') ? window.location.origin : "http://127.0.0.1:8765"
         };
     </script>
 </head>
@@ -25,7 +25,7 @@
             <h1>Billing App</h1>
         </div>
         <nav class="app-nav" aria-label="Primary">
-            <a class="nav-link" href="index.html">Recents</a>
+        <a class="nav-link" href="index.html">Recents</a>
             <a class="nav-link" href="invoice.html">Invoice</a>
             <a class="nav-link" href="receipt.html">Receipt</a>
             <a class="nav-link" href="waybill.html">Waybill</a>
@@ -37,7 +37,6 @@
             <div class="recent-hero-header">
                 <div class="recent-hero-title">
                     <h2>Recents</h2>
-                    <p class="recent-subtitle">Your most recently saved projects. Open a project or import a new one to get started.</p>
                 </div>
 
                 <div class="recent-hero-actions">
@@ -66,28 +65,14 @@
 
         <p id="recent-projects-empty" class="empty-state">No recent projects</p>
         <ul id="recent-projects-list" class="recent-projects" aria-live="polite" hidden></ul>
-    </main>
-
-    <!-- Tauri bootstrap (starts Django sidecar and exposes window.apiFetch / window.DJANGO_PORT) -->
-    <script type="module" src="/main.js" defer></script>
-    <script src="static/js/main.js" defer></script>
-    <script src="static/js/home.js" defer></script>
 
     <input id="project-import-input" type="file" accept=".billproj" hidden>
 
+    <script src="../static/js/main.js" defer></script>
+    <script src="../static/js/home.js" defer></script>
     <script>
-        // Provide a default API base and update it when Tauri notifies of backend port.
-        window.BILLING_APP_CONFIG = window.BILLING_APP_CONFIG || {};
-        if (!window.BILLING_APP_CONFIG.apiBaseUrl) {
-            window.BILLING_APP_CONFIG.apiBaseUrl = "http://127.0.0.1:8765";
-        }
-
-        window.addEventListener('django-port-ready', (e) => {
-            const port = e?.detail?.port;
-            if (port) {
-                window.BILLING_APP_CONFIG.apiBaseUrl = `http://127.0.0.1:${port}`;
-                console.log('Updated BILLING_APP_CONFIG.apiBaseUrl to', window.BILLING_APP_CONFIG.apiBaseUrl);
-            }
+        document.addEventListener("DOMContentLoaded", () => {
+            // page intentionally minimal: recent projects are rendered by home.js
         });
     </script>
 </body>

@@ -12,7 +12,7 @@
                     <link rel="stylesheet" href="../static/css/receipt.css">
                     <script>
                         window.BILLING_APP_CONFIG = {
-                            apiBaseUrl: window.location ? window.location.origin : "http://127.0.0.1:8765"
+                            apiBaseUrl: (window.location && window.location.protocol === 'http:') ? window.location.origin : "http://127.0.0.1:8765"
                         };
                     </script>
                 </head>
