@@ -745,6 +745,8 @@
                 return;
             }
             showToast("Invoice saved.", "success");
+            // Increment the counter after successful save
+            await incrementInvoiceNumber();
         } catch (error) {
             console.error(error);
             showToast("Failed to save invoice.", "error");

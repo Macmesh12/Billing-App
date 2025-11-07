@@ -479,6 +479,8 @@
                 return;
             }
             showToast("Waybill saved.", "success");
+            // Increment the counter after successful save
+            await incrementWaybillNumber();
         } catch (error) {
             console.error(error);
             showToast("Failed to save waybill.", "error");
