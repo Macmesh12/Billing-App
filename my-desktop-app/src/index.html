@@ -34,17 +34,38 @@
 
     <main class="app-main">
         <section class="recent-hero">
-            <h2>Welcome back</h2>
-            <p class="recent-subtitle">Save or reopen billing projects, then jump straight into invoices, receipts, or waybills.</p>
+            <div class="recent-hero-header">
+                <div class="recent-hero-title">
+                    <h2>Recents</h2>
+                    <p class="recent-subtitle">Your most recently saved projects. Open a project or import a new one to get started.</p>
+                </div>
 
-            <div class="project-actions" role="group" aria-label="Project actions">
-                <button id="project-export" class="button" type="button">Save project (.billproj)</button>
-                <button id="project-import" class="button button-secondary" type="button">Open project file</button>
+                <div class="recent-hero-actions">
+                    <div class="recent-controls" role="group" aria-label="Project actions">
+                        <!-- import button moved to the recent-controls block below -->
+                    </div>
+                </div>
             </div>
 
-            <p class="project-hint">Project archives capture invoices, receipts, waybills, and shared assets so you can carry work between devices.</p>
             <div id="project-status" class="project-status" role="status" aria-live="polite"></div>
         </section>
+
+        <!-- Recent controls: search + sort (three-dots) -->
+        <div class="recent-controls">
+            <input id="recent-search" class="recent-search" type="search" placeholder="Search recent files…" aria-label="Search recent files">
+            <!-- import button positioned above the end of the search field -->
+            <button id="project-import" class="button button-secondary import-btn" type="button">Open project file</button>
+            <div class="recent-actions">
+                <button id="recent-sort-toggle" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="Sort">⋯</button>
+                <ul id="recent-sort-menu" class="sort-menu" hidden>
+                    <li data-sort="newest" class="sort-item">Newest</li>
+                    <li data-sort="oldest" class="sort-item">Oldest</li>
+                </ul>
+            </div>
+        </div>
+
+        <p id="recent-projects-empty" class="empty-state">No recent projects</p>
+        <ul id="recent-projects-list" class="recent-projects" aria-live="polite" hidden></ul>
     </main>
 
     <!-- Tauri bootstrap (starts Django sidecar and exposes window.apiFetch / window.DJANGO_PORT) -->

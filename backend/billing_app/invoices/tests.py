@@ -21,5 +21,8 @@ class CalculatorTests(SimpleTestCase):
         totals = calculator.calculate_totals(items)
         self.assertEqual(totals.subtotal, Decimal("200.00"))
         self.assertEqual(totals.levies["NHIL"], Decimal("5.00"))
+        self.assertEqual(totals.levies["GETFUND"], Decimal("5.00"))
+        self.assertEqual(totals.levies["COVID"], Decimal("2.00"))
         self.assertEqual(totals.levies["VAT"], Decimal("30.00"))
-        self.assertEqual(totals.grand_total, Decimal("260.00"))
+        # Total: 200 + 5 + 5 + 2 + 30 = 242.00
+        self.assertEqual(totals.grand_total, Decimal("242.00"))
