@@ -16,8 +16,8 @@ jobs:
       matrix:
         include:
           - platform: 'macos-latest'
-            target: 'universal-apple-darwin'
-            artifact_name: 'macos-universal-dmg'
+            target: ''
+            artifact_name: 'macos-dmg'
             artifact_path: 'my-desktop-app/src-tauri/target/release/bundle/dmg/*.dmg'
           
           - platform: 'windows-latest'
@@ -90,16 +90,15 @@ jobs:
           mkdir -p ../my-desktop-app/src-tauri/binaries
           cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app-x86_64-unknown-linux-gnu
 
-      - name: Build Django backend with PyInstaller (macOS universal)
+      - name: Build Django backend with PyInstaller (macOS)
         if: matrix.platform == 'macos-latest'
         run: |
           cd backend
           pip install pyinstaller
           pyinstaller django-app.spec --clean --noconfirm
           mkdir -p ../my-desktop-app/src-tauri/binaries
-          # Copy to both expected names for universal build
+          # GitHub Actions macOS runners are x86_64, so copy the binary with appropriate name
           cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app-x86_64-apple-darwin
-          cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app-aarch64-apple-darwin
           cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app
 
       - name: Build Django backend with PyInstaller (Windows)
