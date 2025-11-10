@@ -37,7 +37,7 @@ class DocumentCounter(models.Model):
         current = instance.invoice_counter
         instance.invoice_counter += 1
         instance.save()
-        return f"INV-{current:04d}"
+        return f"INV-{current:03d}"
     
     @classmethod
     @transaction.atomic
@@ -47,7 +47,7 @@ class DocumentCounter(models.Model):
         current = instance.receipt_counter
         instance.receipt_counter += 1
         instance.save()
-        return f"REC-{current:04d}"
+        return f"REC-{current:03d}"
     
     @classmethod
     @transaction.atomic
@@ -57,7 +57,7 @@ class DocumentCounter(models.Model):
         current = instance.waybill_counter
         instance.waybill_counter += 1
         instance.save()
-        return f"WB-{current:04d}"
+        return f"WAY-{current:03d}"
     
     @classmethod
     def get_current_counts(cls):
@@ -70,4 +70,4 @@ class DocumentCounter(models.Model):
         }
     
     def __str__(self):
-        return f"Counters: INV={self.invoice_counter}, REC={self.receipt_counter}, WB={self.waybill_counter}"
+        return f"Counters: INV={self.invoice_counter}, REC={self.receipt_counter}, WAY={self.waybill_counter}"

@@ -248,28 +248,6 @@
             },
         };
     }
-                const previewRow = document.createElement("tr");
-                
-                if (item) {
-                    previewRow.innerHTML = `
-                        <td>${item.description || ""}</td>
-                        <td>${formatQuantity(item.quantity || 0)}</td>
-                        <td>${formatCurrency(item.unit_price || 0)}</td>
-                        <td>${formatCurrency(item.total || 0)}</td>
-                    `;
-                } else {
-                    previewRow.innerHTML = `
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                    `;
-                    previewRow.classList.add("empty-row");
-                }
-                container.appendChild(previewRow);
-            }
-        });
-    }
 
     function renderItems() {
         // Function to render items in table and preview - always show 10 rows
