@@ -416,16 +416,16 @@
    In preview mode, signature appears beside summary
    ============================================ */
 
-/* Signature and summary side-by-side in preview */
-.module.is-preview .invoice-summary,
-.module.is-preview .invoice-signature {
+/* Signature and summary side-by-side in preview (but not in PDF export) */
+.module.is-preview:not(.pdf-export-wrapper) .invoice-summary,
+.module.is-preview:not(.pdf-export-wrapper) .invoice-signature {
     display: inline-block; /* Inline layout */
     vertical-align: top; /* Align to top */
     width: 48%; /* Each takes 48% width (with gap) */
 }
 
 /* Signature spacing in preview */
-.module.is-preview .invoice-signature {
+.module.is-preview:not(.pdf-export-wrapper) .invoice-signature {
     margin-top: 1rem; /* Space from top */
 }
 

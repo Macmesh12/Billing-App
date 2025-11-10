@@ -301,51 +301,50 @@
 }
 
 /* Email section - gray background, inline elements */
-/* Make the email row a single straight line. If the content is wider than
-   the container, allow horizontal scrolling rather than wrapping. */
 #waybill-preview-contact .email {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 0.2rem;
-    flex-wrap: nowrap; /* prevent wrapping - keep everything on one line */
-    white-space: nowrap; /* ensure inline content does not wrap */
-    overflow-x: auto; /* allow horizontal scroll if needed */
-    -webkit-overflow-scrolling: touch;
-    /* Hide scrollbar but keep scrolling functional */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE 10+ */
+    gap: 2rem;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: #d1d5db; /* Gray background */
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f2937; /* Dark gray text */
+    margin: 0;
 }
-
-#waybill-preview-contact .account::-webkit-scrollbar {
-    display: none;
-}
-
-
 
 #waybill-preview-contact .email span {
-    display: inline-block;
+    display: inline;
     white-space: nowrap;
 }
 
-/* Account section - yellow background, inline elements with icon placeholders */
-/* Make the account row a single straight line. Use horizontal scrolling
-   instead of wrapping to preserve layout when space is tight. */
+/* Account section - keep everything on a single horizontal line; allow horizontal scroll on overflow */
 #waybill-preview-contact .account {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 1rem;
-    flex-wrap: nowrap; /* keep items on one line */
+    flex-wrap: nowrap; /* prevent wrapping */
     white-space: nowrap;
-    overflow-x: auto;
+    overflow-x: auto; /* allow horizontal scroll if needed */
     -webkit-overflow-scrolling: touch;
+    /* Hide scrollbar but keep scrolling functional */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
     width: 100%;
     padding: 0.6rem 1rem;
     background: #fbbf24; /* Yellow background */
     font-size: 0.9rem;
     font-weight: 500;
+    color: #1f2937; /* Dark text for readability */
     margin: 0;
+}
+
+#waybill-preview-contact .account::-webkit-scrollbar {
+    display: none;
 }
 
 #waybill-preview-contact .account span {
