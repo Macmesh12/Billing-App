@@ -595,13 +595,25 @@
 
     async function loadNextReceiptNumber() {
         // Load the next receipt number from the counter API
+        console.log('[Receipt] Loading next receipt number from:', `${API_BASE}/api/counter/receipt/next/`);
+        console.log('[Receipt] elements.number element:', elements.number);
         try {
             const response = await fetch(`${API_BASE}/api/counter/receipt/next/`);
+            console.log('[Receipt] API response status:', response.status);
             if (response.ok) {
                 const data = await response.json();
+                console.log('[Receipt] API response data:', data);
                 state.receiptNumber = data.next_number;
-                elements.number && (elements.number.textContent = state.receiptNumber);
+                console.log('[Receipt] Setting receipt number to:', state.receiptNumber);
+                if (elements.number) {
+                    elements.number.textContent = state.receiptNumber;
+                    console.log('[Receipt] Set textContent on element');
+                } else {
+                    console.warn('[Receipt] elements.number is null or undefined');
+                }
                 setText(elements.previewNumberEls, state.receiptNumber);
+            } else {
+                console.warn('[Receipt] API response not ok:', response.status, response.statusText);
             }
         } catch (error) {
             console.warn("Failed to load next receipt number", error);

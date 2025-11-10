@@ -594,13 +594,25 @@
 
     async function loadNextWaybillNumber() {
         // Load the next waybill number from the counter API
+        console.log('[Waybill] Loading next waybill number from:', `${API_BASE}/api/counter/waybill/next/`);
+        console.log('[Waybill] elements.number element:', elements.number);
         try {
             const response = await fetch(`${API_BASE}/api/counter/waybill/next/`);
+            console.log('[Waybill] API response status:', response.status);
             if (response.ok) {
                 const data = await response.json();
+                console.log('[Waybill] API response data:', data);
                 state.waybillNumber = data.next_number;
-                elements.number && (elements.number.textContent = state.waybillNumber);
+                console.log('[Waybill] Setting waybill number to:', state.waybillNumber);
+                if (elements.number) {
+                    elements.number.textContent = state.waybillNumber;
+                    console.log('[Waybill] Set textContent on element');
+                } else {
+                    console.warn('[Waybill] elements.number is null or undefined');
+                }
                 setText(elements.previewNumberEls, state.waybillNumber);
+            } else {
+                console.warn('[Waybill] API response not ok:', response.status, response.statusText);
             }
         } catch (error) {
             console.warn("Failed to load next waybill number", error);

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Receipt Number Debug Test</title>
+    <script>
+        window.BILLING_APP_CONFIG = {
+            apiBaseUrl: "http://127.0.0.1:8765"
+        };
+        
+        // Test the API directly
+        async function testAPI() {
+            const output = document.getElementById('output');
+            output.innerHTML += '<h3>Testing API...</h3>';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8765/api/counter/receipt/next/');
+                output.innerHTML += `<p>Response status: ${response.status}</p>`;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    output.innerHTML += `<p>Response data: ${JSON.stringify(data)}</p>`;
+                    output.innerHTML += `<p>Next number: ${data.next_number}</p>`;
+                    
+                    // Try to set it on the element
+                    const el = document.getElementById('receipt-number');
+                    if (el) {
+                        el.textContent = data.next_number;
+                        output.innerHTML += `<p style="color: green;">✓ Successfully set receipt number in element!</p>`;
+                    } else {
+                        output.innerHTML += `<p style="color: red;">✗ Element with id 'receipt-number' not found!</p>`;
+                    }
+                } else {
+                    output.innerHTML += `<p style="color: red;">API response not OK</p>`;
+                }
+            } catch (error) {
+                output.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run test when page loads
+        window.addEventListener('DOMContentLoaded', testAPI);
+    </script>
+</head>
+<body>
+    <h1>Receipt Number Debug Test</h1>
+    <div style="border: 2px solid #ccc; padding: 20px; margin: 20px;">
+        <h2>Receipt Number Display:</h2>
+        <p>No.: <span id="receipt-number">—</span></p>
+    </div>
+    <div id="output" style="border: 2px solid #333; padding: 20px; margin: 20px; background: #f0f0f0;">
+        <h2>Debug Output:</h2>
+    </div>
+</body>
+</html>

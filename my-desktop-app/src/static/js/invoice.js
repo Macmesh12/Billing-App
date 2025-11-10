@@ -925,13 +925,28 @@
 
     async function loadNextInvoiceNumber() {
         // Load the next invoice number from the counter API
+        console.log('[Invoice] Loading next invoice number from:', `${API_BASE}/api/counter/invoice/next/`);
+        console.log('[Invoice] elements.invoiceNumber element:', elements.invoiceNumber);
         try {
             const response = await fetch(`${API_BASE}/api/counter/invoice/next/`);
+            console.log('[Invoice] API response status:', response.status);
             if (response.ok) {
                 const data = await response.json();
+                console.log('[Invoice] API response data:', data);
                 state.invoiceNumber = data.next_number;
-                elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
-                elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+                console.log('[Invoice] Setting invoice number to:', state.invoiceNumber);
+                if (elements.invoiceNumber) {
+                    elements.invoiceNumber.textContent = state.invoiceNumber;
+                    console.log('[Invoice] Set textContent on invoiceNumber element');
+                } else {
+                    console.warn('[Invoice] elements.invoiceNumber is null or undefined');
+                }
+                if (elements.previewNumber) {
+                    elements.previewNumber.textContent = state.invoiceNumber;
+                    console.log('[Invoice] Set textContent on previewNumber element');
+                }
+            } else {
+                console.warn('[Invoice] API response not ok:', response.status, response.statusText);
             }
         } catch (error) {
             console.warn("Failed to load next invoice number", error);
