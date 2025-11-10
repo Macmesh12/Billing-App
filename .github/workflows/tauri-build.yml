@@ -16,13 +16,8 @@ jobs:
       matrix:
         include:
           - platform: 'macos-latest'
-            target: 'x86_64-apple-darwin'
-            artifact_name: 'macos-dmg'
-            artifact_path: 'my-desktop-app/src-tauri/target/release/bundle/dmg/*.dmg'
-          
-          - platform: 'macos-latest'
-            target: 'aarch64-apple-darwin'
-            artifact_name: 'macos-arm64-dmg'
+            target: 'universal-apple-darwin'
+            artifact_name: 'macos-universal-dmg'
             artifact_path: 'my-desktop-app/src-tauri/target/release/bundle/dmg/*.dmg'
           
           - platform: 'windows-latest'
@@ -95,23 +90,17 @@ jobs:
           mkdir -p ../my-desktop-app/src-tauri/binaries
           cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app-x86_64-unknown-linux-gnu
 
-      - name: Build Django backend with PyInstaller (macOS x64)
-        if: matrix.platform == 'macos-latest' && matrix.target == 'x86_64-apple-darwin'
+      - name: Build Django backend with PyInstaller (macOS universal)
+        if: matrix.platform == 'macos-latest'
         run: |
           cd backend
           pip install pyinstaller
           pyinstaller django-app.spec --clean --noconfirm
           mkdir -p ../my-desktop-app/src-tauri/binaries
+          # Copy to both expected names for universal build
           cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app-x86_64-apple-darwin
-
-      - name: Build Django backend with PyInstaller (macOS ARM64)
-        if: matrix.platform == 'macos-latest' && matrix.target == 'aarch64-apple-darwin'
-        run: |
-          cd backend
-          pip install pyinstaller
-          pyinstaller django-app.spec --clean --noconfirm
-          mkdir -p ../my-desktop-app/src-tauri/binaries
           cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app-aarch64-apple-darwin
+          cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app
 
       - name: Build Django backend with PyInstaller (Windows)
         if: matrix.platform == 'windows-latest'
