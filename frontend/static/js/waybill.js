@@ -16,24 +16,6 @@
 
     // Execute when DOM is ready
     onReady(() => {
-    console.log('[Waybill] DOM ready — initializing module');
-    // Simple on-page debug panel so users can see logs without opening devtools
-    function debugLog(message) {
-        try {
-            console.log(message);
-            let panel = document.getElementById('waybill-debug-log');
-            if (!panel) {
-                panel = document.createElement('div');
-                panel.id = 'waybill-debug-log';
-                panel.style.cssText = 'position:fixed;right:8px;top:8px;z-index:9999;max-width:320px;max-height:40vh;overflow:auto;background:rgba(0,0,0,0.7);color:#fff;padding:8px;border-radius:6px;font-size:12px;font-family:monospace;';
-                document.body.appendChild(panel);
-            }
-            const entry = document.createElement('div');
-            entry.textContent = String(message);
-            entry.style.marginBottom = '6px';
-            panel.appendChild(entry);
-        } catch (e) { /* ignore */ }
-    }
     // IIFE for waybill module
     const helpers = window.BillingApp || {};
     // Get global helpers
@@ -192,6 +174,27 @@
             // Always render 10 rows
             for (let index = 0; index < 10; index++) {
                 const item = state.items[index];
+                const previewRow = document.createElement("tr");
+                if (item) {
+                    previewRow.innerHTML = `
+                        <td>${item.description || ""}</td>
+                        <td>${formatQuantity(item.quantity || 0)}</td>
+                        <td>${formatCurrency(item.unit_price || 0)}</td>
+                        <td>${formatCurrency(item.total || 0)}</td>
+                    `;
+                } else {
+                    previewRow.innerHTML = `
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    `;
+                    previewRow.classList.add("empty-row");
+                }
+                container.appendChild(previewRow);
+            }
+        });
+    }
 
     function computeWaybillTotals() {
         let totalQuantity = 0;
@@ -330,6 +333,7 @@
 
     async function handlePreview() {
         // Handle preview toggle
+        console.log('[Waybill] handlePreview() called');
         syncPreview();
         togglePreview(moduleId, true);
     }
@@ -453,14 +457,19 @@
 
     async function handleSave() {
         // Handle PDF download
+        console.log('[Waybill] handleSave() called, isSaving:', state.isSaving);
         if (state.isSaving) return;
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
+            console.log('[Waybill] Calling downloadWaybillPdf()...');
             await downloadWaybillPdf();
             // Increment the counter after successful PDF download
+            console.log('[Waybill] PDF download complete, incrementing counter...');
             await incrementWaybillNumber();
+        } catch (error) {
+            console.error('[Waybill] Error in handleSave:', error);
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
@@ -468,8 +477,10 @@
     }
 
     async function saveWaybillFile() {
+        console.log('[Waybill] saveWaybillFile() called, isSaving:', state.isSaving);
         if (state.isSaving) return;
         if (typeof helpers.saveDocument !== "function") {
+            console.error('[Waybill] saveDocument helper not available');
             showToast("Save helper unavailable.", "error");
             return;
         }
@@ -479,6 +490,7 @@
 
         try {
             showToast("Saving waybill…", "info");
+            console.log('[Waybill] Building waybill payload...');
             const totals = syncPreview() || computeWaybillTotals();
             const payload = buildWaybillDocumentPayload(totals);
             const metadata = {
@@ -548,8 +560,17 @@
     }
 
     function attachEventListeners() {
-    debugLog('[Waybill] Attaching event listeners');
         // Attach event listeners
+        console.log('[Waybill] Attaching event listeners...');
+        console.log('[Waybill] Elements:', {
+            itemsTableBody: elements.itemsTableBody,
+            addItemBtn: elements.addItemBtn,
+            previewToggleBtn: elements.previewToggleBtn,
+            saveBtn: elements.saveBtn,
+            submitBtn: elements.submitBtn,
+            exitPreviewBtn: elements.exitPreviewBtn
+        });
+        
         elements.itemsTableBody?.addEventListener("input", (event) => {
             const target = event.target;
             const field = target.getAttribute("data-field");
@@ -581,6 +602,7 @@
         });
 
         elements.addItemBtn?.addEventListener("click", () => {
+            console.log('[Waybill] Add Item button clicked');
             if (state.items.length >= 10) {
                 showToast("Maximum 10 items allowed", "error");
                 return;
@@ -590,27 +612,22 @@
         });
 
         elements.previewToggleBtn?.addEventListener("click", () => {
-            debugLog('[Waybill] previewToggleBtn clicked');
+            console.log('[Waybill] Preview Toggle button clicked');
             handlePreview();
         });
-        // Add a visible outline to the buttons so it's obvious they're active and clickable
-        try {
-            if (elements.previewToggleBtn) elements.previewToggleBtn.style.outline = '2px solid rgba(255,0,0,0.6)';
-            if (elements.saveBtn) elements.saveBtn.style.outline = '2px solid rgba(0,128,0,0.6)';
-            if (elements.submitBtn) elements.submitBtn.style.outline = '2px solid rgba(0,0,255,0.6)';
-        } catch (e) { /* ignore */ }
         // Save waybill as .way document
         elements.saveBtn?.addEventListener("click", () => {
-            debugLog('[Waybill] saveBtn clicked');
+            console.log('[Waybill] Save button clicked');
             saveWaybillFile();
         });
 
         elements.submitBtn?.addEventListener("click", () => {
-            debugLog('[Waybill] submitBtn clicked');
+            console.log('[Waybill] Submit (Download PDF) button clicked');
             handleSave();
         });
 
         elements.exitPreviewBtn?.addEventListener("click", () => {
+            console.log('[Waybill] Exit Preview button clicked');
             togglePreview(moduleId, false);
         });
 

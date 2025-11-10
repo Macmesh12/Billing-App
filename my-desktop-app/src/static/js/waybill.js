@@ -174,6 +174,27 @@
             // Always render 10 rows
             for (let index = 0; index < 10; index++) {
                 const item = state.items[index];
+                const previewRow = document.createElement("tr");
+                if (item) {
+                    previewRow.innerHTML = `
+                        <td>${item.description || ""}</td>
+                        <td>${formatQuantity(item.quantity || 0)}</td>
+                        <td>${formatCurrency(item.unit_price || 0)}</td>
+                        <td>${formatCurrency(item.total || 0)}</td>
+                    `;
+                } else {
+                    previewRow.innerHTML = `
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    `;
+                    previewRow.classList.add("empty-row");
+                }
+                container.appendChild(previewRow);
+            }
+        });
+    }
 
     function computeWaybillTotals() {
         let totalQuantity = 0;
@@ -312,6 +333,7 @@
 
     async function handlePreview() {
         // Handle preview toggle
+        console.log('[Waybill] handlePreview() called');
         syncPreview();
         togglePreview(moduleId, true);
     }
@@ -435,14 +457,19 @@
 
     async function handleSave() {
         // Handle PDF download
+        console.log('[Waybill] handleSave() called, isSaving:', state.isSaving);
         if (state.isSaving) return;
         state.isSaving = true;
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
+            console.log('[Waybill] Calling downloadWaybillPdf()...');
             await downloadWaybillPdf();
             // Increment the counter after successful PDF download
+            console.log('[Waybill] PDF download complete, incrementing counter...');
             await incrementWaybillNumber();
+        } catch (error) {
+            console.error('[Waybill] Error in handleSave:', error);
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
@@ -450,8 +477,10 @@
     }
 
     async function saveWaybillFile() {
+        console.log('[Waybill] saveWaybillFile() called, isSaving:', state.isSaving);
         if (state.isSaving) return;
         if (typeof helpers.saveDocument !== "function") {
+            console.error('[Waybill] saveDocument helper not available');
             showToast("Save helper unavailable.", "error");
             return;
         }
@@ -461,6 +490,7 @@
 
         try {
             showToast("Saving waybill…", "info");
+            console.log('[Waybill] Building waybill payload...');
             const totals = syncPreview() || computeWaybillTotals();
             const payload = buildWaybillDocumentPayload(totals);
             const metadata = {
@@ -531,6 +561,16 @@
 
     function attachEventListeners() {
         // Attach event listeners
+        console.log('[Waybill] Attaching event listeners...');
+        console.log('[Waybill] Elements:', {
+            itemsTableBody: elements.itemsTableBody,
+            addItemBtn: elements.addItemBtn,
+            previewToggleBtn: elements.previewToggleBtn,
+            saveBtn: elements.saveBtn,
+            submitBtn: elements.submitBtn,
+            exitPreviewBtn: elements.exitPreviewBtn
+        });
+        
         elements.itemsTableBody?.addEventListener("input", (event) => {
             const target = event.target;
             const field = target.getAttribute("data-field");
@@ -562,6 +602,7 @@
         });
 
         elements.addItemBtn?.addEventListener("click", () => {
+            console.log('[Waybill] Add Item button clicked');
             if (state.items.length >= 10) {
                 showToast("Maximum 10 items allowed", "error");
                 return;
@@ -571,18 +612,22 @@
         });
 
         elements.previewToggleBtn?.addEventListener("click", () => {
+            console.log('[Waybill] Preview Toggle button clicked');
             handlePreview();
         });
         // Save waybill as .way document
         elements.saveBtn?.addEventListener("click", () => {
+            console.log('[Waybill] Save button clicked');
             saveWaybillFile();
         });
 
         elements.submitBtn?.addEventListener("click", () => {
+            console.log('[Waybill] Submit (Download PDF) button clicked');
             handleSave();
         });
 
         elements.exitPreviewBtn?.addEventListener("click", () => {
+            console.log('[Waybill] Exit Preview button clicked');
             togglePreview(moduleId, false);
         });
 
