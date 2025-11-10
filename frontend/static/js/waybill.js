@@ -17,6 +17,23 @@
     // Execute when DOM is ready
     onReady(() => {
     console.log('[Waybill] DOM ready — initializing module');
+    // Simple on-page debug panel so users can see logs without opening devtools
+    function debugLog(message) {
+        try {
+            console.log(message);
+            let panel = document.getElementById('waybill-debug-log');
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.id = 'waybill-debug-log';
+                panel.style.cssText = 'position:fixed;right:8px;top:8px;z-index:9999;max-width:320px;max-height:40vh;overflow:auto;background:rgba(0,0,0,0.7);color:#fff;padding:8px;border-radius:6px;font-size:12px;font-family:monospace;';
+                document.body.appendChild(panel);
+            }
+            const entry = document.createElement('div');
+            entry.textContent = String(message);
+            entry.style.marginBottom = '6px';
+            panel.appendChild(entry);
+        } catch (e) { /* ignore */ }
+    }
     // IIFE for waybill module
     const helpers = window.BillingApp || {};
     // Get global helpers
@@ -531,7 +548,7 @@
     }
 
     function attachEventListeners() {
-        console.log('[Waybill] Attaching event listeners');
+    debugLog('[Waybill] Attaching event listeners');
         // Attach event listeners
         elements.itemsTableBody?.addEventListener("input", (event) => {
             const target = event.target;
@@ -573,17 +590,23 @@
         });
 
         elements.previewToggleBtn?.addEventListener("click", () => {
-            console.log('[Waybill] previewToggleBtn clicked');
+            debugLog('[Waybill] previewToggleBtn clicked');
             handlePreview();
         });
+        // Add a visible outline to the buttons so it's obvious they're active and clickable
+        try {
+            if (elements.previewToggleBtn) elements.previewToggleBtn.style.outline = '2px solid rgba(255,0,0,0.6)';
+            if (elements.saveBtn) elements.saveBtn.style.outline = '2px solid rgba(0,128,0,0.6)';
+            if (elements.submitBtn) elements.submitBtn.style.outline = '2px solid rgba(0,0,255,0.6)';
+        } catch (e) { /* ignore */ }
         // Save waybill as .way document
         elements.saveBtn?.addEventListener("click", () => {
-            console.log('[Waybill] saveBtn clicked');
+            debugLog('[Waybill] saveBtn clicked');
             saveWaybillFile();
         });
 
         elements.submitBtn?.addEventListener("click", () => {
-            console.log('[Waybill] submitBtn clicked');
+            debugLog('[Waybill] submitBtn clicked');
             handleSave();
         });
 
