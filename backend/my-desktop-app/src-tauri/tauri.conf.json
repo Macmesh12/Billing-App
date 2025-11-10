@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "my-desktop-app",
+  "productName": "Billing App",
   "version": "0.1.0",
-  "identifier": "y",
+  "identifier": "com.billing.desktop",
   "build": {
     "frontendDist": "../src"
   },
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "my-desktop-app",
+        "title": "Billing App",
         "width": 800,
         "height": 600
       }
@@ -21,7 +21,18 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "deb",
+      "appimage",
+      "msi",
+      "nsis",
+      "dmg",
+      "app"
+    ],
+    "externalBin": [
+      "binaries/django-app"
+    ],
+    "resources": [],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -29,5 +40,19 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    },
+    "dialog": {
+      "all": true,
+      "save": true,
+      "open": true
+    },
+    "fs": {
+      "all": true,
+      "scope": ["**"]
+    }
   }
 }

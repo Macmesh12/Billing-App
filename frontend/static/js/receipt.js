@@ -84,10 +84,15 @@
         balanceDisplay: document.getElementById("receipt-balance-display"),
     };
 
+    // Helper function to generate random 6-digit number
+    function generateRandomNumber() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
     const state = {
         // State object
         receiptId: null,
-        receiptNumber: "",
+        receiptNumber: generateRandomNumber(),
         isSaving: false,
         items: [],
     };
@@ -628,45 +633,23 @@
     }
 
     async function loadNextReceiptNumber() {
-        // Load the next receipt number from the counter API
-        console.log('[Receipt] Loading next receipt number from:', `${API_BASE}/api/counter/receipt/next/`);
-        console.log('[Receipt] elements.number element:', elements.number);
-        try {
-            const response = await fetch(`${API_BASE}/api/counter/receipt/next/`);
-            console.log('[Receipt] API response status:', response.status);
-            if (response.ok) {
-                const data = await response.json();
-                console.log('[Receipt] API response data:', data);
-                state.receiptNumber = data.next_number;
-                console.log('[Receipt] Setting receipt number to:', state.receiptNumber);
-                if (elements.number) {
-                    elements.number.textContent = state.receiptNumber;
-                    console.log('[Receipt] Set textContent on element');
-                } else {
-                    console.warn('[Receipt] elements.number is null or undefined');
-                }
-                setText(elements.previewNumberEls, state.receiptNumber);
-            } else {
-                console.warn('[Receipt] API response not ok:', response.status, response.statusText);
-            }
-        } catch (error) {
-            console.warn("Failed to load next receipt number", error);
+        // Generate a new random 6-digit receipt number
+        console.log('[Receipt] Generating new random receipt number');
+        state.receiptNumber = generateRandomNumber();
+        console.log('[Receipt] Generated receipt number:', state.receiptNumber);
+        if (elements.number) {
+            elements.number.textContent = state.receiptNumber;
+            console.log('[Receipt] Set textContent on element');
         }
+        setText(elements.previewNumberEls, state.receiptNumber);
     }
 
     async function incrementReceiptNumber() {
-        // Increment the receipt number counter after successful PDF download
-        try {
-            const response = await fetch(`${API_BASE}/api/counter/receipt/next/`, { method: "POST" });
-            if (response.ok) {
-                const data = await response.json();
-                state.receiptNumber = data.next_number;
-                elements.number && (elements.number.textContent = state.receiptNumber);
-                setText(elements.previewNumberEls, state.receiptNumber);
-            }
-        } catch (error) {
-            console.warn("Failed to increment receipt number", error);
-        }
+        // Generate a new random 6-digit receipt number after successful PDF download
+        state.receiptNumber = generateRandomNumber();
+        elements.number && (elements.number.textContent = state.receiptNumber);
+        setText(elements.previewNumberEls, state.receiptNumber);
+        console.log('[Receipt] Generated new receipt number for next document:', state.receiptNumber);
     }
 
     (async function init() {

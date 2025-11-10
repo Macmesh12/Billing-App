@@ -33,9 +33,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1.5rem;
-    padding: 1rem 1.5rem;
-    min-height: 180px;
+    gap: 1.5rem; /* Reduced from 1.5rem */
+    padding: 1rem 1.5rem; /* Reduced vertical padding */
+    min-height: 180px; /* Reduced from 180px */
     border-radius: 10px;
     border: 1px solid rgba(234,179,8,0.25);
     background: #eab308;
@@ -46,7 +46,7 @@
 /* Logo centered in letterhead - middle of all sides */
 .logo-placeholder {
     display: block;
-    max-width: 300px; /* allow responsive scaling */
+    max-width: 300px; /* Reduced from 300px for better fit */
     width: 100%;
     height: auto; /* preserve aspect ratio */
     margin: auto;
@@ -56,15 +56,15 @@
 /* Preview mode compact letterhead */
 .is-preview .invoice-letterhead,
 .pdf-export-wrapper .invoice-letterhead {
-    padding: 0.5rem 0.8rem;
+    padding: 0.4rem 0.8rem; /* Further reduced padding */
     margin-bottom: 0.4rem;
-    min-height: 120px;
-    gap: 0.8rem;
+    min-height: 100px; /* Reduced from 120px */
+    gap: 0.6rem; /* Reduced gap */
 }
 
 .is-preview .logo-placeholder,
 .pdf-export-wrapper .logo-placeholder {
-    max-width: 200px; /* smaller cap for preview/export */
+    max-width: 160px; /* Reduced from 200px - smaller but proportional */
     width: auto;
     height: auto; /* keep natural aspect ratio */
 }
@@ -230,26 +230,45 @@
    Displays subtotal, taxes/levies, and grand total
    ============================================ */
 
-/* Summary card container */
+/* Invoice summary container (totals section) - YELLOW THEME like receipt */
 .invoice-summary {
-    display: grid; /* Grid layout for stacked items */
-    gap: 1rem; /* Space between items */
-    margin: 2rem 0 2.0rem auto; /* Push to right side, spacing above/below */
-    max-width: 500px; /* Limit width */
-    padding: 1.2rem 1.0rem; /* Inner padding */
-    border-radius: 16px; /* Rounded corners */
-    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(241,244,255,0.9)); /* Gradient background */
-    box-shadow: 0 16px 40px rgba(15,23,42,0.08); /* Soft shadow */
-    -webkit-border-radius: 16px; /* Safari compatibility */
-    -moz-border-radius: 16px; /* Firefox compatibility */
-    -ms-border-radius: 16px; /* IE compatibility */
-    -o-border-radius: 16px; /* Opera compatibility */
+    width: fit-content; /* Fit to content */
+    max-width: 500px; /* Maximum width */
+    min-width: 360px; /* Minimum width */
+    margin: 2rem 0 2rem auto; /* Right-aligned with spacing */
+    padding: 1rem 1.2rem; /* Internal padding */
+    border-radius: 10px; /* Rounded corners */
+    background: linear-gradient(135deg, rgba(254,243,199,0.95), rgba(254,249,195,0.9)); /* Yellow theme like receipt */
+    border: 1px solid rgba(234,179,8,0.25); /* Gold border */
+    -webkit-border-radius: 10px; /* Safari compatibility */
+    -moz-border-radius: 10px; /* Firefox compatibility */
+    -ms-border-radius: 10px; /* IE compatibility */
+    -o-border-radius: 10px; /* Opera compatibility */
+}
+
+/* Force visibility and strong styling on all summary children */
+.invoice-summary *,
+.pdf-export-wrapper .invoice-summary *,
+.levy-total-row,
+.levy-total-row *,
+.vat-row,
+.vat-row *,
+.grand-total,
+.grand-total * {
+    color: #000000 !important; /* Force black text */
+    opacity: 1 !important; /* No transparency */
+    font-weight: 700 !important; /* Force bold */
+    -webkit-print-color-adjust: exact !important; /* Force color printing */
+    print-color-adjust: exact !important;
 }
 
 /* Summary table (subtotal row) */
 .summary-table {
     width: 100%; /* Full width */
     border-collapse: collapse; /* Merge borders */
+    border-bottom: 1px solid rgba(16,24,40,0.15); /* Line below subtotal */
+    padding-bottom: 0.5rem; /* Space below table */
+    margin-bottom: 0.5rem; /* Space before levies */
 }
 
 /* Summary table cell styling */
@@ -294,40 +313,41 @@
     color: var(--text); /* Full text color */
 }
 
-/* Total Levies row */
+/* Total Levies row - BOLD BLACK STYLE like receipt */
 .levy-total-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text);
+    font-size: 1rem;
+    font-weight: 700 !important;
+    color: #000000 !important; /* Force black */
     border-top: 1px solid rgba(16,24,40,0.08);
     margin-top: 0.5rem;
 }
 
-/* VAT row */
+/* VAT row - BOLD BLACK STYLE like receipt */
 .vat-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text);
+    font-size: 1rem;
+    font-weight: 700 !important;
+    color: #000000 !important; /* Force black */
 }
 
-/* Grand total row */
+/* Grand total row - EXTRA BOLD BLACK like receipt */
 .grand-total {
     display: flex; /* Flexbox layout */
     justify-content: space-between; /* Space between label and value */
     align-items: center; /* Vertically center */
-    padding-top: 0.75rem; /* Space above */
-    border-top: 2px solid rgba(16,24,40,0.15); /* Stronger top border separator */
-    font-size: 1.125rem; /* Larger text */
-    font-weight: 800; /* Extra bold */
+    padding-top: 0.8rem; /* Space above */
+    border-top: 2px solid var(--primary); /* Primary color border like receipt */
     margin-top: 0.5rem;
+    font-size: 1.1rem; /* Larger text */
+    font-weight: 700 !important; /* Extra bold */
+    color: #000000 !important; /* Force black */
 }
 
 /* ============================================
@@ -339,30 +359,35 @@
 /* Notes container */
 .invoice-notes {
     margin: 2.5rem 0; /* Spacing above and below */
-    font-size: 11px; /* Small text */
+    font-size: 13px; /* Increased by 2px from 11px */
     font-style: italic; /* Italic style */
+    min-height: 200px; /* Make it deeper */
+    font-weight: 700; /* Make notes bolder */
 }
 
 /* Notes heading */
 .invoice-notes h4 {
     margin-bottom: 0.8rem; /* Space below heading */
     letter-spacing: 0.4px; /* Slight letter spacing */
+    font-weight: 800; /* Bolder heading */
 }
 
 /* Notes textarea (edit mode) */
 .invoice-notes textarea {
     width: 100%; /* Full width */
-    min-height: 180px; /* Minimum height */
+    min-height: 250px; /* Increased from 180px - deeper */
     line-height: 1.5; /* Line spacing */
+    font-weight: 700; /* Bolder text */
 }
 
 /* Notes list (preview mode) */
 .invoice-notes ul {
     list-style: disc; /* Bullet points */
     padding-left: 1.2rem; /* Indent bullets */
-    color: var(--muted); /* Muted color */
+    color: var(--text); /* Changed from muted to text for darker/bolder */
     display: grid; /* Grid layout */
     gap: 0.35rem; /* Space between items */
+    font-weight: 700; /* Make list items bolder */
 }
 
 /* Empty state message when no notes */
@@ -391,15 +416,15 @@
 /* Signature block (image + metadata) */
 .signature-block {
     display: grid; /* Grid layout */
-    gap: 0.35rem; /* Space between items */
+    gap: 0.25rem; /* Reduced space between items */
     align-items: center; /* Center vertically */
-    margin-top: 10%; /* Push down from top */
+    margin-top: 5%; /* Reduced from 10% */
     margin-left: 10%; /* Indent from left */
 }
 
 /* Signature image styling */
 .signature-image {
-    width: 180px; /* Fixed width */
+    width: 120px; /* Reduced from 180px - smaller */
     height: auto; /* Maintain aspect ratio */
     object-fit: contain; /* Scale image to fit */
 }
@@ -408,6 +433,7 @@
 .signature-meta p {
     margin: 0; /* No margins */
     text-align: left; /* Left-aligned */
+    font-size: 0.85rem; /* Smaller text */
 }
 
 /* ============================================
@@ -416,33 +442,78 @@
    In preview mode, signature appears beside summary
    ============================================ */
 
-/* Signature and summary side-by-side in preview (but not in PDF export) */
-.module.is-preview:not(.pdf-export-wrapper) .invoice-summary,
-.module.is-preview:not(.pdf-export-wrapper) .invoice-signature {
-    display: inline-block; /* Inline layout */
-    vertical-align: top; /* Align to top */
-    width: 48%; /* Each takes 48% width (with gap) */
+/* Summary and signature in block layout (stacked vertically) */
+.invoice-summary,
+.invoice-signature {
+    display: block; /* Block layout */
+    width: 100%; /* Full width */
 }
 
-/* Signature spacing in preview */
-.module.is-preview:not(.pdf-export-wrapper) .invoice-signature {
-    margin-top: 1rem; /* Space from top */
+.invoice-signature {
+    margin: 2rem 0 1rem; /* Spacing above and below */
 }
 
-/* PDF Export: Force block layout for better rendering */
-.pdf-export-wrapper .invoice-summary,
-.pdf-export-wrapper .invoice-signature {
-    display: block !important; /* Force block layout */
-    width: 100% !important; /* Full width */
-    max-width: 500px; /* Limit width */
-}
-
-.pdf-export-wrapper .invoice-signature {
-    margin: 2rem 0 2.5rem 0; /* Standard spacing */
-}
-
+/* PDF Export: Ensure all summary text is bold and fully visible with yellow theme */
 .pdf-export-wrapper .invoice-summary {
-    margin: 2rem 0 2.0rem auto; /* Right-aligned */
+    background: linear-gradient(135deg, rgba(254,243,199,0.95), rgba(254,249,195,0.9)) !important; /* Yellow theme like receipt */
+    border: 1px solid rgba(234,179,8,0.25) !important; /* Gold border */
+}
+
+.pdf-export-wrapper .invoice-summary,
+.pdf-export-wrapper .invoice-summary * {
+    color: #000000 !important; /* Full black for maximum contrast */
+    -webkit-print-color-adjust: exact !important; /* Force colors in print */
+    print-color-adjust: exact !important; /* Force colors in print */
+}
+
+.pdf-export-wrapper .summary-table th,
+.pdf-export-wrapper .summary-table td,
+.summary-table th,
+.summary-table td {
+    font-weight: 700 !important; /* Bold text */
+    color: #000000 !important; /* Full black */
+    opacity: 1 !important; /* No transparency */
+    -webkit-print-color-adjust: exact !important; /* Force color printing */
+    print-color-adjust: exact !important;
+}
+
+.pdf-export-wrapper .levies-table,
+.pdf-export-wrapper .levies-table *,
+.levies-table,
+.levies-table * {
+    font-weight: 700 !important; /* Bold text */
+    color: #000000 !important; /* Full black */
+    opacity: 1 !important; /* No transparency */
+    -webkit-print-color-adjust: exact !important; /* Force color printing */
+    print-color-adjust: exact !important;
+}
+
+.pdf-export-wrapper .levy-total-row,
+.pdf-export-wrapper .levy-total-row *,
+.pdf-export-wrapper .levy-total-row span,
+.levy-total-row,
+.levy-total-row * {
+    font-weight: 700 !important; /* Bold like receipt */
+    color: #000000 !important; /* Full black */
+}
+
+.pdf-export-wrapper .vat-row,
+.pdf-export-wrapper .vat-row *,
+.pdf-export-wrapper .vat-row span,
+.vat-row,
+.vat-row * {
+    font-weight: 700 !important; /* Bold like receipt */
+    color: #000000 !important; /* Full black */
+}
+
+.pdf-export-wrapper .grand-total,
+.pdf-export-wrapper .grand-total *,
+.pdf-export-wrapper .grand-total span,
+.grand-total,
+.grand-total * {
+    font-weight: 700 !important; /* Bold like receipt */
+    color: #000000 !important; /* Full black */
+    font-size: 1.1rem !important; /* Slightly larger */
 }
 
 /* Compact summary in preview */
@@ -475,7 +546,8 @@
 /* Compact invoice notes in preview */
 .is-preview .invoice-notes {
     margin: 1rem 0;
-    font-size: 9px;
+    font-size: 11px; /* Increased by 2px from 9px */
+    min-height: 150px; /* Make it deeper in preview too */
 }
 
 .is-preview .invoice-notes h4 {

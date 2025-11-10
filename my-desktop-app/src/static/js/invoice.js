@@ -177,12 +177,17 @@
         contact: document.getElementById("invoice-contact"),
     };
 
+    // Helper function to generate random 6-digit number
+    function generateRandomNumber() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
     const state = {
         // Application state object
         items: [],
         levies: [],
         invoiceId: null,
-        invoiceNumber: "INV-001",
+        invoiceNumber: generateRandomNumber(),
         isSaving: false,
     };
 
@@ -617,6 +622,30 @@
         clone.removeAttribute("hidden");
         clone.setAttribute("data-pdf-clone", "true");
         
+        // Force visibility on summary elements with inline styles AND background
+        const levyTotalRow = clone.querySelector('.levy-total-row');
+        const vatRow = clone.querySelector('.vat-row');
+        const grandTotal = clone.querySelector('.grand-total');
+        
+        if (levyTotalRow) {
+            levyTotalRow.style.cssText = 'display: flex !important; justify-content: space-between !important; color: #000000 !important; background-color: transparent !important; font-weight: 900 !important; opacity: 1 !important; padding: 0.5rem 0 !important;';
+            levyTotalRow.querySelectorAll('span').forEach(span => {
+                span.style.cssText = 'color: #000000 !important; font-weight: 900 !important; opacity: 1 !important; background: none !important;';
+            });
+        }
+        if (vatRow) {
+            vatRow.style.cssText = 'display: flex !important; justify-content: space-between !important; color: #000000 !important; background-color: transparent !important; font-weight: 900 !important; opacity: 1 !important; padding: 0.5rem 0 !important;';
+            vatRow.querySelectorAll('span').forEach(span => {
+                span.style.cssText = 'color: #000000 !important; font-weight: 900 !important; opacity: 1 !important; background: none !important;';
+            });
+        }
+        if (grandTotal) {
+            grandTotal.style.cssText = 'display: flex !important; justify-content: space-between !important; color: #000000 !important; background-color: transparent !important; font-weight: 900 !important; opacity: 1 !important; font-size: 1.2rem !important; padding: 0.75rem 0 !important;';
+            grandTotal.querySelectorAll('span').forEach(span => {
+                span.style.cssText = 'color: #000000 !important; font-weight: 900 !important; opacity: 1 !important; font-size: 1.2rem !important; background: none !important;';
+            });
+        }
+        
         // Convert image paths to absolute URLs for proper loading
         const images = clone.querySelectorAll("img");
         images.forEach((img) => {
@@ -669,6 +698,8 @@
                 logging: false,
                 width: A4_PX_WIDTH,
                 height: Math.max(A4_PX_HEIGHT, clone.scrollHeight),
+                foreignObjectRendering: false, // Disable to force better text rendering
+                removeContainer: true,
             });
 
             const { jsPDF } = window.jspdf;
@@ -958,48 +989,26 @@
     }
 
     async function loadNextInvoiceNumber() {
-        // Load the next invoice number from the counter API
-        console.log('[Invoice] Loading next invoice number from:', `${API_BASE}/api/counter/invoice/next/`);
-        console.log('[Invoice] elements.invoiceNumber element:', elements.invoiceNumber);
-        try {
-            const response = await fetch(`${API_BASE}/api/counter/invoice/next/`);
-            console.log('[Invoice] API response status:', response.status);
-            if (response.ok) {
-                const data = await response.json();
-                console.log('[Invoice] API response data:', data);
-                state.invoiceNumber = data.next_number;
-                console.log('[Invoice] Setting invoice number to:', state.invoiceNumber);
-                if (elements.invoiceNumber) {
-                    elements.invoiceNumber.textContent = state.invoiceNumber;
-                    console.log('[Invoice] Set textContent on invoiceNumber element');
-                } else {
-                    console.warn('[Invoice] elements.invoiceNumber is null or undefined');
-                }
-                if (elements.previewNumber) {
-                    elements.previewNumber.textContent = state.invoiceNumber;
-                    console.log('[Invoice] Set textContent on previewNumber element');
-                }
-            } else {
-                console.warn('[Invoice] API response not ok:', response.status, response.statusText);
-            }
-        } catch (error) {
-            console.warn("Failed to load next invoice number", error);
+        // Generate a new random 6-digit invoice number
+        console.log('[Invoice] Generating new random invoice number');
+        state.invoiceNumber = generateRandomNumber();
+        console.log('[Invoice] Generated invoice number:', state.invoiceNumber);
+        if (elements.invoiceNumber) {
+            elements.invoiceNumber.textContent = state.invoiceNumber;
+            console.log('[Invoice] Set textContent on invoiceNumber element');
+        }
+        if (elements.previewNumber) {
+            elements.previewNumber.textContent = state.invoiceNumber;
+            console.log('[Invoice] Set textContent on previewNumber element');
         }
     }
 
     async function incrementInvoiceNumber() {
-        // Increment the invoice number counter after successful PDF download
-        try {
-            const response = await fetch(`${API_BASE}/api/counter/invoice/next/`, { method: "POST" });
-            if (response.ok) {
-                const data = await response.json();
-                state.invoiceNumber = data.next_number;
-                elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
-                elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
-            }
-        } catch (error) {
-            console.warn("Failed to increment invoice number", error);
-        }
+        // Generate a new random 6-digit invoice number after successful PDF download
+        state.invoiceNumber = generateRandomNumber();
+        elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
+        elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
+        console.log('[Invoice] Generated new invoice number for next document:', state.invoiceNumber);
     }
 
     (async function init() {
