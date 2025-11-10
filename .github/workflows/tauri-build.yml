@@ -15,11 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'
-            target: ''
-            artifact_name: 'macos-dmg'
-            artifact_path: 'my-desktop-app/src-tauri/target/release/bundle/dmg/*.dmg'
-          
           - platform: 'windows-latest'
             target: ''
             artifact_name: 'windows-installers'
@@ -66,11 +61,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libappindicator3-dev librsvg2-dev patchelf libpango-1.0-0 libcairo2 libgdk-pixbuf2.0-0 libjpeg-dev libpng-dev
 
-      - name: Install macOS dependencies
-        if: matrix.platform == 'macos-latest'
-        run: |
-          brew install cairo pango gdk-pixbuf libffi
-
       - name: Install Python dependencies
         run: |
           cd backend
@@ -89,17 +79,6 @@ jobs:
           pyinstaller django-app.spec --clean --noconfirm
           mkdir -p ../my-desktop-app/src-tauri/binaries
           cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app-x86_64-unknown-linux-gnu
-
-      - name: Build Django backend with PyInstaller (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: |
-          cd backend
-          pip install pyinstaller
-          pyinstaller django-app.spec --clean --noconfirm
-          mkdir -p ../my-desktop-app/src-tauri/binaries
-          # GitHub Actions macOS runners are x86_64, so copy the binary with appropriate name
-          cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app-x86_64-apple-darwin
-          cp dist/django-app ../my-desktop-app/src-tauri/binaries/django-app
 
       - name: Build Django backend with PyInstaller (Windows)
         if: matrix.platform == 'windows-latest'
@@ -169,6 +148,5 @@ jobs:
             artifacts/**/*.msi
             artifacts/**/*.deb
             artifacts/**/*.AppImage
-            artifacts/**/*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
