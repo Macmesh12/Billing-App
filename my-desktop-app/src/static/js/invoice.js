@@ -74,13 +74,20 @@
         // ============================================
         // MODULE INITIALIZATION
         // ============================================
+        console.log('[Invoice] invoice.js loaded and DOM ready');
         
         const moduleId = "invoice-module"; // ID of the invoice module element
         const moduleEl = document.getElementById(moduleId); // Reference to module DOM element
+        console.log('[Invoice] moduleEl:', moduleEl);
         const form = document.getElementById("invoice-form"); // Reference to invoice form
+        console.log('[Invoice] form:', form);
         
         // Exit early if required elements are not found
-        if (!moduleEl || !form) return;
+        if (!moduleEl || !form) {
+            console.error('[Invoice] Missing required elements! moduleEl:', moduleEl, 'form:', form);
+            return;
+        }
+        console.log('[Invoice] All required elements found, continuing initialization...');
 
         function toggleModulePreview(isPreview) {
             // Local fallback toggle for preview mode
@@ -688,8 +695,35 @@
             const offsetY = (pdfHeight - renderHeight) / 2;
 
             pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
-            pdf.save(filename);
-            showToast("PDF downloaded successfully!");
+            
+            // Check if running in Tauri desktop app
+            if (window.__TAURI__?.dialog?.save && window.__TAURI__?.fs?.writeBinaryFile) {
+                // Tauri: Show save dialog and write PDF
+                const { dialog, fs } = window.__TAURI__;
+                let savePath = await dialog.save({
+                    defaultPath: filename,
+                    filters: [{ name: "PDF Document", extensions: ["pdf"] }],
+                });
+                
+                if (!savePath) {
+                    showToast("PDF save cancelled", "info");
+                    return;
+                }
+                
+                if (!savePath.toLowerCase().endsWith(".pdf")) {
+                    savePath = `${savePath}.pdf`;
+                }
+                
+                // Get PDF as Uint8Array and write to file
+                const pdfData = pdf.output("arraybuffer");
+                const uint8Array = new Uint8Array(pdfData);
+                await fs.writeBinaryFile({ path: savePath, contents: uint8Array });
+                showToast("PDF saved successfully!");
+            } else {
+                // Browser: Direct download
+                pdf.save(filename);
+                showToast("PDF downloaded successfully!");
+            }
         } catch (error) {
             console.error("PDF generation error:", error);
             showToast("Failed to generate PDF: " + error.message, "error");
