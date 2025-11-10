@@ -14,3 +14,31 @@ backend/build/
 
 # Local virtual environments
 backend/.venv*/
+# Ignore build artifacts and packaging outputs
+billing-app_1.0.0_all/
+my-desktop-app/src-tauri/target/
+my-desktop-app/src-tauri/binaries/
+my-desktop-app/node_modules/
+backend/dist/
+backend/build/
+.conda/
+
+# Common artifacts
+*.deb
+*.AppImage
+*.dmg
+*.msi
+*.exe
+*.zip
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.sqlite3
+
+# IDE
+.vscode/
+.DS_Store
