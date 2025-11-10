@@ -33,13 +33,20 @@
             return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2);
         };
 
+    console.log('[Waybill] waybill.js loaded and DOM ready');
     const moduleId = "waybill-module";
     // Module ID
     const moduleEl = document.getElementById(moduleId);
+    console.log('[Waybill] moduleEl:', moduleEl);
     // Module element
     const form = document.getElementById("waybill-form");
+    console.log('[Waybill] form:', form);
     // Form element
-    if (!moduleEl || !form) return;
+    if (!moduleEl || !form) {
+        console.error('[Waybill] Missing required elements! moduleEl:', moduleEl, 'form:', form);
+        return;
+    }
+    console.log('[Waybill] All required elements found, continuing initialization...');
     // Exit if elements not found
 
     const config = window.BILLING_APP_CONFIG || {};

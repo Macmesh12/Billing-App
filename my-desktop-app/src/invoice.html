@@ -50,7 +50,7 @@ DEPENDENCIES:
         // Default to the current origin so packaged apps and server-served
         // pages call the correct backend without relying on a hardcoded dev URL.
         window.BILLING_APP_CONFIG = {
-            apiBaseUrl: (window.location && window.location.protocol === 'http:') ? window.location.origin : "http://127.0.0.1:8765"
+            apiBaseUrl: (window.location && window.location.protocol === 'http:' && window.location.port === '8765') ? window.location.origin : "http://127.0.0.1:8765"
         };
     </script>
 </head>

@@ -24,13 +24,20 @@
     const formatCurrency = typeof helpers.formatCurrency === "function" ? helpers.formatCurrency : (value) => Number(value || 0).toFixed(2);
     // Fallback for formatCurrency
 
+    console.log('[Receipt] receipt.js loaded and DOM ready');
     const moduleId = "receipt-module";
     // Module ID
     const moduleEl = document.getElementById(moduleId);
+    console.log('[Receipt] moduleEl:', moduleEl);
     // Module element
     const form = document.getElementById("receipt-form");
+    console.log('[Receipt] form:', form);
     // Form element
-    if (!moduleEl || !form) return;
+    if (!moduleEl || !form) {
+        console.error('[Receipt] Missing required elements! moduleEl:', moduleEl, 'form:', form);
+        return;
+    }
+    console.log('[Receipt] All required elements found, continuing initialization...');
     // Exit if elements not found
 
     const config = window.BILLING_APP_CONFIG || {};

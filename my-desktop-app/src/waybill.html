@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="../static/css/general.css">
     <link rel="stylesheet" href="../static/css/waybill.css">
     <script>
-        window.BILLING_APP_CONFIG = { apiBaseUrl: (window.location && window.location.protocol === 'http:') ? window.location.origin : "http://127.0.0.1:8765" };
+        window.BILLING_APP_CONFIG = { apiBaseUrl: (window.location && window.location.protocol === 'http:' && window.location.port === '8765') ? window.location.origin : "http://127.0.0.1:8765" };
     </script>
 </head>
 <body class="billing-app">

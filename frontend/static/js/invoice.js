@@ -74,13 +74,20 @@
         // ============================================
         // MODULE INITIALIZATION
         // ============================================
+        console.log('[Invoice] invoice.js loaded and DOM ready');
         
         const moduleId = "invoice-module"; // ID of the invoice module element
         const moduleEl = document.getElementById(moduleId); // Reference to module DOM element
+        console.log('[Invoice] moduleEl:', moduleEl);
         const form = document.getElementById("invoice-form"); // Reference to invoice form
+        console.log('[Invoice] form:', form);
         
         // Exit early if required elements are not found
-        if (!moduleEl || !form) return;
+        if (!moduleEl || !form) {
+            console.error('[Invoice] Missing required elements! moduleEl:', moduleEl, 'form:', form);
+            return;
+        }
+        console.log('[Invoice] All required elements found, continuing initialization...');
 
         function toggleModulePreview(isPreview) {
             // Local fallback toggle for preview mode

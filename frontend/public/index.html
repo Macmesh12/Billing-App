@@ -15,7 +15,7 @@
         // the API base to the current origin. This avoids hardcoding a
         // development-only URL.
         window.BILLING_APP_CONFIG = {
-            apiBaseUrl: (window.location && window.location.protocol === 'http:') ? window.location.origin : "http://127.0.0.1:8765"
+            apiBaseUrl: (window.location && window.location.protocol === 'http:' && window.location.port === '8765') ? window.location.origin : "http://127.0.0.1:8765"
         };
     </script>
 </head>
