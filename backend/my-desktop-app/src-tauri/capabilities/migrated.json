@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "migrated",
+  "description": "Permissions for dialog and fs plugins",
+  "windows": ["main"],
+  "permissions": []
+}

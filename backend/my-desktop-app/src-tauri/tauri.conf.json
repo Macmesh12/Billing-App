@@ -44,15 +44,6 @@
   "plugins": {
     "shell": {
       "open": true
-    },
-    "dialog": {
-      "all": true,
-      "save": true,
-      "open": true
-    },
-    "fs": {
-      "all": true,
-      "scope": ["**"]
     }
   }
 }
