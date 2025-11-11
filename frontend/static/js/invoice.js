@@ -759,8 +759,16 @@
                 // Get PDF as Uint8Array and write to file
                 const pdfData = pdf.output("arraybuffer");
                 const uint8Array = new Uint8Array(pdfData);
-                await fs.writeBinaryFile({ path: savePath, contents: uint8Array });
-                showToast("PDF saved successfully!");
+                console.log('[Invoice] PDF data prepared, size:', uint8Array.length, 'bytes');
+                
+                try {
+                    await fs.writeFile(savePath, Array.from(uint8Array));
+                    console.log('[Invoice] File written successfully');
+                    showToast("PDF saved successfully!");
+                } catch (writeError) {
+                    console.error('[Invoice] Write error:', writeError);
+                    throw writeError;
+                }
             } else {
                 console.log('[Invoice] Falling back to browser download');
                 // Browser: Direct download
