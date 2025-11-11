@@ -728,13 +728,24 @@
             pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
             
             // Check if running in Tauri desktop app
+            console.log('[Invoice] Checking Tauri availability:', {
+                hasTauri: !!window.__TAURI__,
+                hasDialog: !!window.__TAURI__?.dialog,
+                hasSave: !!window.__TAURI__?.dialog?.save,
+                hasFs: !!window.__TAURI__?.fs,
+                hasWriteBinaryFile: !!window.__TAURI__?.fs?.writeBinaryFile
+            });
+            
             if (window.__TAURI__?.dialog?.save && window.__TAURI__?.fs?.writeBinaryFile) {
+                console.log('[Invoice] Using Tauri native save dialog');
                 // Tauri: Show save dialog and write PDF
                 const { dialog, fs } = window.__TAURI__;
                 let savePath = await dialog.save({
                     defaultPath: filename,
                     filters: [{ name: "PDF Document", extensions: ["pdf"] }],
                 });
+                
+                console.log('[Invoice] Save dialog result:', savePath);
                 
                 if (!savePath) {
                     showToast("PDF save cancelled", "info");
@@ -751,6 +762,7 @@
                 await fs.writeBinaryFile({ path: savePath, contents: uint8Array });
                 showToast("PDF saved successfully!");
             } else {
+                console.log('[Invoice] Falling back to browser download');
                 // Browser: Direct download
                 pdf.save(filename);
                 showToast("PDF downloaded successfully!");
