@@ -761,14 +761,10 @@
                 const uint8Array = new Uint8Array(pdfData);
                 console.log('[Invoice] PDF data prepared, size:', uint8Array.length, 'bytes');
                 
-                try {
-                    await fs.writeFile(savePath, Array.from(uint8Array));
-                    console.log('[Invoice] File written successfully');
-                    showToast("PDF saved successfully!");
-                } catch (writeError) {
-                    console.error('[Invoice] Write error:', writeError);
-                    throw writeError;
-                }
+                // Use the same API as the working save function
+                await fs.writeBinaryFile({ path: savePath, contents: uint8Array });
+                console.log('[Invoice] File written successfully to:', savePath);
+                showToast("PDF saved successfully!");
             } else {
                 console.log('[Invoice] Falling back to browser download');
                 // Browser: Direct download
