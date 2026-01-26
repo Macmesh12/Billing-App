@@ -1,11 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:printing/printing.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
 import '../providers/app_state.dart';
 import '../widgets/custom_button.dart';
-import '../utils/pdf_generator.dart';
+import '../services/api_service.dart';
 
 class InvoiceScreen extends StatefulWidget {
   const InvoiceScreen({super.key});
@@ -16,6 +15,7 @@ class InvoiceScreen extends StatefulWidget {
 
 class _InvoiceScreenState extends State<InvoiceScreen> {
   bool isEditMode = true;
+  int? savedInvoiceId;
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +185,6 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header
         const Text(
           'INVOICE',
           style: TextStyle(
@@ -195,8 +194,6 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           ),
         ),
         const Divider(height: 32, thickness: 2),
-
-        // Invoice Info
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -217,8 +214,6 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           ],
         ),
         const SizedBox(height: 24),
-
-        // Customer
         const Text('Bill To:', style: TextStyle(color: Colors.grey, fontSize: 12)),
         const SizedBox(height: 8),
         Text(
@@ -228,8 +223,6 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         Text(invoice.customerAddress),
         Text(invoice.customerCity),
         const SizedBox(height: 32),
-
-        // Items Table
         Container(
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey.shade300),
@@ -270,8 +263,6 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           ),
         ),
         const SizedBox(height: 24),
-
-        // Totals
         Column(
           children: [
             _buildTotalRow('Subtotal', invoice.subtotal),
@@ -283,8 +274,6 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           ],
         ),
         const SizedBox(height: 24),
-
-        // Notes
         if (invoice.notes.isNotEmpty) ...[
           const Text('Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
@@ -361,7 +350,52 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
   }
 
   Future<void> _exportPDF(BuildContext context, invoice) async {
-    final pdf = await PDFGenerator.generateInvoicePDF(invoice);
-    await Printing.layoutPdf(onLayout: (format) => pdf.save());
+    if (savedInvoiceId == null) {
+      // First save the invoice to Django
+      try {
+        final result = await ApiService.createInvoice({
+          'customer_name': invoice.customerName,
+          'customer_address': invoice.customerAddress,
+          'customer_city': invoice.customerCity,
+          'classification': invoice.classification,
+          'issue_date': invoice.date,
+          'items_payload': invoice.lineItems.map((i) => {
+            'description': i.description,
+            'qty': i.qty,
+            'unit_price': i.unitPrice,
+            'amount': i.amount,
+          }).toList(),
+          'notes': invoice.notes,
+        });
+        savedInvoiceId = result['id'];
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to save invoice: $e')),
+          );
+        }
+        return;
+      }
+    }
+
+    // Download PDF from Django
+    try {
+      final response = await ApiService.downloadInvoicePDF(savedInvoiceId!);
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('\${directory.path}/invoice_\${invoice.invoiceNumber}.pdf');
+      await file.writeAsBytes(response.bodyBytes);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF saved to \${file.path}')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export PDF: $e')),
+        );
+      }
+    }
   }
 }
