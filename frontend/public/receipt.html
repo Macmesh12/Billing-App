@@ -10,6 +10,7 @@
                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
                     <link rel="stylesheet" href="../static/css/general.css">
                     <link rel="stylesheet" href="../static/css/receipt.css">
+                    <!-- Styles moved to ../static/css/receipt.css -->
                     <script>
                         window.BILLING_APP_CONFIG = {
                             apiBaseUrl: (window.location && window.location.protocol === 'http:' && window.location.port === '8765') ? window.location.origin : "http://127.0.0.1:8765"
@@ -22,10 +23,68 @@
                         <h1>Billing App</h1>
                     </div>
                     <nav class="app-nav" aria-label="Primary">
-                        <a class="nav-link" href="index.html">Recents</a>
-                        <a class="nav-link" href="invoice.html">Invoice</a>
-                        <a class="nav-link" href="receipt.html">Receipt</a>
-                        <a class="nav-link" href="waybill.html">Waybill</a>
+                        <div class="nav-main">
+                            <a class="nav-link" href="index.html">Recents</a>
+                            <a class="nav-link" href="invoice.html">Invoice</a>
+                            <a class="nav-link" href="receipt.html">Receipt</a>
+                            <a class="nav-link" href="waybill.html">Waybill</a>
+                        </div>
+                        <div class="nav-bottom">
+                            <div class="nav-settings">
+                                <button id="nav-settings-toggle" class="nav-link button-ghost" type="button" aria-haspopup="dialog" aria-expanded="false">Settings</button>
+                                <div id="nav-settings-overlay" class="settings-overlay" hidden>
+                                    <div id="nav-settings-pop" class="settings-popover" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+                                    <div class="settings-header">
+                                        <h4>Settings</h4>
+                                        <button id="settings-close" class="settings-close" aria-label="Close">✕</button>
+                                    </div>
+                                    <p class="settings-note">Choose where drafts and exported PDFs should be stored. For local browser-only storage, leave paths empty.</p>
+
+                                    <div class="settings-row">
+                                        <label for="settings-draft-path">Draft save path</label>
+                                        <div class="settings-path">
+                                            <input id="settings-draft-path" type="text" placeholder="/path/to/save/drafts or leave empty for local" />
+                                            <button id="settings-choose-draft" class="button-secondary">Choose…</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="settings-row">
+                                        <label for="settings-pdf-path">PDF save path</label>
+                                        <div class="settings-path">
+                                            <input id="settings-pdf-path" type="text" placeholder="/path/to/save/pdfs or leave empty for local" />
+                                            <button id="settings-choose-pdf" class="button-secondary">Choose…</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="settings-row settings-toggle">
+                                        <label class="switch"><input id="settings-save-pdf" type="checkbox" /><span class="slider"></span></label>
+                                        <div class="settings-toggle-label">Save PDF when saving draft</div>
+                                    </div>
+
+                                    <hr />
+                                    <div class="settings-row">
+                                        <label>Manage Customers</label>
+                                        <div id="settings-customers-list"></div>
+                                        <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                                            <input id="settings-customer-add-input" type="text" placeholder="Add customer name" />
+                                            <button id="settings-customer-add" class="button-secondary">Add</button>
+                                        </div>
+                                    </div>
+
+                                    <input id="settings-pdf-chooser" type="file" webkitdirectory directory multiple hidden />
+                                    <input id="settings-draft-chooser" type="file" webkitdirectory directory multiple hidden />
+
+                                    <div class="settings-actions">
+                                        <button id="settings-clear-data-btn" class="button-secondary" style="background:var(--danger);color:#fff;border:none;">Clear Data</button>
+                                        <div style="flex:1"></div>
+                                        <button id="settings-save-btn" class="button-secondary">Save</button>
+                                        <button id="settings-save-pdf-now" class="button">Save PDF now</button>
+                                    </div>
+                                </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </nav>
                 </header>
 
@@ -34,16 +93,10 @@
                         <div class="module-header module-header--long">
                             <h2>Receipt</h2>
                             <div class="module-actions">
-                                <button id="receipt-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
-                                <button id="receipt-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                                <button id="receipt-save" class="button button-secondary" type="button" title="Save project (.billproj)">Save</button>
-                                <button id="receipt-submit" class="button" type="button" title="Download PDF" aria-label="Download PDF">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                        <path d="M12 3v10" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                                        <path d="M7 10l5 5 5-5" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                                    </svg>
-                                </button>
+                                <button id="receipt-preview-toggle" class="button button-secondary" type="button" title="Preview">Preview</button>
+                                <button id="receipt-back-to-edit" class="button button-secondary preview-back" type="button">Back to Edit</button>
+                                <button id="receipt-save" class="button button-secondary" type="button" title="Save PDF">Save PDF</button>
+                                <button id="receipt-save-draft" class="button" type="button" title="Save Draft">Save Draft</button>
                             </div>
                         </div>
 
@@ -55,10 +108,7 @@
                                     <div class="letterhead-left">
                                         <h3>RECEIPT</h3>
                                         <p>Receipt No.: <span id="receipt-number">—</span></p>
-                                        <label class="field-block">
-                                            <span>Date</span>
-                                            <input type="date" id="receipt-issue-date" name="issue_date" required>
-                                        </label>
+                                        <p class="receipt-date">Date: <input type="date" id="receipt-issue-date" name="issue_date" required style="display: inline; width: auto; border: none; background: transparent;"></p>
                                     </div>
                                     <div class="letterhead-right">
                                         <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
@@ -79,93 +129,31 @@
                                     </table>
                                     <button type="button" id="receipt-add-item" class="button button-secondary">Add Item</button>
 
-                                    <div class="receipt-payment-section">
-                                        <label class="field-block">
-                                            <span>Amount Paid (GHC)</span>
-                                            <input type="number" step="0.01" id="receipt-amount-paid" name="amount_paid" placeholder="0.00" required>
-                                        </label>
-                                        <label class="field-block">
-                                            <span>Payment Method</span>
-                                            <select id="receipt-payment-method" name="payment_method" required>
-                                                <option value="">Select method</option>
-                                                <option value="Cash">Cash</option>
-                                                <option value="Mobile Money">Mobile Money</option>
-                                                <option value="Bank Transfer">Bank Transfer</option>
-                                            </select>
-                                        </label>
-                                    </div>
-
-                                    <div class="receipt-totals">
-                                        <div class="total-row">
-                                            <span>Total Amount:</span>
-                                            <span id="receipt-total-display">GH₵ 0.00</span>
-                                        </div>
-                                        <div class="total-row balance-row">
-                                            <span>Balance:</span>
-                                            <span id="receipt-balance-display">GH₵ 0.00</span>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section class="receipt-signature">
-                                    <div class="signature-left">
-                                        <label class="field-block">
-                                            <span>Creative Director</span>
-                                        </label>
-                                    </div>
-                                    <div class="signature-right">
-                                        <label class="field-block">
-                                            <span>Customer Name</span>
-                                            <input type="text" id="receipt-customer-name" name="customer_name" placeholder="Client name" required>
-                                        </label>
-                                         <label class="field-block">
-                                            <span>Issued By: </span>
-                                            <input type="text" id="receipt-issued-by" name="issued_by" placeholder="Issued by" required>
-                                        </label>
-                                    </div>
-                                </section>
-                            </form>
-
-                            <div id="receipt-preview" class="document receipt-document receipt-preview-landscape" hidden>
-                                <div class="receipt-letterhead">
-                                    <div class="letterhead-left">
-                                        <h3>RECEIPT</h3>
-                                        <p>Receipt No.: <span class="js-receipt-preview-number">—</span></p>
-                                        <p class="receipt-date">Date: <span class="js-receipt-preview-date">—</span></p>
-                                    </div>
-                                    <div class="letterhead-right">
-                                        <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
-                                    </div>
-                                </div>
-
-                                <section class="receipt-body">
-
-                                    <table class="document-items">
-                                        <thead>
-                                            <tr>
-                                                <th class="description">Description</th>
-                                                <th>Qty</th>
-                                                <th>Unit Price (GHC)</th>
-                                                <th>Amount (GHC)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="receipt-preview-rows"></tbody>
-                                    </table>
-
                                     <div class="receipt-summary-section">
                                         <div class="receipt-payment-info">
-                                            <p><strong>Payment Method:</strong> <span class="js-receipt-preview-payment-method">—</span></p>
-                                            <p><strong>Amount Paid:</strong> <span class="js-receipt-preview-amount-paid">GH₵ 0.00</span></p>
+                                            <label class="field-block">
+                                                <span class="receipt-strong">Amount Paid (GHC)</span>
+                                                <input type="number" step="0.01" id="receipt-amount-paid" name="amount_paid" placeholder="0.00" required>
+                                            </label>
+                                            <label class="field-block">
+                                                <span class="receipt-strong">Payment Method</span>
+                                                <select id="receipt-payment-method" name="payment_method" required>
+                                                    <option value="">Select method</option>
+                                                    <option value="Cash">Cash</option>
+                                                    <option value="Mobile Money">Mobile Money</option>
+                                                    <option value="Bank Transfer">Bank Transfer</option>
+                                                </select>
+                                            </label>
                                         </div>
 
                                         <div class="receipt-totals">
                                             <div class="total-row">
                                                 <span>Total Amount:</span>
-                                                <span class="js-receipt-preview-total-amount">GH₵ 0.00</span>
+                                                <span id="receipt-total-display">GH₵ 0.00</span>
                                             </div>
                                             <div class="total-row balance-row">
                                                 <span>Balance:</span>
-                                                <span class="js-receipt-preview-balance">GH₵ 0.00</span>
+                                                <span id="receipt-balance-display">GH₵ 0.00</span>
                                             </div>
                                         </div>
                                     </div>
@@ -173,22 +161,33 @@
 
                                 <section class="receipt-signature">
                                     <div class="signature-left">
-                                        <p><strong>Creative Director:</strong></p>
+                                        <label class="field-block">
+                                            <span class="receipt-strong--heavy">Creative Director</span>
+                                        </label>
                                         <div class="signature-block">
                                             <img src="/assets/sign.png" alt="Creative Director Signature" class="signature-image">
                                         </div>
                                     </div>
+
+                                    <div class="signature-middle">
+                                        <label class="field-block">
+                                            <span class="receipt-strong">Customer Name</span>
+                                            <input type="text" id="receipt-customer-name" name="customer_name" placeholder="Client name" required>
+                                        </label>
+                                    </div>
+
                                     <div class="signature-right">
-                                        <p><strong>Customer Name:</strong> <span class="js-receipt-preview-customer-name">—</span></p>
-                                        <p><strong>Issued By:</strong> <span class="js-receipt-preview-issued-by">—</span></p>
+                                        <label class="field-block">
+                                            <span class="receipt-strong">Issued By</span>
+                                            <input type="text" id="receipt-issued-by" name="issued_by" placeholder="Issued by" required>
+                                        </label>
                                     </div>
                                 </section>
-
-                                <section id="receipt-preview-contact">
+                                <section class="receipt-contact-bar">
                                     <div class="contact-wrapper">
                                         <p class="account">
-                                            <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
-                                            <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
+                                            <span>0543127562 <img src="/assets/mobile money.png" alt="Mobile Money" class="contact-icon"></span>
+                                            <span>0505321475 <img src="/assets/whatsapp.png" alt="WhatsApp" class="contact-icon"></span>
                                             <span>0540673202</span>
                                             <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
                                         </p>
@@ -196,10 +195,11 @@
                                             <span>Email: spaquelsmultimedia@gmail.com</span>
                                             <span>Website: www.spaquelsmultimedia.org</span>
                                         </p>
-                        
                                     </div>
                                 </section>
-                            </div>
+                            </form>
+
+                            <!-- Preview removed -->
                             </div> <!-- End A4 workspace -->
                         </div>
                         <div class="module-toast" id="receipt-toast" role="status" aria-live="polite" hidden></div>
@@ -209,6 +209,9 @@
                 <script src="../static/js/main.js" defer></script>
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" referrerpolicy="no-referrer"></script>
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" referrerpolicy="no-referrer"></script>
+                <script src="../static/js/customers.js" defer></script>
+                <script src="../static/js/drafts.js" defer></script>
                 <script src="../static/js/receipt.js" defer></script>
+                <script src="../static/js/settings.js" defer></script>
                 </body>
                 </html>

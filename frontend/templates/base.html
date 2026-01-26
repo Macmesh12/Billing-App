@@ -17,16 +17,76 @@
 <header class="app-header">
     <h1>Billing App</h1>
     <nav class="app-nav" aria-label="Main navigation">
-    <a href="{% url 'home' %}" class="nav-link">Recents</a>
-        <a href="{% url 'invoice-form' %}" class="nav-link">Invoice</a>
-        <a href="{% url 'receipt-form' %}" class="nav-link">Receipt</a>
-        <a href="{% url 'waybill-form' %}" class="nav-link">Waybill</a>
+        <div class="nav-main">
+            <a href="{% url 'home' %}" class="nav-link">Recents</a>
+            <a href="{% url 'invoice-form' %}" class="nav-link">Invoice</a>
+            <a href="{% url 'receipt-form' %}" class="nav-link">Receipt</a>
+            <a href="{% url 'waybill-form' %}" class="nav-link">Waybill</a>
+        </div>
+
+        <div class="nav-bottom">
+            <div class="nav-settings">
+                <button id="nav-settings-toggle" class="nav-link button-ghost" type="button" aria-haspopup="dialog" aria-expanded="false">Settings</button>
+                <div id="nav-settings-overlay" class="settings-overlay" hidden>
+                    <div id="nav-settings-pop" class="settings-popover" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+                    <div class="settings-header">
+                        <h4>Settings</h4>
+                        <button id="settings-close" class="settings-close" aria-label="Close">✕</button>
+                    </div>
+                    <p class="settings-note">Choose where drafts and exported PDFs should be stored. For local browser-only storage, leave paths empty.</p>
+
+                    <div class="settings-row">
+                        <label for="settings-draft-path">Draft save path</label>
+                        <div class="settings-path">
+                            <input id="settings-draft-path" type="text" placeholder="/path/to/save/drafts or leave empty for local" />
+                            <button id="settings-choose-draft" class="button-secondary">Choose…</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-row">
+                        <label for="settings-pdf-path">PDF save path</label>
+                        <div class="settings-path">
+                            <input id="settings-pdf-path" type="text" placeholder="/path/to/save/pdfs or leave empty for local" />
+                            <button id="settings-choose-pdf" class="button-secondary">Choose…</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-row settings-toggle">
+                        <label class="switch"><input id="settings-save-pdf" type="checkbox" /><span class="slider"></span></label>
+                        <div class="settings-toggle-label">Save PDF when saving draft</div>
+                    </div>
+
+                    <hr />
+                    <div class="settings-row">
+                        <label>Manage Customers</label>
+                        <div id="settings-customers-list"></div>
+                        <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                            <input id="settings-customer-add-input" type="text" placeholder="Add customer name" />
+                            <button id="settings-customer-add" class="button-secondary">Add</button>
+                        </div>
+                    </div>
+
+                    <input id="settings-pdf-chooser" type="file" webkitdirectory directory multiple hidden />
+                    <input id="settings-draft-chooser" type="file" webkitdirectory directory multiple hidden />
+
+                    <div class="settings-actions">
+                        <button id="settings-clear-data-btn" class="button-secondary" style="background:var(--danger);color:#fff;border:none;">Clear Data</button>
+                        <div style="flex:1"></div>
+                        <button id="settings-save-btn" class="button-secondary">Save</button>
+                        <button id="settings-save-pdf-now" class="button">Save PDF now</button>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </nav>
 </header>
 <main class="app-main">
     {% block content %}{% endblock %}
 </main>
 <script src="{% static 'js/main.js' %}"></script>
+<script src="{% static 'js/customers.js' %}"></script>
+<script src="{% static 'js/settings.js' %}"></script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

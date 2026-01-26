@@ -48,9 +48,10 @@
     const elements = {
         // DOM elements object
         previewToggleBtn: document.getElementById("receipt-preview-toggle"),
-        exitPreviewBtn: document.getElementById("receipt-exit-preview"),
-    submitBtn: document.getElementById("receipt-submit"),
+        
+        submitBtn: document.getElementById("receipt-submit"),
     saveBtn: document.getElementById("receipt-save"),
+    saveDraftBtn: document.getElementById("receipt-save-draft"),
         toast: document.getElementById("receipt-toast"),
         number: document.getElementById("receipt-number"),
         addItemBtn: document.getElementById("receipt-add-item"),
@@ -84,17 +85,24 @@
         balanceDisplay: document.getElementById("receipt-balance-display"),
     };
 
-    // Helper function to generate random 6-digit number
-    function generateRandomNumber() {
-        return Math.floor(100000 + Math.random() * 900000).toString();
+    // Helper function to generate SPQ + 2 uppercase letters + 4 digits
+    function generateSPQNumber() {
+        const letters = Array.from({ length: 2 }, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+        const digits = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join('');
+        return `SPQ${letters}${digits}`;
     }
 
     const state = {
         // State object
         receiptId: null,
-        receiptNumber: generateRandomNumber(),
+        receiptNumber: generateSPQNumber(),
+        draftId: null,
         isSaving: false,
-        items: [],
+        items: [
+            { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true },
+            { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+            { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+        ],
     };
 
     // Increment document number helper: preserves prefix and zero-padding
@@ -172,7 +180,10 @@
 
     function calculateTotals() {
         // Calculate total amount from items
-        const total = state.items.reduce((sum, item) => sum + (item.total || 0), 0);
+        // Only include enabled items (placeholders have enabled === false)
+        const total = (state.items || [])
+            .filter((item) => item && item.enabled !== false)
+            .reduce((sum, item) => sum + (Number(item.total) || 0), 0);
         const amountPaid = Number(inputs.amountPaid?.value) || 0;
         const balance = total - amountPaid;
         
@@ -188,81 +199,75 @@
     }
 
     function renderItems() {
-        // Render items in the table - always show 10 rows
+        // Render only the actual items in the table; don't show placeholder rows by default.
         const tbody = elements.itemsTable?.querySelector("tbody");
         if (!tbody) return;
-        
+
         tbody.innerHTML = "";
-        
-        // Render up to 10 rows
-        for (let index = 0; index < 10; index++) {
-            const item = state.items[index] || {};
-            const row = document.createElement("tr");
-            
-            if (index < state.items.length) {
-                // Row with data and inputs
-                row.innerHTML = `
-                    <td><input type="text" value="${item.description || ""}" data-index="${index}" data-field="description" placeholder="Item description"></td>
-                    <td><input type="number" value="${item.quantity || 0}" data-index="${index}" data-field="quantity" min="0" step="1"></td>
-                    <td><input type="number" value="${item.unit_price || 0}" data-index="${index}" data-field="unit_price" min="0" step="0.01"></td>
-                    <td class="total-cell">${formatCurrency(item.total || 0)}</td>
-                    <td><button type="button" class="button-icon" data-remove="${index}" title="Remove item">×</button></td>
+
+        // Render one row per item in state.items
+        state.items.forEach((item, index) => {
+            if (item && item.enabled === false) {
+                const placeholder = document.createElement('tr');
+                placeholder.className = 'item-placeholder';
+                placeholder.innerHTML = `
+                    <td class="placeholder-cell">&nbsp;</td>
+                    <td class="placeholder-cell">&nbsp;</td>
+                    <td class="placeholder-cell">&nbsp;</td>
+                    <td class="total-cell">&nbsp;</td>
+                    <td></td>
                 `;
-            } else {
-                // Empty row for visual spacing
-                row.innerHTML = `
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                `;
-                row.classList.add("empty-row");
+                tbody.appendChild(placeholder);
+                return;
             }
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td><input type="text" value="${item.description || ""}" data-index="${index}" data-field="description" placeholder="Item description"></td>
+                <td><input type="number" value="${item.quantity || 0}" data-index="${index}" data-field="quantity" min="0" step="1"></td>
+                <td><input type="number" value="${item.unit_price || 0}" data-index="${index}" data-field="unit_price" min="0" step="0.01"></td>
+                <td class="total-cell">${formatCurrency(item.total || 0)}</td>
+                <td><button type="button" class="button-icon" data-remove="${index}" title="Remove item">×</button></td>
+            `;
             tbody.appendChild(row);
-        }
-        
+        });
+
         calculateTotals();
         renderPreviewItems();
     }
 
     function renderPreviewItems() {
-        // Render items in preview mode - always show 10 rows
+        // Render only existing (enabled) items in preview
         if (!elements.previewRows) return;
-        
+
         elements.previewRows.innerHTML = "";
-        
-        // Render up to 10 rows
-        for (let index = 0; index < 10; index++) {
-            const item = state.items[index];
-            const row = document.createElement("tr");
-            
-            if (item) {
-                // Row with actual data
-                row.innerHTML = `
-                    <td>${item.description || "—"}</td>
-                    <td>${item.quantity || 0}</td>
-                    <td>${formatCurrency(item.unit_price || 0)}</td>
-                    <td>${formatCurrency(item.total || 0)}</td>
-                `;
-            } else {
-                // Empty row for visual spacing
+        state.items.forEach((item) => {
+            if (!item || item.enabled === false) {
+                const row = document.createElement("tr");
                 row.innerHTML = `
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                 `;
-                row.classList.add("empty-row");
+                elements.previewRows.appendChild(row);
+                return;
             }
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${item.description || "—"}</td>
+                <td>${item.quantity || 0}</td>
+                <td>${formatCurrency(item.unit_price || 0)}</td>
+                <td>${formatCurrency(item.total || 0)}</td>
+            `;
             elements.previewRows.appendChild(row);
-        }
+        });
     }
 
     function serializeReceiptItems() {
-        return state.items
+        return (state.items || [])
+            .filter((item) => item && item.enabled !== false)
             .filter((item) => {
-                if (!item) return false;
                 const description = (item.description || "").trim();
                 const quantity = Number(item.quantity) || 0;
                 const price = Number(item.unit_price) || 0;
@@ -322,7 +327,13 @@
     async function handlePreview() {
         // Handle preview toggle
         syncPreview();
-        togglePreview(moduleId, true);
+        // Use in-place preview (togglePreview). The module has already synced the preview
+        try {
+            togglePreview(moduleId, true);
+            return;
+        } catch (err) {
+            console.error('Failed to toggle in-place preview', err);
+        }
     }
 
     async function downloadReceiptPdf() {
@@ -338,21 +349,90 @@
         
         syncPreview();
         
-        const previewEl = document.getElementById("receipt-preview");
-        if (!previewEl) {
-            showToast("Preview element not found", "error");
+        // Clone the editable form element directly to preserve edit page styling
+        const docEl = document.getElementById("receipt-form");
+        if (!docEl) {
+            showToast("Document element not found for PDF export", "error");
             return;
         }
 
-        // Create a wrapper for PDF export with exact preview styling
+        // Create a wrapper off-screen that allows natural document sizing
         const exportWrapper = document.createElement("div");
-        exportWrapper.className = "module is-preview pdf-export-wrapper";
+        exportWrapper.className = "module";
         exportWrapper.setAttribute("aria-hidden", "true");
-        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
+        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0;";
         
-        const clone = previewEl.cloneNode(true);
+        const clone = docEl.cloneNode(true);
         clone.removeAttribute("hidden");
         clone.setAttribute("data-pdf-clone", "true");
+        clone.classList.remove('document-editable', 'is-preview', 'module-preview');
+        // Let the clone use its natural CSS-defined size (297mm from .receipt-document)
+        // Sanitize clone for PDF: remove buttons and convert inputs to static text
+        (function sanitizeCloneForPdf(root) {
+            if (!root) return;
+            const removeSelectors = [
+                'button', '.button', '.button-icon', '.btn-remove-row',
+                '[id$="-preview-toggle"]', '[id$="-exit-preview"]', '.module-actions', '.module-toast',
+                '.preview-overlay', '.preview-close', '.preview-input-value', '.preview-input-block'
+            ];
+            removeSelectors.forEach(sel => root.querySelectorAll(sel).forEach(n => n.remove()));
+
+            root.querySelectorAll('[data-remove]').forEach(n => n.remove());
+
+            // Remove hidden payloads and scripts (prevent raw JSON or debug payloads from showing)
+            root.querySelectorAll('input[type="hidden"], [id$="-payload"], script').forEach(n => n.remove());
+
+            function escapeHtml(s) {
+                return String(s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            function replaceWithText(node, text) {
+                const value = text || '';
+                if (node.tagName && node.tagName.toLowerCase() === 'textarea') {
+                    const div = document.createElement('div');
+                    if (node.id) div.id = node.id;
+                    div.classList.add('pdf-replacement');
+                    div.style.cssText = 'background: transparent; border: none; font: inherit; color: inherit; display: block; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word;';
+                    div.innerHTML = escapeHtml(value).replace(/\n/g, '<br>');
+                    node.parentNode && node.parentNode.replaceChild(div, node);
+                    return;
+                }
+                const span = document.createElement('span');
+                span.textContent = value;
+                if (node.id) span.id = node.id;
+                span.classList.add('pdf-replacement');
+                span.style.cssText = 'background: transparent; border: none; font: inherit; color: inherit; display: inline-block; white-space: normal; overflow-wrap: break-word; word-break: break-word;';
+                node.parentNode && node.parentNode.replaceChild(span, node);
+            }
+
+            root.querySelectorAll('input, textarea, select').forEach((el) => {
+                try {
+                    // Skip inputs inside placeholder cells
+                    const isInPlaceholder = el.closest('.item-placeholder, .placeholder-cell');
+                    if (isInPlaceholder) {
+                        el.remove();
+                        return;
+                    }
+                    if (el.tagName.toLowerCase() === 'select') {
+                        const text = (el.options && el.options[el.selectedIndex]) ? el.options[el.selectedIndex].text : (el.value || '');
+                        replaceWithText(el, text);
+                        return;
+                    }
+                    const type = (el.getAttribute('type') || '').toLowerCase();
+                    if (type === 'checkbox' || type === 'radio') {
+                        const span = document.createElement('span');
+                        span.textContent = el.checked ? '✓' : '';
+                        span.style.cssText = 'font-weight:700; color: inherit;';
+                        el.parentNode && el.parentNode.replaceChild(span, el);
+                        return;
+                    }
+                    replaceWithText(el, el.value || el.placeholder || '');
+                } catch (e) { /* ignore */ }
+            });
+        })(clone);
         
         // Convert image paths to absolute URLs for proper loading
         const images = clone.querySelectorAll("img");
@@ -369,6 +449,8 @@
         // The preview element itself is the document
         exportWrapper.appendChild(clone);
         document.body.appendChild(exportWrapper);
+        // Give the browser a frame to render the off-screen clone so html2canvas can capture it
+        await new Promise((resolve) => requestAnimationFrame(resolve));
 
         let filename = state.receiptNumber || "receipt";
         if (!filename.toLowerCase().endsWith(".pdf")) {
@@ -393,45 +475,39 @@
                 })
             );
 
-            const A4_PX_WIDTH = 794;
-            const A4_PX_HEIGHT = 1122;
-            clone.style.width = A4_PX_WIDTH + "px";
-            clone.style.maxWidth = A4_PX_WIDTH + "px";
+            // Force layout recalc and measure natural document size
+            clone.offsetHeight; // Force reflow
+            const rect = clone.getBoundingClientRect();
+            const widthPx = Math.ceil(rect.width) || Math.ceil(clone.offsetWidth) || 1122;
+            const heightPx = Math.ceil(rect.height) || Math.ceil(clone.offsetHeight) || 1587;
+            const renderScale = 2;
 
             const canvas = await window.html2canvas(clone, {
-                scale: 2,
+                scale: renderScale,
                 useCORS: true,
-                allowTaint: true, // Allow cross-origin images
+                allowTaint: true,
                 backgroundColor: "#ffffff",
                 logging: false,
-                width: A4_PX_WIDTH,
-                height: Math.max(A4_PX_HEIGHT, clone.scrollHeight),
+                width: widthPx,
+                height: heightPx,
+                foreignObjectRendering: false,
+                removeContainer: true,
             });
 
             const { jsPDF } = window.jspdf;
+
+            const imgData = canvas.toDataURL("image/png");
+            const pxPerMm = 96 / 25.4;
+            const widthMm = Math.max(1, widthPx / pxPerMm);
+            const heightMm = Math.max(1, heightPx / pxPerMm);
             const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
+                orientation: widthMm >= heightMm ? 'landscape' : 'portrait',
+                unit: 'mm',
+                format: [widthMm, heightMm],
                 compress: true,
             });
 
-            const imgData = canvas.toDataURL("image/png");
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            let renderWidth = pdfWidth;
-            let renderHeight = (canvas.height * renderWidth) / canvas.width;
-
-            if (renderHeight > pdfHeight) {
-                const ratio = pdfHeight / renderHeight;
-                renderHeight = pdfHeight;
-                renderWidth = renderWidth * ratio;
-            }
-
-            const offsetX = (pdfWidth - renderWidth) / 2;
-            const offsetY = (pdfHeight - renderHeight) / 2;
-
-            pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
+            pdf.addImage(imgData, "PNG", 0, 0, widthMm, heightMm, undefined, "FAST");
             
             // Check if running in Tauri desktop app
             if (window.__TAURI__?.dialog?.save && window.__TAURI__?.fs?.writeBinaryFile) {
@@ -443,8 +519,9 @@
                 });
                 
                 if (!savePath) {
+                    document.body.removeChild(exportWrapper);
                     showToast("PDF save cancelled", "info");
-                    return;
+                    return { cancelled: true };
                 }
                 
                 if (!savePath.toLowerCase().endsWith(".pdf")) {
@@ -455,17 +532,23 @@
                 const pdfData = pdf.output("arraybuffer");
                 const uint8Array = new Uint8Array(pdfData);
                 await fs.writeBinaryFile({ path: savePath, contents: uint8Array });
+                document.body.removeChild(exportWrapper);
                 showToast("PDF saved successfully!");
+                return { path: savePath, name: filename };
             } else {
                 // Browser: Direct download
                 pdf.save(filename);
+                document.body.removeChild(exportWrapper);
                 showToast("PDF downloaded successfully!");
+                return { name: filename };
             }
         } catch (error) {
             console.error("PDF generation error:", error);
             showToast("Failed to generate PDF: " + error.message, "error");
-        } finally {
-            document.body.removeChild(exportWrapper);
+            if (exportWrapper && exportWrapper.parentNode) {
+                document.body.removeChild(exportWrapper);
+            }
+            return { cancelled: true, error: error.message };
         }
     }
 
@@ -476,9 +559,11 @@
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
-            await downloadReceiptPdf();
-            // Increment the counter after successful PDF download
-            await incrementReceiptNumber();
+            const result = await downloadReceiptPdf();
+            if (!result?.cancelled) {
+                // Increment the counter after successful PDF download
+                await incrementReceiptNumber();
+            }
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
@@ -534,9 +619,44 @@
     }
 
     async function loadExistingReceipt() {
+        // Load existing receipt if ID in URL or if an openDocument was placed in sessionStorage
+        try {
+            const openDocJson = window.sessionStorage?.getItem('billingapp.openDocument');
+            if (openDocJson) {
+                window.sessionStorage?.removeItem('billingapp.openDocument');
+                const openDoc = JSON.parse(openDocJson);
+                if (openDoc.type === 'receipt' && openDoc.data) {
+                    const data = openDoc.data;
+                    state.receiptNumber = data.receipt_number || state.receiptNumber;
+                    elements.number && (elements.number.textContent = state.receiptNumber);
+                    setText(elements.previewNumberEls, state.receiptNumber);
+                    if (inputs.receivedFrom) inputs.receivedFrom.value = data.received_from || "";
+                    if (inputs.amountPaid) inputs.amountPaid.value = data.amount_paid || 0;
+                    if (inputs.paymentMethod) inputs.paymentMethod.value = data.payment_method || "";
+                    if (inputs.approvedBy) inputs.approvedBy.value = data.approved_by || "";
+                    if (inputs.issueDate && data.issue_date) inputs.issueDate.value = data.issue_date;
+                    if (inputs.customerName) inputs.customerName.value = data.customer_name || "";
+                    state.items = Array.isArray(data.items) ? data.items : [];
+                    renderItems();
+                    syncPreview();
+                    if (openDoc.preview) togglePreview(moduleId, true);
+                    return;
+                }
+            }
+        } catch (e) { /* ignore */ }
         // Load existing receipt if ID in URL
         const id = getQueryParam("id");
-        if (!id) return;
+        if (!id) {
+            // default to three rows: first enabled, next two placeholders
+            state.items = [
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true },
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+            ];
+            renderItems();
+            syncPreview();
+            return;
+        }
         try {
             const data = await callApi(`/receipts/api/${id}/`);
             state.receiptId = data.id;
@@ -558,24 +678,56 @@
 
     function attachEventListeners() {
         // Attach event listeners
-        elements.previewToggleBtn?.addEventListener("click", () => {
-            handlePreview();
-        });
+        // Preview toggle removed (no preview button in markup)
         // Save receipt as .rec document
         elements.saveBtn?.addEventListener("click", () => {
             saveReceiptFile();
+        });
+
+        // Save draft to localStorage using Drafts API
+        elements.saveDraftBtn?.addEventListener('click', async () => {
+            try {
+                showToast('Saving draft…', 'info');
+                const totals = syncPreview() || calculateTotals();
+                const payload = buildReceiptDocumentPayload(totals);
+                const metadata = {
+                    bill_number: state.receiptNumber,
+                    customer: inputs.customerName?.value || '',
+                    issue_date: inputs.issueDate?.value || '',
+                };
+                if (!window.Drafts || typeof window.Drafts.saveDraft !== 'function') {
+                    showToast('Draft API not available', 'error');
+                    return;
+                }
+                const res = await window.Drafts.saveDraft('receipt', payload, metadata, state.draftId);
+                if (res && res.id) {
+                    state.draftId = res.id;
+                    showToast('Draft saved', 'success');
+                } else {
+                    showToast('Draft saved', 'success');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to save draft', 'error');
+            }
         });
 
         elements.submitBtn?.addEventListener("click", () => {
             handleSave();
         });
 
+        // Preview button removed from markup; no-op
+
+        // Exit preview button removed from markup; no-op
+
         elements.addItemBtn?.addEventListener("click", () => {
-            if (state.items.length >= 10) {
-                showToast("Maximum 10 items allowed", "error");
-                return;
+            // Enable the first placeholder row if present; otherwise append a new enabled row.
+            const placeholderIndex = (state.items || []).findIndex((it) => it && it.enabled === false);
+            if (placeholderIndex !== -1) {
+                state.items[placeholderIndex] = { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true };
+            } else {
+                state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0, enabled: true });
             }
-            state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
             renderItems();
         });
 
@@ -616,9 +768,7 @@
             renderItems();
         });
 
-        elements.exitPreviewBtn?.addEventListener("click", () => {
-            togglePreview(moduleId, false);
-        });
+        // Exit preview removed (no preview button in markup)
 
         // Recalculate totals when amount paid changes
         inputs.amountPaid?.addEventListener("input", () => {
@@ -633,9 +783,9 @@
     }
 
     async function loadNextReceiptNumber() {
-        // Generate a new random 6-digit receipt number
-        console.log('[Receipt] Generating new random receipt number');
-        state.receiptNumber = generateRandomNumber();
+        // Generate a new SPQ receipt number for unsaved receipts
+        console.log('[Receipt] Generating new SPQ receipt number');
+        state.receiptNumber = generateSPQNumber();
         console.log('[Receipt] Generated receipt number:', state.receiptNumber);
         if (elements.number) {
             elements.number.textContent = state.receiptNumber;
@@ -645,8 +795,8 @@
     }
 
     async function incrementReceiptNumber() {
-        // Generate a new random 6-digit receipt number after successful PDF download
-        state.receiptNumber = generateRandomNumber();
+        // Generate a new SPQ receipt number after successful PDF download
+        state.receiptNumber = generateSPQNumber();
         elements.number && (elements.number.textContent = state.receiptNumber);
         setText(elements.previewNumberEls, state.receiptNumber);
         console.log('[Receipt] Generated new receipt number for next document:', state.receiptNumber);

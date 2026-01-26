@@ -27,7 +27,8 @@ def get_next_invoice_number(request: HttpRequest) -> HttpResponse:
     
     if request.method == "GET":
         instance = DocumentCounter.get_instance()
-        next_number = f"INV-{instance.invoice_counter:03d}"
+        # For clients requesting without incrementing, return placeholder
+        next_number = "SPQ-NEW"
         return _cors(JsonResponse({"next_number": next_number}))
     
     elif request.method == "POST":
@@ -48,7 +49,7 @@ def get_next_receipt_number(request: HttpRequest) -> HttpResponse:
     
     if request.method == "GET":
         instance = DocumentCounter.get_instance()
-        next_number = f"REC-{instance.receipt_counter:03d}"
+        next_number = "SPQ-NEW"
         return _cors(JsonResponse({"next_number": next_number}))
     
     elif request.method == "POST":
@@ -69,7 +70,7 @@ def get_next_waybill_number(request: HttpRequest) -> HttpResponse:
     
     if request.method == "GET":
         instance = DocumentCounter.get_instance()
-        next_number = f"WAY-{instance.waybill_counter:03d}"
+        next_number = "SPQ-NEW"
         return _cors(JsonResponse({"next_number": next_number}))
     
     elif request.method == "POST":

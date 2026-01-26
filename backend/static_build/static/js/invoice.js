@@ -125,34 +125,16 @@
         // Object containing references to key DOM elements
         itemsPayload: document.getElementById("invoice-items-payload"),
         itemsTableBody: document.querySelector("#invoice-items-table tbody"),
-        previewRows: document.getElementById("invoice-preview-rows"),
         subtotal: document.getElementById("invoice-subtotal"),
         levyTotal: document.getElementById("invoice-levy-total"),
         vat: document.getElementById("invoice-vat"),
         grandTotal: document.getElementById("invoice-grand-total"),
-        previewSubtotal: document.getElementById("invoice-preview-subtotal"),
-        previewLevyTotal: document.getElementById("invoice-preview-levy-total"),
-        previewVat: document.getElementById("invoice-preview-vat"),
-        previewGrand: document.getElementById("invoice-preview-grand"),
         levyContainer: document.getElementById("invoice-levies"),
-        previewLevyContainer: document.getElementById("invoice-preview-levies"),
         addItemBtn: document.getElementById("invoice-add-item"),
-        previewToggleBtn: document.getElementById("invoice-preview-toggle"),
-        exitPreviewBtn: document.getElementById("invoice-exit-preview"),
+        // preview buttons removed from static build
         submitBtn: document.getElementById("invoice-submit"),
         toast: document.getElementById("invoice-toast"),
         invoiceNumber: document.getElementById("invoice-number"),
-        previewNumber: document.getElementById("invoice-preview-number"),
-        previewCustomer: document.getElementById("invoice-preview-customer"),
-        previewClassification: document.getElementById("invoice-preview-classification"),
-        previewDate: document.getElementById("invoice-preview-date"),
-        previewCompanyName: document.getElementById("invoice-preview-company-name"),
-        previewCompanyInfo: document.getElementById("invoice-preview-company-info"),
-        previewClientRef: document.getElementById("invoice-preview-client-ref"),
-        previewIntro: document.getElementById("invoice-preview-intro"),
-        previewNotesList: document.getElementById("invoice-preview-notes"),
-        previewSignatory: document.getElementById("invoice-preview-signatory"),
-        previewContact: document.getElementById("invoice-preview-contact"),
     };
 
     const inputs = {
@@ -174,7 +156,7 @@
         items: [],
         levies: [],
         invoiceId: null,
-        invoiceNumber: "INV-001",
+        invoiceNumber: "—",
         isSaving: false,
     };
 
@@ -286,12 +268,17 @@
     }
 
     function renderLevyPlaceholders() {
-        // Function to render levy placeholders in edit and preview sections
-        if (!elements.levyContainer || !elements.previewLevyContainer) return;
+        // Function to render levy placeholders in edit section
+        if (!elements.levyContainer) return;
         elements.levyContainer.innerHTML = "";
-        elements.previewLevyContainer.innerHTML = "";
         levyValueMap.clear();
-        previewLevyValueMap.clear();
+        const hasPreview = Boolean(document.getElementById("invoice-preview-levies"));
+        if (hasPreview) {
+            // Clear the preview container only if it exists in the DOM
+            const previewContainer = document.getElementById("invoice-preview-levies");
+            if (previewContainer) previewContainer.innerHTML = "";
+            previewLevyValueMap.clear();
+        }
 
         state.levies
             .filter(({ isVat }) => !isVat)
@@ -302,11 +289,14 @@
             const valueEl = line.querySelector("[data-levy]");
             levyValueMap.set(name, valueEl);
 
-            const previewLine = document.createElement("p");
-            previewLine.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-preview-levy="${name}">0.00</span>`;
-            elements.previewLevyContainer.appendChild(previewLine);
-            const previewVal = previewLine.querySelector("[data-preview-levy]");
-            previewLevyValueMap.set(name, previewVal);
+            if (hasPreview) {
+                const previewContainer = document.getElementById("invoice-preview-levies");
+                const previewLine = document.createElement("p");
+                previewLine.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-preview-levy="${name}">0.00</span>`;
+                previewContainer.appendChild(previewLine);
+                const previewVal = previewLine.querySelector("[data-preview-levy]");
+                previewLevyValueMap.set(name, previewVal);
+            }
             });
     }
 
@@ -508,23 +498,24 @@
         
         await preparePreviewSnapshot();
         
-        const previewEl = document.getElementById("invoice-preview");
-        if (!previewEl) {
-            showToast("Preview element not found", "error");
+        // Use the editable document as the source for PDF export (preview removed)
+        const docEl = moduleEl.querySelector('.module-preview') || moduleEl.querySelector('.document') || document.getElementById("invoice-form");
+        if (!docEl) {
+            showToast("Document element not found for PDF export", "error");
             return;
         }
 
-        // Create a wrapper for PDF export with exact preview styling
+        // Create a wrapper for PDF export
         const exportWrapper = document.createElement("div");
-        exportWrapper.className = "module is-preview pdf-export-wrapper";
+        exportWrapper.className = "module pdf-export-wrapper";
         exportWrapper.setAttribute("aria-hidden", "true");
         exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
-        
-    const clone = previewEl.cloneNode(true);
-    clone.removeAttribute("hidden");
-    clone.setAttribute("data-pdf-clone", "true");
-        
-        // The preview element itself is the document
+
+        const clone = docEl.cloneNode(true);
+        clone.removeAttribute("hidden");
+        clone.setAttribute("data-pdf-clone", "true");
+
+        // The editable document itself is the document to export
         exportWrapper.appendChild(clone);
         document.body.appendChild(exportWrapper);
 
@@ -695,17 +686,13 @@
             debouncedServerTotals();
         });
 
-        elements.previewToggleBtn?.addEventListener("click", () => {
-            handlePreviewToggle();
-        });
+        // Preview toggle removed in static build; no-op
 
         elements.submitBtn?.addEventListener("click", () => {
             handleSave();
         });
 
-        elements.exitPreviewBtn?.addEventListener("click", () => {
-            togglePreview(moduleId, false);
-        });
+        // Exit preview removed in static build; no-op
 
         const liveSyncFields = [
             inputs.customer,

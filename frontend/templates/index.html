@@ -15,38 +15,82 @@
             <h2>Recents</h2>
             <p class="recent-subtitle">Your most recently saved projects. Open a project or import a new one to get started.</p>
         </div>
-
-        <div class="recent-hero-actions">
-            <div class="recent-controls" role="group" aria-label="Project actions">
-                <!-- import button moved near the search control below -->
-            </div>
-        </div>
     </div>
 
     <div id="project-status" class="project-status" role="status" aria-live="polite"></div>
 </section>
 
-<!-- Recent controls: search + sort (three-dots) -->
-<div class="recent-controls">
-    <input id="recent-search" class="recent-search" type="search" placeholder="Search recent files…" aria-label="Search recent files">
-    <!-- import button positioned above the end of the search field -->
-    <button id="project-import" class="button button-secondary import-btn" type="button">Open project file</button>
-    <div class="recent-actions">
-        <button id="recent-sort-toggle" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="Sort">⋯</button>
-        <ul id="recent-sort-menu" class="sort-menu" hidden>
-            <li data-sort="newest" class="sort-item">Newest</li>
-            <li data-sort="oldest" class="sort-item">Oldest</li>
-        </ul>
+<!-- Top bar inside app-main: search+sort on the left, tabs on the right -->
+<div class="home-topbar">
+    <div class="home-search recent-controls" role="search">
+        <input id="recent-search" class="recent-search" type="search" placeholder="Search recent files…" aria-label="Search recent files">
+        <button id="home-show-customer-docs" class="button button-ghost" type="button" title="Show documents for customer">Customer Docs</button>
+        <button id="project-import" class="button button-secondary import-btn" type="button">Open project file</button>
+        <div class="recent-actions">
+            <button id="recent-sort-toggle" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="Sort">⋯</button>
+            <ul id="recent-sort-menu" class="sort-menu" hidden>
+                <li data-sort="newest" class="sort-item">Newest</li>
+                <li data-sort="oldest" class="sort-item">Oldest</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="home-tabs recent-controls" role="tablist" aria-label="Home tabs">
+        <button id="home-tab-recents" class="button button-primary" type="button">Recents</button>
+        <button id="home-tab-drafts" class="button" type="button">Saved</button>
     </div>
 </div>
 
-<p id="recent-projects-empty" class="empty-state">No recent projects</p>
-<ul id="recent-projects-list" class="recent-projects" aria-live="polite" hidden></ul>
+    <div class="home-container">
+        <header class="home-header">
+            <h2>Documents</h2>
+            <div class="home-actions">
+                <button class="button" onclick="window.location.href='{% url "invoice-form" %}'">New Invoice</button>
+                <button class="button" onclick="window.location.href='{% url "receipt-form" %}'">New Receipt</button>
+                <button class="button" onclick="window.location.href='{% url "waybill-form" %}'">New Waybill</button>
+            </div>
+        </header>
 
-{# Counters and footer intentionally removed per user request #}
+        <section class="recent-tables-grid">
+            <div class="recent-table-card" id="recent-documents">
+                <div class="card-head">
+                    <h3>Recent</h3>
+                    <p class="card-sub">Latest created documents</p>
+                </div>
+                <div class="card-body">
+                    <div class="list-header">
+                        <div class="col type">Type</div>
+                        <div class="col number">Number</div>
+                        <div class="col date">Date</div>
+                        <div class="col customer">Customer</div>
+                        <div class="col total">Total</div>
+                        <div class="col actions">Actions</div>
+                    </div>
+                    <div class="list-body" id="recent-list">
+                        <div class="list-row empty-row">No recent documents.</div>
+                    </div>
+                </div>
+            </div>
 
-{% endblock %}
-
-{% block extra_js %}
-<script src="{% static 'js/home.js' %}"></script>
+            <div class="recent-table-card" id="draft-documents">
+                <div class="card-head">
+                    <h3>Saved</h3>
+                    <p class="card-sub">Saved drafts awaiting completion</p>
+                </div>
+                <div class="card-body">
+                    <div class="list-header">
+                        <div class="col type">Type</div>
+                        <div class="col number">Number</div>
+                        <div class="col date">Date</div>
+                        <div class="col customer">Customer</div>
+                        <div class="col total">Total</div>
+                        <div class="col actions">Actions</div>
+                    </div>
+                    <div class="list-body" id="draft-list">
+                        <div class="list-row empty-row">No saved items.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
 {% endblock %}

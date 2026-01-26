@@ -8,6 +8,7 @@
         receipt: "Receipt",
         waybill: "Waybill",
     };
+    const DOCUMENT_TYPES = new Set(["invoice", "receipt", "waybill"]);
 
     const state = {
         recents: [],
@@ -490,6 +491,28 @@
         try {
             setBusy(true);
             setStatus("Opening file…");
+
+            const entryType = (entry.type || "").toLowerCase();
+            const entryExtension = (entry.extension || "").toLowerCase();
+            const isDocumentPdf = DOCUMENT_TYPES.has(entryType) || entryExtension === "pdf";
+
+            if (isDocumentPdf) {
+                if (entry.path && isTauri && window.__TAURI__?.shell?.open) {
+                    await window.__TAURI__.shell.open(entry.path);
+                    setStatus(`Opened ${entry.name}`, "success");
+                    rememberProject({
+                        ...entry,
+                        lastAction: "open",
+                        timestamp: Date.now(),
+                        extension: entryExtension || "pdf",
+                    });
+                } else if (entry.path) {
+                    setStatus("Cannot open this file outside the desktop app.", "error");
+                } else {
+                    setStatus("File path not available. Locate the PDF manually to reopen it.", "error");
+                }
+                return;
+            }
 
             // If we have a path and we're in Tauri, read the file
             if (entry.path && isTauri && window.__TAURI__?.fs?.readTextFile) {

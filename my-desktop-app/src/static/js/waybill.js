@@ -59,10 +59,10 @@
         itemsPayload: document.getElementById("waybill-items-payload"),
         itemsTableBody: document.querySelector("#waybill-items-table tbody"),
         previewRowsContainers: document.querySelectorAll(".js-waybill-preview-rows"),
-        previewToggleBtn: document.getElementById("waybill-preview-toggle"),
-        exitPreviewBtn: document.getElementById("waybill-exit-preview"),
+        
     submitBtn: document.getElementById("waybill-submit"),
     saveBtn: document.getElementById("waybill-save"),
+        saveDraftBtn: document.getElementById("waybill-save-draft"),
         addItemBtn: document.getElementById("waybill-add-item"),
         toast: document.getElementById("waybill-toast"),
         number: document.getElementById("waybill-number"),
@@ -91,16 +91,23 @@
         contact: document.getElementById("waybill-contact"),
     };
 
-    // Helper function to generate random 6-digit number
-    function generateRandomNumber() {
-        return Math.floor(100000 + Math.random() * 900000).toString();
+    // Helper function to generate SPQ + 2 uppercase letters + 4 digits
+    function generateSPQNumber() {
+        const letters = Array.from({ length: 2 }, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+        const digits = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join('');
+        return `SPQ${letters}${digits}`;
     }
 
     const state = {
         // State object
-        items: [],
+        items: [
+            { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true },
+            { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+            { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+        ],
         waybillId: null,
-        waybillNumber: generateRandomNumber(),
+        waybillNumber: generateSPQNumber(),
+        draftId: null,
         isSaving: false,
     };
 
@@ -182,37 +189,38 @@
         previewBodies.forEach((container) => {
             if (!container) return;
             container.innerHTML = "";
-            
-            // Always render 10 rows
-            for (let index = 0; index < 10; index++) {
-                const item = state.items[index];
-                const previewRow = document.createElement("tr");
-                if (item) {
-                    previewRow.innerHTML = `
-                        <td>${item.description || ""}</td>
-                        <td>${formatQuantity(item.quantity || 0)}</td>
-                        <td>${formatCurrency(item.unit_price || 0)}</td>
-                        <td>${formatCurrency(item.total || 0)}</td>
-                    `;
-                } else {
-                    previewRow.innerHTML = `
+
+            // Render items and placeholders (only enabled items contribute values)
+            state.items.forEach((item) => {
+                if (item && item.enabled === false) {
+                    const placeholderRow = document.createElement("tr");
+                    placeholderRow.innerHTML = `
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                     `;
-                    previewRow.classList.add("empty-row");
+                    container.appendChild(placeholderRow);
+                    return;
                 }
+                const previewRow = document.createElement("tr");
+                previewRow.innerHTML = `
+                    <td>${item.description || ""}</td>
+                    <td>${formatQuantity(item.quantity || 0)}</td>
+                    <td>${formatCurrency(item.unit_price || 0)}</td>
+                    <td>${formatCurrency(item.total || 0)}</td>
+                `;
                 container.appendChild(previewRow);
-            }
+            });
         });
     }
 
     function computeWaybillTotals() {
+        // Only include enabled items in totals
         let totalQuantity = 0;
         let subtotal = 0;
-        state.items.forEach((item) => {
-            if (!item) return;
+        (state.items || []).forEach((item) => {
+            if (!item || item.enabled === false) return;
             totalQuantity += parseNumber(item.quantity);
             subtotal += parseNumber(item.total);
         });
@@ -223,9 +231,9 @@
     }
 
     function serializeWaybillItems() {
-        return state.items
+        return (state.items || [])
+            .filter((item) => item && item.enabled !== false)
             .filter((item) => {
-                if (!item) return false;
                 const desc = (item.description || "").trim();
                 const quantity = parseNumber(item.quantity);
                 const price = parseNumber(item.unit_price);
@@ -262,38 +270,38 @@
     }
 
     function renderItems() {
-        // Function to render items in table and preview - always show 10 rows
+        // Render only actual items in the table (no placeholder rows)
         const tableBody = elements.itemsTableBody;
-        tableBody && (tableBody.innerHTML = "");
+        if (tableBody) tableBody.innerHTML = "";
 
-        // Render exactly 10 rows
-        for (let index = 0; index < 10; index++) {
-            const item = state.items[index];
-            const row = document.createElement("tr");
-            
-            if (item) {
-                row.innerHTML = `
-                    <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
-                    <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
-                    <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
-                    <td class="row-total">${formatCurrency(item.total || 0)}</td>
-                    <td><button type="button" class="btn-remove-row" data-remove="${index}" aria-label="Remove row" title="Remove this item">×</button></td>
+        state.items.forEach((item, index) => {
+            if (item && item.enabled === false) {
+                const placeholder = document.createElement('tr');
+                placeholder.className = 'item-placeholder';
+                placeholder.innerHTML = `
+                    <td class="placeholder-cell">&nbsp;</td>
+                    <td class="placeholder-cell">&nbsp;</td>
+                    <td class="placeholder-cell">&nbsp;</td>
+                    <td class="row-total">&nbsp;</td>
+                    <td></td>
                 `;
-            } else {
-                row.innerHTML = `
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                `;
-                row.classList.add("empty-row");
+                tableBody?.appendChild(placeholder);
+                return;
             }
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
+                <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
+                <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
+                <td class="row-total">${formatCurrency(item.total || 0)}</td>
+                <td><button type="button" class="btn-remove-row" data-remove="${index}" aria-label="Remove row" title="Remove this item">×</button></td>
+            `;
             tableBody?.appendChild(row);
-        }
+        });
 
         if (elements.itemsPayload) {
-            elements.itemsPayload.value = JSON.stringify(state.items);
+            elements.itemsPayload.value = JSON.stringify(serializeWaybillItems());
         }
 
         updatePreviewItems();
@@ -325,7 +333,12 @@
         // Handle preview toggle
         console.log('[Waybill] handlePreview() called');
         syncPreview();
-        togglePreview(moduleId, true);
+        try {
+            togglePreview(moduleId, true);
+            return;
+        } catch (err) {
+            console.error('Failed to toggle in-place preview', err);
+        }
     }
 
     async function downloadWaybillPdf() {
@@ -340,22 +353,92 @@
         }
         
         syncPreview();
-        
-        const previewEl = document.getElementById("waybill-preview");
-        if (!previewEl) {
-            showToast("Preview element not found", "error");
+
+        const moduleEl = document.getElementById(moduleId);
+        const docEl = (moduleEl && moduleEl.querySelector('.module-preview')) || moduleEl.querySelector('.document') || document.getElementById("waybill-form");
+        if (!docEl) {
+            showToast("Document element not found for PDF export", "error");
             return;
         }
 
-        // Create a wrapper for PDF export with exact preview styling
+        // Create a wrapper off-screen that allows natural document sizing
         const exportWrapper = document.createElement("div");
-        exportWrapper.className = "module is-preview pdf-export-wrapper";
+        exportWrapper.className = "module";
         exportWrapper.setAttribute("aria-hidden", "true");
-        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
+        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0;";
         
-        const clone = previewEl.cloneNode(true);
+        const clone = docEl.cloneNode(true);
         clone.removeAttribute("hidden");
         clone.setAttribute("data-pdf-clone", "true");
+        clone.classList.remove('document-editable', 'is-preview', 'module-preview');
+        // Let the clone use its natural CSS-defined size (297mm from .waybill-document)
+
+        // Sanitize clone for PDF: remove any interactive buttons and convert inputs to static text
+        (function sanitizeCloneForPdf(root) {
+            if (!root) return;
+            const removeSelectors = [
+                'button', '.button', '.button-icon', '.btn-remove-row',
+                '[id$="-preview-toggle"]', '[id$="-exit-preview"]', '.module-actions', '.module-toast',
+                '.preview-overlay', '.preview-close', '.preview-input-value', '.preview-input-block'
+            ];
+            removeSelectors.forEach(sel => root.querySelectorAll(sel).forEach(n => n.remove()));
+
+            root.querySelectorAll('[data-remove]').forEach(n => n.remove());
+
+            // Remove hidden payloads and scripts (prevent raw JSON or debug payloads from showing)
+            root.querySelectorAll('input[type="hidden"], [id$="-payload"], script').forEach(n => n.remove());
+
+            function escapeHtml(s) {
+                return String(s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            function replaceWithText(node, text) {
+                const value = text || '';
+                if (node.tagName && node.tagName.toLowerCase() === 'textarea') {
+                    const div = document.createElement('div');
+                    if (node.id) div.id = node.id;
+                    div.classList.add('pdf-replacement');
+                    div.style.cssText = 'background: transparent; border: none; font: inherit; color: inherit; display: block; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word;';
+                    div.innerHTML = escapeHtml(value).replace(/\n/g, '<br>');
+                    node.parentNode && node.parentNode.replaceChild(div, node);
+                    return;
+                }
+                const span = document.createElement('span');
+                span.textContent = value;
+                if (node.id) span.id = node.id;
+                span.classList.add('pdf-replacement');
+                span.style.cssText = 'background: transparent; border: none; font: inherit; color: inherit; display: inline-block; white-space: normal; overflow-wrap: break-word; word-break: break-word;';
+                node.parentNode && node.parentNode.replaceChild(span, node);
+            }
+
+            root.querySelectorAll('input, textarea, select').forEach((el) => {
+                try {
+                    // Skip inputs inside placeholder cells
+                    const isInPlaceholder = el.closest('.item-placeholder, .placeholder-cell');
+                    if (isInPlaceholder) {
+                        el.remove();
+                        return;
+                    }
+                    if (el.tagName.toLowerCase() === 'select') {
+                        const text = (el.options && el.options[el.selectedIndex]) ? el.options[el.selectedIndex].text : (el.value || '');
+                        replaceWithText(el, text);
+                        return;
+                    }
+                    const type = (el.getAttribute('type') || '').toLowerCase();
+                    if (type === 'checkbox' || type === 'radio') {
+                        const span = document.createElement('span');
+                        span.textContent = el.checked ? '✓' : '';
+                        span.style.cssText = 'font-weight:700; color: inherit;';
+                        el.parentNode && el.parentNode.replaceChild(span, el);
+                        return;
+                    }
+                    replaceWithText(el, el.value || el.placeholder || '');
+                } catch (e) { /* ignore */ }
+            });
+        })(clone);
         
         // Convert image paths to absolute URLs for proper loading
         const images = clone.querySelectorAll("img");
@@ -372,6 +455,8 @@
         // The preview element itself is the document
         exportWrapper.appendChild(clone);
         document.body.appendChild(exportWrapper);
+        // Give the browser a frame to render the off-screen clone so html2canvas can capture it
+        await new Promise((resolve) => requestAnimationFrame(resolve));
 
         let filename = state.waybillNumber || "waybill";
         if (!filename.toLowerCase().endsWith(".pdf")) {
@@ -396,45 +481,39 @@
                 })
             );
 
-            const A4_PX_WIDTH = 794;
-            const A4_PX_HEIGHT = 1122;
-            clone.style.width = A4_PX_WIDTH + "px";
-            clone.style.maxWidth = A4_PX_WIDTH + "px";
+            // Force layout recalc and measure natural document size
+            clone.offsetHeight; // Force reflow
+            const rect = clone.getBoundingClientRect();
+            const widthPx = Math.ceil(rect.width) || Math.ceil(clone.offsetWidth) || 1122;
+            const heightPx = Math.ceil(rect.height) || Math.ceil(clone.offsetHeight) || 1587;
+            const renderScale = 2;
 
             const canvas = await window.html2canvas(clone, {
-                scale: 2,
+                scale: renderScale,
                 useCORS: true,
-                allowTaint: true, // Allow cross-origin images
+                allowTaint: true,
                 backgroundColor: "#ffffff",
                 logging: false,
-                width: A4_PX_WIDTH,
-                height: Math.max(A4_PX_HEIGHT, clone.scrollHeight),
+                width: widthPx,
+                height: heightPx,
+                foreignObjectRendering: false,
+                removeContainer: true,
             });
 
             const { jsPDF } = window.jspdf;
+
+            const imgData = canvas.toDataURL("image/png");
+            const pxPerMm = 96 / 25.4;
+            const widthMm = Math.max(1, widthPx / pxPerMm);
+            const heightMm = Math.max(1, heightPx / pxPerMm);
             const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
+                orientation: widthMm >= heightMm ? 'landscape' : 'portrait',
+                unit: 'mm',
+                format: [widthMm, heightMm],
                 compress: true,
             });
 
-            const imgData = canvas.toDataURL("image/png");
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            let renderWidth = pdfWidth;
-            let renderHeight = (canvas.height * renderWidth) / canvas.width;
-
-            if (renderHeight > pdfHeight) {
-                const ratio = pdfHeight / renderHeight;
-                renderHeight = pdfHeight;
-                renderWidth = renderWidth * ratio;
-            }
-
-            const offsetX = (pdfWidth - renderWidth) / 2;
-            const offsetY = (pdfHeight - renderHeight) / 2;
-
-            pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
+            pdf.addImage(imgData, "PNG", 0, 0, widthMm, heightMm, undefined, "FAST");
             
             // Check if running in Tauri desktop app
             if (window.__TAURI__?.dialog?.save && window.__TAURI__?.fs?.writeBinaryFile) {
@@ -446,8 +525,9 @@
                 });
                 
                 if (!savePath) {
+                    document.body.removeChild(exportWrapper);
                     showToast("PDF save cancelled", "info");
-                    return;
+                    return { cancelled: true };
                 }
                 
                 if (!savePath.toLowerCase().endsWith(".pdf")) {
@@ -458,17 +538,23 @@
                 const pdfData = pdf.output("arraybuffer");
                 const uint8Array = new Uint8Array(pdfData);
                 await fs.writeBinaryFile({ path: savePath, contents: uint8Array });
+                document.body.removeChild(exportWrapper);
                 showToast("PDF saved successfully!");
+                return { path: savePath, name: filename };
             } else {
                 // Browser: Direct download
                 pdf.save(filename);
+                document.body.removeChild(exportWrapper);
                 showToast("PDF downloaded successfully!");
+                return { name: filename };
             }
         } catch (error) {
             console.error("PDF generation error:", error);
             showToast("Failed to generate PDF: " + error.message, "error");
-        } finally {
-            document.body.removeChild(exportWrapper);
+            if (exportWrapper && exportWrapper.parentNode) {
+                document.body.removeChild(exportWrapper);
+            }
+            return { cancelled: true, error: error.message };
         }
     }
 
@@ -481,10 +567,12 @@
 
         try {
             console.log('[Waybill] Calling downloadWaybillPdf()...');
-            await downloadWaybillPdf();
-            // Increment the counter after successful PDF download
-            console.log('[Waybill] PDF download complete, incrementing counter...');
-            await incrementWaybillNumber();
+            const result = await downloadWaybillPdf();
+            if (!result?.cancelled) {
+                // Increment the counter after successful PDF download
+                console.log('[Waybill] PDF download complete, incrementing counter...');
+                await incrementWaybillNumber();
+            }
         } catch (error) {
             console.error('[Waybill] Error in handleSave:', error);
         } finally {
@@ -544,10 +632,45 @@
     }
 
     async function loadExistingWaybill() {
+        // Load existing waybill if ID in URL or if an openDocument was placed in sessionStorage
+        try {
+            const openDocJson = window.sessionStorage?.getItem('billingapp.openDocument');
+            if (openDocJson) {
+                window.sessionStorage?.removeItem('billingapp.openDocument');
+                const openDoc = JSON.parse(openDocJson);
+                if (openDoc.type === 'waybill' && openDoc.data) {
+                    const data = openDoc.data;
+                    state.waybillNumber = data.waybill_number || state.waybillNumber;
+                    elements.number && (elements.number.textContent = state.waybillNumber);
+                    setText(elements.previewNumberEls, state.waybillNumber);
+                    if (inputs.issueDate && data.issue_date) inputs.issueDate.value = data.issue_date;
+                    if (inputs.customer) inputs.customer.value = data.customer_name || "";
+                    if (inputs.destination) inputs.destination.value = data.destination || "";
+                    if (inputs.driver) inputs.driver.value = data.driver_name || "";
+                    if (inputs.receiver) inputs.receiver.value = data.receiver_name || "";
+                    const receivedItems = Array.isArray(data.items) ? data.items : [];
+                    // If opened document has no items, provide three placeholder rows
+                    state.items = receivedItems.length ? receivedItems : [
+                        { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true },
+                        { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+                        { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+                    ];
+                    renderItems();
+                    syncPreview();
+                    if (openDoc.preview) togglePreview(moduleId, true);
+                    return;
+                }
+            }
+        } catch (e) { /* ignore */ }
         // Load existing waybill if ID in URL
         const id = getQueryParam("id");
         if (!id) {
-            state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+            // Start with three rows: first enabled, next two are placeholders
+            state.items = [
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true },
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+            ];
             renderItems();
             syncPreview();
             return;
@@ -564,13 +687,18 @@
             if (inputs.driver) inputs.driver.value = data.driver_name || "";
             if (inputs.receiver) inputs.receiver.value = data.receiver_name || "";
             const receivedItems = Array.isArray(data.items) ? data.items : [];
-            state.items = receivedItems.length ? receivedItems : [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+            state.items = receivedItems.length ? receivedItems : [];
             renderItems();
             syncPreview();
         } catch (error) {
             console.error("Failed to load waybill", error);
             showToast("Could not load waybill details", "error");
-            state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+            // Fallback to three placeholders
+            state.items = [
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true },
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+            ];
             renderItems();
             syncPreview();
         }
@@ -582,10 +710,8 @@
         console.log('[Waybill] Elements:', {
             itemsTableBody: elements.itemsTableBody,
             addItemBtn: elements.addItemBtn,
-            previewToggleBtn: elements.previewToggleBtn,
             saveBtn: elements.saveBtn,
             submitBtn: elements.submitBtn,
-            exitPreviewBtn: elements.exitPreviewBtn
         });
         
         elements.itemsTableBody?.addEventListener("input", (event) => {
@@ -605,7 +731,7 @@
             const totalEl = rowEl ? rowEl.querySelector(".row-total") : null;
             if (totalEl) totalEl.textContent = formatCurrency(item.total || 0);
             if (elements.itemsPayload) {
-                elements.itemsPayload.value = JSON.stringify(state.items);
+                elements.itemsPayload.value = JSON.stringify(serializeWaybillItems());
             }
             updatePreviewItems();
         });
@@ -620,22 +746,49 @@
 
         elements.addItemBtn?.addEventListener("click", () => {
             console.log('[Waybill] Add Item button clicked');
-            if (state.items.length >= 10) {
-                showToast("Maximum 10 items allowed", "error");
-                return;
+            // Enable the first placeholder row if present; otherwise append a new enabled row
+            const placeholderIndex = (state.items || []).findIndex((it) => it && it.enabled === false);
+            if (placeholderIndex !== -1) {
+                state.items[placeholderIndex] = { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true };
+            } else {
+                state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0, enabled: true });
             }
-            state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
             renderItems();
         });
 
-        elements.previewToggleBtn?.addEventListener("click", () => {
-            console.log('[Waybill] Preview Toggle button clicked');
-            handlePreview();
-        });
+        // Preview toggle removed (no preview button in markup)
         // Save waybill as .way document
         elements.saveBtn?.addEventListener("click", () => {
             console.log('[Waybill] Save button clicked');
             saveWaybillFile();
+        });
+
+        // Save draft to localStorage using Drafts API
+        elements.saveDraftBtn?.addEventListener('click', async () => {
+            try {
+                showToast('Saving draft…', 'info');
+                const totals = syncPreview() || computeWaybillTotals();
+                const payload = buildWaybillDocumentPayload(totals);
+                const metadata = {
+                    bill_number: state.waybillNumber,
+                    customer: inputs.customer?.value || '',
+                    destination: inputs.destination?.value || '',
+                };
+                if (!window.Drafts || typeof window.Drafts.saveDraft !== 'function') {
+                    showToast('Draft API not available', 'error');
+                    return;
+                }
+                const res = await window.Drafts.saveDraft('waybill', payload, metadata, state.draftId);
+                if (res && res.id) {
+                    state.draftId = res.id;
+                    showToast('Draft saved', 'success');
+                } else {
+                    showToast('Draft saved', 'success');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to save draft', 'error');
+            }
         });
 
         elements.submitBtn?.addEventListener("click", () => {
@@ -643,10 +796,9 @@
             handleSave();
         });
 
-        elements.exitPreviewBtn?.addEventListener("click", () => {
-            console.log('[Waybill] Exit Preview button clicked');
-            togglePreview(moduleId, false);
-        });
+        // Preview buttons removed from markup; preview toggle disabled
+
+        // Exit preview removed (no preview button in markup)
 
         // Live preview sync on form input
         form.addEventListener("input", () => {
@@ -655,9 +807,9 @@
     }
 
     async function loadNextWaybillNumber() {
-        // Generate a new random 6-digit waybill number
-        console.log('[Waybill] Generating new random waybill number');
-        state.waybillNumber = generateRandomNumber();
+        // Generate a new SPQ waybill number for unsaved waybills
+        console.log('[Waybill] Generating new SPQ waybill number');
+        state.waybillNumber = generateSPQNumber();
         console.log('[Waybill] Generated waybill number:', state.waybillNumber);
         if (elements.number) {
             elements.number.textContent = state.waybillNumber;
@@ -667,8 +819,8 @@
     }
 
     async function incrementWaybillNumber() {
-        // Generate a new random 6-digit waybill number after successful PDF download
-        state.waybillNumber = generateRandomNumber();
+        // Generate a new SPQ waybill number after successful PDF download
+        state.waybillNumber = generateSPQNumber();
         elements.number && (elements.number.textContent = state.waybillNumber);
         setText(elements.previewNumberEls, state.waybillNumber);
         console.log('[Waybill] Generated new waybill number for next document:', state.waybillNumber);

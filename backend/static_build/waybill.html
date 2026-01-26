@@ -33,11 +33,7 @@
     <section id="waybill-module" class="module" data-document-type="waybill">
         <div class="module-header">
             <h2>Waybill</h2>
-            <div class="module-actions">
-                <button id="waybill-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
-                <button id="waybill-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="waybill-submit" class="button" type="button">Download PDF</button>
-            </div>
+            <div class="module-actions"></div>
         </div>
 
         <div class="module-body">
@@ -96,78 +92,22 @@
                 </div>
 
                 <section class="waybill-contact-bar">
-                    <input type="text" id="waybill-contact" placeholder="DELIVERED BY SPAQUELS &bull; CONTACT: 0540 673202 | 050 532 1475 | 030 273 8719" aria-label="Waybill contact information">
-                </section>
-            </form>
-
-            <article id="waybill-preview" class="document waybill-document" hidden>
-                <div class="waybill-letterhead">
-                    <div class="letterhead-left">
-                        <h3>WAYBILL</h3>
-                        <p>No.: <span class="js-waybill-preview-number">—</span></p>
-                        <p class="waybill-date">Date: <span class="js-waybill-preview-date">—</span></p>
-                    </div>
-                    <div class="letterhead-right">
-                        <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
-                    </div>
-                </div>
-                
-
-                <table class="document-items">
-                    <thead>
-                        <tr>
-                            <th class="description">Description</th>
-                            <th>Qty</th>
-                            <th>Unit Price (GHC)</th>
-                            <th>Amount (GHC)</th>
-                        </tr>
-                    </thead>
-                    <tbody class="js-waybill-preview-rows"></tbody>
-                </table>
-
-                <div class="waybill-signature-grid">
-                    <div class="signature-card">
-                        <span class="signature-title">Delivered By</span>
-                        <div class="field-block">
-                            <span>Name</span>
-                            <p class="js-waybill-preview-driver" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
-                        </div>
-                        <div class="field-block">
-                            <span>Date</span>
-                            <p class="js-waybill-preview-delivery-date" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
-                        </div>
-                        <div class="signature-line">Signature</div>
-                    </div>
-                    <div class="signature-card">
-                        <span class="signature-title">Received By</span>
-                        <div class="field-block">
-                            <span>Name</span>
-                            <p class="js-waybill-preview-receiver" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
-                        </div>
-                        <div class="field-block">
-                            <span>Date</span>
-                            <p class="js-waybill-preview-received-date" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
-                        </div>
-                        <div class="signature-line">Signature</div>
-                    </div>
-                </div>
-
-                <section id="waybill-preview-contact">
                     <div class="contact-wrapper">
-                       
                         <p class="account">
-                            <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
-                            <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
+                            <span>0543127562 <img src="../static/assets/mobile money.png" alt="Mobile Money" class="contact-icon"></span>
+                            <span>0505321475 <img src="../static/assets/whatsapp.png" alt="WhatsApp" class="contact-icon"></span>
                             <span>0540673202</span>
                             <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
                         </p>
-                         <p class="email">
+                        <p class="email">
                             <span>Email: spaquelsmultimedia@gmail.com</span>
                             <span>Website: www.spaquelsmultimedia.org</span>
                         </p>
                     </div>
                 </section>
-            </article>
+            </form>
+
+            <!-- Preview removed: printing/export code now clones the editable `#waybill-form` element when needed -->
         </div>
         <div class="module-toast" id="waybill-toast" role="status" aria-live="polite" hidden></div>
     </section>

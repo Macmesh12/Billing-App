@@ -42,65 +42,197 @@
             return Number.isNaN(number) ? 0 : number;
             // Return number or 0 if NaN
         },
-        togglePreview(moduleId, isPreview) {
-            // Function to toggle between edit and preview modes
-            const moduleEl = document.getElementById(moduleId);
-            // Get module element
-            if (!moduleEl) return;
-            const showPreview = Boolean(isPreview);
-            // Convert to boolean
-            moduleEl.classList.toggle("is-preview", showPreview);
-            // Toggle CSS class
-            
-            // Toggle action buttons visibility
-            const previewToggleBtn = moduleEl.querySelector('[id$="-preview-toggle"]');
-            const exitPreviewBtn = moduleEl.querySelector('[id$="-exit-preview"]');
-            const submitBtn = moduleEl.querySelector('[id$="-submit"]');
-            
-            if (showPreview) {
-                previewToggleBtn?.setAttribute("hidden", "hidden");
-                submitBtn?.removeAttribute("hidden");
-                exitPreviewBtn?.removeAttribute("hidden");
-            } else {
-                previewToggleBtn?.removeAttribute("hidden");
-                submitBtn?.removeAttribute("hidden");
-                exitPreviewBtn?.setAttribute("hidden", "hidden");
-            }
-            
-            const form = moduleEl.querySelector("form.document-editable");
-            // Find editable form
-            if (form) {
-                if (showPreview) {
-                    form.setAttribute("hidden", "hidden");
-                    // Hide form in preview
-                } else {
-                    form.removeAttribute("hidden");
-                    // Show form in edit
-                }
-            }
-            moduleEl.querySelectorAll(".document").forEach((doc) => {
-                // Loop through document elements
-                if (!doc.classList.contains("document-editable")) {
-                    // If not editable form
-                    if (showPreview) {
-                        doc.removeAttribute("hidden");
-                        // Show preview documents
+        showPreviewOverlay(element, options = {}) {
+            try {
+                if (!element) return null;
+                const el = (typeof element === 'string') ? document.querySelector(element) : element;
+                if (!el) return null;
+                // create overlay backdrop
+                const backdrop = document.createElement('div');
+                backdrop.className = 'preview-overlay-backdrop';
+                backdrop.setAttribute('role', 'dialog');
+                backdrop.setAttribute('aria-modal', 'true');
+                const wrapper = document.createElement('div');
+                wrapper.className = 'preview-overlay';
+                // clone element
+                const clone = el.cloneNode(true);
+                // remove interactive controls and replace inputs with text
+                const inputs = clone.querySelectorAll('input, textarea, select');
+                inputs.forEach((input) => {
+                    const val = input.value || input.getAttribute('value') || '';
+                    const span = document.createElement('span');
+                    span.textContent = val;
+                    span.className = 'preview-input-value';
+                    input.replaceWith(span);
+                });
+                // remove buttons, icons and form controls
+                const buttons = clone.querySelectorAll('button, .btn, input[type=button], input[type=submit]');
+                buttons.forEach((b) => b.remove());
+                // convert image src to absolute and allow CORS
+                const images = clone.querySelectorAll('img');
+                images.forEach((img) => {
+                    try {
+                        if (img.src && !img.src.startsWith('data:')) {
+                            const absoluteUrl = new URL(img.getAttribute('src'), window.location.href).href;
+                            img.setAttribute('src', absoluteUrl);
+                            img.setAttribute('crossorigin', 'anonymous');
+                        }
+                    } catch (e) { /* ignore */ }
+                });
+
+                // Determine a width to match the original document's appearance (honor CSS width if specified)
+                const docNode = clone.querySelector('.document') || clone;
+                try {
+                    const computed = window.getComputedStyle(docNode);
+                    const w = computed && computed.width ? computed.width : null;
+                    if (w) {
+                        wrapper.style.width = w;
+                        wrapper.style.maxWidth = w;
                     } else {
-                        doc.setAttribute("hidden", "hidden");
-                        // Hide preview documents
+                        wrapper.style.width = '210mm';
+                        wrapper.style.maxWidth = '210mm';
                     }
+                } catch (e) {
+                    wrapper.style.width = '210mm';
+                    wrapper.style.maxWidth = '210mm';
                 }
-            });
+                // add close button
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'button button-secondary preview-close';
+                closeBtn.textContent = 'Close preview';
+                closeBtn.addEventListener('click', () => {
+                    if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+                    window.removeEventListener('keydown', escHandler);
+                });
+
+                const escHandler = (ev) => {
+                    if (ev.key === 'Escape' || ev.key === 'Esc') {
+                        if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+                        window.removeEventListener('keydown', escHandler);
+                    }
+                };
+
+                wrapper.appendChild(closeBtn);
+                wrapper.appendChild(clone);
+                backdrop.appendChild(wrapper);
+                document.body.appendChild(backdrop);
+                window.addEventListener('keydown', escHandler);
+                return { backdrop, wrapper, clone };
+            } catch (err) {
+                console.error('Failed to show preview overlay', err);
+                return null;
+            }
         },
+            togglePreview(moduleIdentifier, isPreview) {
+                try {
+                    let moduleEl;
+                    if (typeof moduleIdentifier === 'string') moduleEl = document.getElementById(moduleIdentifier);
+                    else moduleEl = moduleIdentifier;
+                    if (!moduleEl) return false;
+
+                    const workspace = moduleEl.querySelector('.a4-workspace') || moduleEl;
+                    const form = moduleEl.querySelector('form') || moduleEl.querySelector('.document-editable');
+
+                    if (isPreview) {
+                        // Create or show the preview DOM
+                        if (!moduleEl.querySelector('.module-preview')) {
+                            const docEl = moduleEl.querySelector('.document') || form;
+                            if (!docEl) return false;
+                            // Clone the document. If it's a form, convert clone into a div to avoid
+                            // CSS rules that hide form elements in preview mode ('.module.is-preview form { display: none; }').
+                            let clone = docEl.cloneNode(true);
+                            if (clone.tagName && clone.tagName.toLowerCase() === 'form') {
+                                const wrapper = document.createElement('div');
+                                // preserve class names (including 'document' and 'document-editable') so layout styles remain
+                                wrapper.className = clone.className || '';
+                                wrapper.classList.add('module-preview');
+                                // Keep document-editable class so sizing/spacing don't change
+                                wrapper.innerHTML = clone.innerHTML;
+                                clone = wrapper;
+                            } else {
+                                clone.classList.add('module-preview');
+                            }
+                            // Replace inputs/selects/textarea with static text
+                            const inputs = clone.querySelectorAll('input, textarea, select');
+                            inputs.forEach((input) => {
+                                const span = document.createElement('span');
+                                let value = '';
+                                if (input.type === 'checkbox' || input.type === 'radio') {
+                                    value = input.checked ? 'Yes' : 'No';
+                                } else {
+                                    value = input.value || input.getAttribute('value') || input.placeholder || '';
+                                }
+                                span.textContent = value;
+                                span.className = 'preview-input-value preview-input-block';
+                                // Ensure the span fills the cell like the original input
+                                try { span.style.display = 'inline-block'; span.style.width = '100%'; } catch (e) {}
+                                input.replaceWith(span);
+                            });
+                            // Remove interactive controls
+                            clone.querySelectorAll('button, a, input[type="submit"], input[type="button"]').forEach((el) => el.remove());
+                                // Append preview clone in workspace
+                                const container = workspace || moduleEl;
+                                // Save current transform so we can restore after preview
+                                try {
+                                    const prevTransform = container.style.transform || '';
+                                    container.dataset._prevTransform = prevTransform;
+                                    // Only override transform if saved zoom is explicitly 0 to avoid invisible preview
+                                    try {
+                                        const type = moduleEl?.dataset?.documentType || 'global';
+                                        const zoomKey = `billingapp:zoom:${type}`;
+                                        const raw = window.localStorage?.getItem(zoomKey);
+                                        const savedZoom = raw !== null ? Number.parseFloat(raw) : null;
+                                        if (savedZoom === 0) {
+                                            container.style.transform = 'scale(1)';
+                                            container.style.setProperty('--zoom-level', '1');
+                                        }
+                                    } catch (err) { /* ignore errors reading localStorage */ }
+                                } catch (err) { /* ignore */ }
+                                container.appendChild(clone);
+                        }
+                        moduleEl.classList.add('is-preview');
+                    } else {
+                        // Hide or remove the preview DOM
+                        const previewEl = moduleEl.querySelector('.module-preview');
+                        if (previewEl && previewEl.parentNode) previewEl.parentNode.removeChild(previewEl);
+                        // Restore previous transform if we overrode it above
+                        try {
+                            const container = workspace || moduleEl;
+                            const prevTransform = container.dataset._prevTransform;
+                            if (typeof prevTransform !== 'undefined') {
+                                container.style.transform = prevTransform || '';
+                                if (prevTransform) {
+                                    // also reset the css var if we set it during preview
+                                    const match = prevTransform.match(/scale\(([^)]+)\)/);
+                                    if (match) container.style.setProperty('--zoom-level', match[1]);
+                                } else {
+                                    container.style.removeProperty('--zoom-level');
+                                }
+                                delete container.dataset._prevTransform;
+                            }
+                        } catch (err) { /* ignore */ }
+                        moduleEl.classList.remove('is-preview');
+                    }
+                    return true;
+                } catch (err) {
+                    console.warn('Failed to toggle preview', err);
+                    return false;
+                }
+            },
+        // preview functionality removed from main helpers
     };
 
     const RECENTS_STORAGE_KEY = "billingapp.recents.v1";
     const LEGACY_RECENT_KEYS = ["billingapp.recentProjects"];
     const RECENTS_MAX_ITEMS = 50;
 
+    const DOCUMENT_TYPES = new Set(["invoice", "receipt", "waybill"]);
+
     const extensionForType = (type) => {
-        // All documents now use .billproj extension
-        return "billproj";
+        const normalized = (type || "").toLowerCase();
+        if (normalized === "project") return "billproj";
+        if (DOCUMENT_TYPES.has(normalized)) return "pdf";
+        return "pdf";
     };
 
     const ensureExtension = (name, ext) => {
@@ -167,7 +299,19 @@
 
     const normalizeRecentEntry = (entry) => {
         const type = (entry?.type || "project").toLowerCase();
-        const extension = entry?.extension || extensionForType(type);
+        const defaultExt = extensionForType(type);
+        const inferredExt = (() => {
+            const path = entry?.path;
+            if (!path || typeof path !== "string") return "";
+            const match = path.split(/[.]/).pop();
+            return match ? match.toLowerCase() : "";
+        })();
+        const rawExt = (entry?.extension || inferredExt || "").toLowerCase();
+        const extension = (() => {
+            if (!rawExt) return defaultExt;
+            if (DOCUMENT_TYPES.has(type) && rawExt === "billproj") return defaultExt;
+            return rawExt;
+        })();
         return {
             name: entry?.name || `Untitled ${type}`,
             path: entry?.path || null,

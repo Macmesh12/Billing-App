@@ -1,0 +1,25 @@
+/* Copied from frontend/static/css/home.css */
+.app-main {
+    position: fixed;
+    top: 0;
+    left: 280px; /* match .app-nav width */
+    right: 0;
+    bottom: 0;
+    overflow: auto;
+    padding: 0;
+    box-sizing: border-box;
+    z-index: 10; /* sit below the nav which uses z-index:40 */
+    background: linear-gradient(135deg, #fefce8 0%, #fef9e6 50%, #fffef5 100%);
+}
+
+/* Hero Section */
+.home-hero {
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(254,252,232,0.98) 100%);
+    border-bottom: 1px solid rgba(234,179,8,0.1);
+    padding: 3rem 2.5rem 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    position: relative;
+    overflow: hidden;
+}
+
+/* ... rest of home.css preserved ... */

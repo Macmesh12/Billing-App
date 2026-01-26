@@ -1,0 +1,51 @@
+/* Copied from frontend/static/css/general.css - preserved for Flutter styling reference */
+:root {
+    --accent: #eab308;
+    --accent-2: #fbbf24;
+    --accent-dark: #ca8a04;
+    --border: #fef3c7;
+    --bg: #fefce8;
+    --bg-2: linear-gradient(180deg, #fefce8 0%, #fef9e6 100%);
+    --card-bg: #ffffff;
+    --text: #0f1724;
+    --muted: #556070;
+    --muted-2: #7b8794;
+    --success: #10b981;
+    --danger: #ef4444;
+    --glass: rgba(255,255,255,0.6);
+    --radius: 12px;
+    --shadow-soft: 0 8px 30px rgba(16,24,40,0.06);
+    --shadow-strong: 0 20px 50px rgba(2,6,23,0.12);
+    --primary: #eab308;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body,
+body.billing-app {
+    margin: 0;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg-2);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100%;
+    width: 220px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.5rem 0;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    color: #ffffff;
+    z-index: 40;
+}
+
+/* ... rest of general.css preserved in design/css/general.css ... */

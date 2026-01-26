@@ -1,0 +1,12 @@
+/* Copied from frontend/static/css/invoice.css */
+.invoice-document {
+    width: 297mm;
+    min-height: auto;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 15mm 20mm;
+    box-sizing: border-box;
+    font-size: 1.1rem;
+}
+
+/* ... rest of invoice.css preserved ... */

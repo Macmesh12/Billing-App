@@ -1,22 +1,266 @@
-/* Recents hero + project actions */
-.recent-hero {
-    text-align: left;
-    padding: 4rem 2rem 2rem;
-    max-width: 680px;
-    margin: 0 0;
+.app-main {
+    position: fixed;
+    top: 0;
+    left: 280px; /* match .app-nav width */
+    right: 0;
+    bottom: 0;
+    overflow: auto;
+    padding: 0;
+    box-sizing: border-box;
+    z-index: 10; /* sit below the nav which uses z-index:40 */
+    background: linear-gradient(135deg, #fefce8 0%, #fef9e6 50%, #fffef5 100%);
 }
 
-.recent-hero h2 {
+/* Hero Section */
+.home-hero {
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(254,252,232,0.98) 100%);
+    border-bottom: 1px solid rgba(234,179,8,0.1);
+    padding: 3rem 2.5rem 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    position: relative;
+    overflow: hidden;
+}
+
+.home-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(234,179,8,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.hero-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+.hero-title {
+    margin: 0 0 0.5rem;
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #eab308 0%, #f59e0b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-subtitle {
     margin: 0;
-    font-size: 2rem;
-    letter-spacing: -0.5px;
-   
+    font-size: 1.125rem;
+    color: var(--muted);
+    font-weight: 500;
 }
 
-.recent-subtitle {
-    margin: 0.75rem 0 1.5rem;
-    color: var(--muted);
+/* ---------- Accent List preset (modern card list with accents) ---------- */
+/* Render each table row as a card with an accent badge for Type and clearer Location */
+.recent-table {
+    width: 100%;
+    border-collapse: separate;
+}
+
+.recent-table thead tr,
+.recent-table tbody tr {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 90px;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    align-items: center;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.recent-table thead,
+.recent-table tbody {
+    display: block;
+}
+
+/* Make the header row use the same grid columns but keep it visually neutral */
+.recent-table thead tr {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 90px;
+    gap: 1rem;
+    margin: 0 1rem 0 1rem;
+    padding: 0.45rem 1rem;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 6px;
+}
+.recent-table thead th { display: block; padding: 0.45rem 0; text-align: left; }
+.recent-table tbody tr:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 36px rgba(16,24,40,0.09);
+}
+.recent-table thead th,
+.recent-table tbody td { padding: 0.4rem 0; border-bottom: none; color: #475569; }
+
+/* Bill Type badge (strong accent) */
+.recent-table thead th:nth-child(1), .recent-table tbody td:nth-child(1) {
+    justify-self: start;
+    align-self: center;
+    /* Type badge — keep header cell neutral but body gets badge styling */
+}
+.recent-table tbody td:nth-child(1) {
+    background: linear-gradient(90deg,#f59e0b,#fbbf24);
+    color: #08203a;
+    padding: 0.28rem 0.65rem;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(245,158,11,0.12);
+}
+
+/* Customer name more prominent */
+.recent-table tbody td:nth-child(4) {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+/* Date muted */
+.recent-table tbody td:nth-child(3) { color: #64748b; font-size: 0.92rem; }
+
+/* Location column clearer */
+.recent-table tbody td:nth-child(5) {
+    text-align: right;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+/* Actions column */
+.recent-table tbody td:nth-child(6) { text-align: center; }
+
+/* Hide the table header on small screens and stack cells */
+@media (max-width: 860px) {
+    .recent-table thead { display: none; }
+    .recent-table tbody tr { grid-template-columns: 1fr; gap: 0.5rem; margin: 0.5rem 0.5rem; padding: 0.8rem; }
+    .recent-table tbody td { display: block; width: 100%; padding: 0.15rem 0; }
+    .recent-table tbody td:nth-child(2) { justify-self: start; }
+}
+
+/* Ensure the card container scroll area still looks good */
+.recent-table-card .card-body { padding: 0.75rem 0.9rem; }
     font-size: 1.05rem;
+
+/* Enhancements and responsive tweaks for the Recents / Home page */
+.recent-hero-header {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.recent-hero {
+    background: transparent;
+    border-bottom: 1px solid rgba(16,24,40,0.03);
+    padding: 1.6rem 0.75rem;
+}
+
+.recent-hero-title h2 {
+    font-size: 1.6rem;
+    margin-bottom: 0.25rem;
+}
+
+.recent-hero .recent-subtitle {
+    max-width: 560px;
+}
+
+.recent-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 0.75rem;
+    max-width: 1100px;
+    margin: 0 auto 1rem;
+    position: relative;
+}
+
+.recent-search {
+    flex: 1 1 420px;
+    min-width: 200px;
+}
+
+/* Place the import button aligned to the right of the search on wide screens */
+.recent-controls .import-btn {
+    position: absolute;
+    right: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+@media (max-width: 860px) {
+    .recent-controls { padding: 0.5rem; }
+    .recent-controls .import-btn { position: static; transform: none; margin-left: 0.5rem; }
+}
+
+/* Recent project list card container */
+.recent-list-card {
+    max-width: 1100px;
+    margin: 1rem auto 2rem;
+    padding: 0;
+}
+
+.recent-project-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 90px;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid rgba(16,24,40,0.04);
+    background: transparent;
+}
+
+/* Make empty state visible and centered */
+.empty-state {
+    text-align: center;
+    color: var(--muted-2);
+    padding: 2rem 1rem;
+}
+
+/* Slightly reduce card padding on small screens */
+@media (max-width: 560px) {
+    .counter-card { padding: 1rem 1.25rem; }
+    .recent-hero { padding: 1rem 0.5rem; }
+}
+}
+
+.home-container { max-width: none; width: 100%; padding: 1rem 2rem; box-sizing: border-box; background: #ffffff; min-height: 100vh; }
+.home-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; max-width:1100px; margin:0 auto 1rem; padding: 1rem; background: rgba(255,255,255,0.9); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.home-header h2 { margin:0; font-size:1.8rem; font-weight: 700; color: #1e293b; }
+.home-actions { display:flex; gap:0.5rem; }
+
+.recent-tables-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 1100px; margin: 0 auto; }
+.recent-table-card { background: #ffffff; border-radius: 16px; padding: 0; box-shadow: 0 8px 32px rgba(0,0,0,0.12); display:flex; flex-direction:column; height: calc(100vh - 220px); border: 1px solid rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.recent-table-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.15); }
+.recent-table-card .card-head { padding: 1rem 1.5rem; border-bottom: 2px solid #e2e8f0; background: linear-gradient(90deg, #f1f5f9, #ffffff); border-radius: 16px 16px 0 0; }
+.recent-table-card .card-head h3 { margin: 0; font-size: 1.2rem; font-weight: 600; color: #334155; }
+.recent-table-card .card-body { padding: 0; overflow: auto; flex: 1 1 auto; }
+
+.recent-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.recent-table thead th { position: sticky; top: 0; background: #ffffff; z-index: 10; padding: 1rem 1.5rem; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+.recent-table tbody td { padding: 0.8rem 1.5rem; border-bottom: 1px solid #f1f5f9; color: #64748b; }
+.recent-table tbody tr:hover { background: #f8fafc; transition: background 0.15s ease; }
+.recent-table tbody tr.empty-row td { padding: 3rem 1.5rem; text-align:center; color: #94a3b8; font-style: italic; }
+
+/* Make table columns sensible widths */
+.recent-table th:nth-child(1), .recent-table td:nth-child(1) { width: 10%; }
+.recent-table th:nth-child(2), .recent-table td:nth-child(2) { width: 18%; }
+.recent-table th:nth-child(3), .recent-table td:nth-child(3) { width: 15%; }
+.recent-table th:nth-child(4), .recent-table td:nth-child(4) { width: 30%; }
+.recent-table th:nth-child(5), .recent-table td:nth-child(5) { width: 12%; text-align:right; font-weight: 500; }
+.recent-table th:nth-child(6), .recent-table td:nth-child(6) { width: 15%; text-align:center; }
+
+@media (max-width: 1100px) {
+    .recent-tables-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+    .recent-table-card { height: auto; max-height: 60vh; }
+    .home-container { padding: 1rem; }
+    .home-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
 }
 
 .project-actions {
@@ -181,16 +425,23 @@
 }
 
 .recent-project-item {
-    /* flat list row: stack name above meta, left aligned */
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 0.75rem 0;
-    box-shadow: none;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 90px;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.9rem 0;
     border-bottom: 1px solid rgba(16,24,40,0.04);
+    background: transparent;
+}
+
+@media (max-width: 860px) {
+    .recent-project-item {
+        /* switch to stacked rows for narrow screens */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 0.75rem 0.5rem;
+    }
 }
 
 .recent-controls {
@@ -270,6 +521,27 @@
     gap: 0.75rem;
 }
 
+/* Tighter row typography and actions alignment */
+.recent-project-item .recent-project-name {
+    font-size: 1rem;
+    color: #0f172a;
+    line-height: 1.15;
+}
+.recent-project-item .recent-project-meta {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+.recent-project-item .recent-actions,
+.recent-project-item .project-actions {
+    justify-self: center;
+}
+
+/* Make the customer cell more prominent on small screens */
+@media (max-width: 860px) {
+    .recent-project-item .recent-project-name { font-size: 1.05rem; }
+    .recent-project-item .recent-project-meta { font-size: 0.9rem; }
+}
+
 /* position the import button above the end of the search input */
 .recent-controls .import-btn {
     position: absolute;
@@ -314,7 +586,64 @@
     margin: 0 auto;
     position: relative; /* anchor for absolute action placement */
 }
-.recent-hero .recent-hero-actions,
+
+/* ===== New simplified list styles for the rewritten HTML structure ===== */
+.list-header, .list-row {
+    display: grid;
+    grid-template-columns: 1.2fr 0.9fr 1fr 1.6fr 0.9fr 90px;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.6rem 1rem;
+}
+
+.list-header { background: transparent; padding-top: 0.25rem; padding-bottom: 0.25rem; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 0.85rem; }
+
+/* Styled list header: clear background, subtle divider, and sticky inside the card body */
+.list-header {
+    background: linear-gradient(90deg, rgba(248,250,252,0.6), rgba(255,255,255,0.4));
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    box-shadow: inset 0 -1px 0 rgba(16,24,40,0.03);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+.list-header .col { color: #475569; font-weight: 700; font-size: 0.85rem; }
+
+/* Also support older header class used in public build */
+.recent-list-header {
+    display: grid;
+    grid-template-columns: 1.2fr 0.9fr 1fr 1.6fr 0.9fr 90px;
+    gap: 1rem;
+    padding: 0.6rem 1rem;
+    background: linear-gradient(90deg, rgba(248,250,252,0.6), rgba(255,255,255,0.4));
+    border-radius: 8px;
+    box-shadow: inset 0 -1px 0 rgba(16,24,40,0.03);
+    color: #475569;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.list-header { color: #4b5563; letter-spacing: 0.6px; }
+.recent-list-header { color: #4b5563; letter-spacing: 0.6px; }
+.list-body { display: block; padding: 0.25rem 0; }
+.list-row { background: #fff; margin: 0.5rem 0; border-radius: 8px; box-shadow: 0 6px 18px rgba(16,24,40,0.04); }
+.list-row.empty-row { padding: 1.25rem; color: #94a3b8; text-align: center; box-shadow: none; background: transparent; }
+.list-row .col { padding: 0.2rem 0; color: #0f172a; }
+.list-row .col.date { color: #64748b; font-size: 0.92rem; }
+.list-row .col.total { text-align: right; font-weight: 700; }
+.list-row .col.actions { text-align: center; }
+
+@media (max-width: 860px) {
+    .list-header { display: none; }
+    .list-row { grid-template-columns: 1fr; padding: 0.9rem; }
+    .list-row .col { display: block; width: 100%; padding: 0.15rem 0; }
+    .list-row .col.total { text-align: left; }
+}
+
+.recent-hero .recent-hero-actions {
+    margin-left: auto; /* ensure actions are pushed to the far right */
+}
 .recent-hero-actions {
     margin-left: auto; /* ensure actions are pushed to the far right */
 }
@@ -332,3 +661,606 @@
 @media (min-width: 1200px) {
     .recent-hero-header .import-btn { right: 4rem; }
 }
+
+/* Center and style the Recents/Drafts toggle buttons in the hero */
+.recent-hero .recent-controls {
+    display: flex;
+    justify-content: flex-start;
+    gap: 1rem;
+    margin: 1rem 0 0.75rem;
+    align-items: center;
+}
+
+.recent-hero .recent-controls .button {
+    padding: 0.6rem 1.2rem;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 1rem;
+    box-shadow: 0 8px 22px rgba(2,6,23,0.08);
+    border: 1px solid rgba(16,24,40,0.06);
+    background: linear-gradient(90deg,#f59e0b,#fbbf24);
+    color: #fff;
+}
+
+.recent-hero .recent-controls .button.button-primary {
+    background: linear-gradient(90deg,#f59e0b,#fbbf24);
+}
+
+.recent-hero .recent-controls .button:not(.button-primary) {
+    background: #fff;
+    color: #334155;
+}
+
+@media (max-width: 860px) {
+    .recent-hero .recent-controls { gap: 0.6rem; }
+    .recent-hero .recent-controls .button { padding: 0.5rem 1rem; font-size: 0.95rem; }
+}
+
+/* ===== Final override: force header/body grid alignment ===== */
+/* This block is placed at the end so it wins over earlier table rules. */
+.recent-table {
+    border-spacing: 0;
+    border-collapse: separate;
+}
+
+/* Make the header and body block-level so we can grid both consistently */
+.recent-table thead,
+.recent-table tbody {
+    display: block !important;
+}
+
+/* Header row uses exact same grid track sizes as body rows */
+.recent-table thead tr,
+.recent-table tbody tr {
+    display: grid !important;
+    grid-template-columns: 2.2fr 1fr 1fr 2fr 1fr 90px !important;
+    gap: 1rem !important;
+    margin: 0 !important;
+    padding: 0.45rem 1rem !important;
+    align-items: center !important;
+}
+
+/* Neutral header appearance */
+.recent-table thead th {
+    display: block !important;
+    padding: 0.45rem 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    position: static !important;
+    color: #475569 !important;
+    text-transform: uppercase !important;
+    font-weight: 600 !important;
+}
+
+/* Body row styling as cards */
+.recent-table tbody tr {
+    background: #fff !important;
+    border-radius: 10px !important;
+    box-shadow: 0 6px 18px rgba(16,24,40,0.06) !important;
+    margin: 0.6rem 0 !important;
+    padding: 0.7rem 1rem !important;
+}
+
+/* Make each cell participate in the grid and reset default table padding */
+.recent-table tbody td {
+    display: block !important;
+    padding: 0 !important;
+    color: #475569 !important;
+}
+
+/* Ensure empty-row colspan visuals remain centered */
+.recent-table tbody tr.empty-row td { display: block !important; padding: 1.4rem 0 !important; text-align: center !important; }
+
+@media (max-width: 860px) {
+    .recent-table thead { display: none !important; }
+    .recent-table thead tr { display: none !important; }
+    .recent-table tbody tr { grid-template-columns: 1fr !important; padding: 0.8rem !important; }
+    .recent-table tbody td { padding: 0.15rem 0 !important; }
+}
+
+/* Ensure the page area behind the home content is white when this stylesheet is loaded */
+body.app-main { background: #ffffff !important; }
+
+/* Make the home container and tables fill the available app-main viewport */
+.home-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* fill the fixed .app-main area */
+    position: relative;
+    padding-top: 4.5rem; /* make room for the floating search + toggles */
+}
+
+.recent-tables-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    flex: 1 1 auto;
+    align-items: stretch;
+}
+
+.recent-table-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.recent-table-card .card-body {
+    flex: 1 1 auto;
+    overflow: auto; /* scroll content inside the card */
+}
+
+@media (max-width: 1100px) {
+    .recent-tables-grid { grid-template-columns: 1fr; }
+}
+
+/* Position search (top-left) and Recent/Saved toggles (top-right) */
+.recent-hero + .recent-controls {
+    position: absolute;
+    top: 0.9rem;
+    left: 1.5rem;
+    right: auto;
+    width: 48%;
+    max-width: 640px;
+    z-index: 40;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.recent-hero .recent-controls {
+    position: absolute;
+    top: 0.9rem;
+    right: 1.5rem;
+    z-index: 40;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.recent-hero + .recent-controls .recent-search,
+.recent-hero + .recent-controls input.recent-search {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 860px) {
+    .home-container { padding-top: 2rem; }
+    .recent-hero + .recent-controls { position: static; width: auto; margin: 0.75rem 0 0; }
+    .recent-hero .recent-controls { position: static; margin-top: 0.5rem; }
+}
+
+/* Topbar layout: left = search+sort, right = tabs */
+.home-topbar {
+    background: rgba(255,255,255,0.98);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(234,179,8,0.1);
+    padding: 1.25rem 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.home-search {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1 1 60%;
+    max-width: 640px;
+}
+
+.search-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted-2);
+    pointer-events: none;
+}
+
+.recent-search {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    border: 2px solid rgba(234,179,8,0.15);
+    border-radius: 12px;
+    background: #ffffff;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.recent-search:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 4px 16px rgba(234,179,8,0.15);
+}
+
+.button-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: #ffffff;
+    border: 2px solid rgba(234,179,8,0.2);
+    border-radius: 10px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.button-secondary:hover {
+    background: linear-gradient(135deg, #fef9e6, #fffef5);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(234,179,8,0.15);
+}
+
+.home-tabs {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    background: rgba(234,179,8,0.08);
+    padding: 0.375rem;
+    border-radius: 12px;
+}
+
+.tab-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    background: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.tab-button:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.7);
+}
+
+.tab-button.tab-active,
+.tab-button[aria-selected="true"] {
+    background: linear-gradient(135deg, #eab308, #f59e0b);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(234,179,8,0.25);
+}
+
+.icon-btn {
+    background: #ffffff;
+    border: 2px solid rgba(234,179,8,0.15);
+    border-radius: 10px;
+    padding: 0.625rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text);
+}
+
+.icon-btn:hover {
+    border-color: var(--accent);
+    background: rgba(254,249,230,0.5);
+    transform: translateY(-1px);
+}
+
+.sort-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: #ffffff;
+    border: 1px solid rgba(234,179,8,0.15);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem;
+    z-index: 1200;
+    min-width: 160px;
+    overflow: hidden;
+}
+
+.sort-item {
+    padding: 0.625rem 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.sort-item:hover {
+    background: linear-gradient(135deg, #fef9e6, #fffef5);
+    color: var(--accent-dark);
+}
+
+.sort-item.active {
+    background: rgba(234,179,8,0.1);
+    font-weight: 700;
+    color: var(--accent-dark);
+}
+
+/* Content area */
+.home-content-wrapper {
+    padding: 2rem 2.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.content-panel {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.list-container {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    padding: 1.5rem;
+    border: 1px solid rgba(234,179,8,0.1);
+}
+
+.list-header {
+    display: grid;
+    grid-template-columns: 1.8fr 0.8fr 1fr 1.2fr 1fr 120px;
+    gap: 1.5rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, rgba(254,249,230,0.5), rgba(255,254,245,0.3));
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+}
+
+.document-list,
+.recent-projects {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.list-row,
+.recent-project-item {
+    display: grid;
+    grid-template-columns: 1.8fr 0.8fr 1fr 1.2fr 1fr 120px;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    background: #ffffff;
+    border: 2px solid rgba(234,179,8,0.08);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.list-row:hover,
+.recent-project-item:hover {
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(234,179,8,0.15);
+    transform: translateY(-2px);
+}
+
+.list-row .col,
+.recent-project-item > * {
+    font-size: 0.95rem;
+    color: var(--text);
+}
+
+.col-customer {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 1rem;
+}
+
+.col-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem 0.875rem;
+    background: linear-gradient(135deg, #eab308, #f59e0b);
+    color: #ffffff;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    width: fit-content;
+    box-shadow: 0 2px 8px rgba(234,179,8,0.25);
+}
+
+.col-date {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.col-number {
+    font-weight: 600;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: var(--text);
+}
+
+.col-storage {
+    color: var(--muted-2);
+    font-size: 0.875rem;
+}
+
+.col-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.empty-state svg {
+    opacity: 0.3;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state span {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.empty-state small {
+    font-size: 0.95rem;
+    color: var(--muted-2);
+    max-width: 400px;
+}
+
+.project-status {
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.project-status:not(:empty) {
+    background: rgba(234,179,8,0.1);
+    border: 1px solid rgba(234,179,8,0.2);
+}
+
+.project-status.is-success {
+    color: var(--success);
+    background: rgba(16,185,129,0.1);
+    border-color: rgba(16,185,129,0.2);
+}
+
+.project-status.is-error {
+    color: var(--danger);
+    background: rgba(239,68,68,0.1);
+    border-color: rgba(239,68,68,0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .list-header,
+    .list-row,
+    .recent-project-item {
+        grid-template-columns: 1.5fr 0.8fr 1fr 1fr 90px;
+        gap: 1rem;
+    }
+    
+    .col-storage {
+        display: none;
+    }
+}
+
+@media (max-width: 860px) {
+    .app-main {
+        left: 0;
+        padding: 0;
+    }
+    
+    .home-hero {
+        padding: 2rem 1.5rem;
+    }
+    
+    .hero-title {
+        font-size: 2rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+    
+    .home-topbar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem 1.5rem;
+        gap: 1rem;
+    }
+    
+    .home-search {
+        max-width: 100%;
+        flex-wrap: wrap;
+    }
+    
+    .home-tabs {
+        width: 100%;
+        justify-content: space-around;
+    }
+    
+    .home-content-wrapper {
+        padding: 1.5rem;
+    }
+    
+    .list-header {
+        display: none;
+    }
+    
+    .list-row,
+    .recent-project-item {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+    
+    .col-type {
+        width: fit-content;
+    }
+    
+    .col-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .button-secondary {
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .tab-button {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+

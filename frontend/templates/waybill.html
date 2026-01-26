@@ -14,23 +14,19 @@ Context:
 {% endblock %}
 
 {% block content %}
-<section id="waybill-module" class="module{% if preview %} is-preview{% endif %}">
-    <div class="module-header">
+<section id="waybill-module" class="module {% if preview %}is-preview{% endif %}">
+        <div class="module-header">
         <h2>Waybill</h2>
+        {% if not preview %}
         <div class="module-actions">
-            {% if waybill %}
-                <a href="{% url 'waybill-pdf' waybill.pk %}" class="button" target="_blank" rel="noopener">Download PDF</a>
-            {% endif %}
-            {% if not preview %}
-                <button id="waybill-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="waybill-submit" class="button" type="submit" form="waybill-form">Save Waybill</button>
-            {% endif %}
+            <button id="waybill-submit" class="button" type="submit" form="waybill-form">Save Waybill</button>
         </div>
+        {% endif %}
     </div>
 
     <div class="module-body">
         <div class="a4-workspace">
-        <form id="waybill-form" class="document waybill document-editable" method="post" action="{% url 'waybill-form' %}" {% if preview %}hidden{% endif %}>
+        <form id="waybill-form" class="document waybill document-editable" method="post" action="{% url 'waybill-form' %}">
             {% csrf_token %}
             <header class="document-header">
                 <div>
@@ -58,12 +54,14 @@ Context:
                         <th>Quantity</th>
                         <th>Unit Price</th>
                         <th>Total</th>
-                        <th></th>
+                        {% if not preview %}<th></th>{% endif %}
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
+            {% if not preview %}
             <button type="button" id="waybill-add-item" class="button button-secondary">Add Item</button>
+            {% endif %}
 
             <section class="document-footer">
                 <div>
@@ -75,61 +73,21 @@ Context:
                     <div class="signature-line"></div>
                 </div>
             </section>
-        </form>
-
-        <article id="waybill-preview" class="document waybill" {% if not preview %}hidden{% endif %}>
-            <header class="document-header">
-                <div>
-                    <h3>WAYBILL</h3>
-                    <p>No.: {{ waybill.waybill_number|default:"" }}</p>
-                    <p>Date: {{ waybill.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
-                </div>
-                <div class="sender-receiver">
-                    <p><strong>Customer:</strong> {{ waybill.customer_name|default:form.customer_name.value }}</p>
-                    <p><strong>Destination:</strong> {{ waybill.destination|default:form.destination.value }}</p>
-                </div>
-            </header>
-
-            {% if not preview %}
-            <div class="preview-actions">
-                <button class="button button-secondary" data-exit-preview>Back to Edit</button>
-            </div>
-            {% endif %}
-
-            <table class="document-items">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Quantity</th>
-                        <th>Unit Price</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody id="waybill-preview-rows">
-                    {% if waybill %}
-                        {% for item in waybill.items %}
-                            <tr>
-                                <td>{{ item.description }}</td>
-                                <td>{{ item.quantity|floatformat:2 }}</td>
-                                <td>{{ item.unit_price|floatformat:2 }}</td>
-                                <td>{{ item.total|floatformat:2 }}</td>
-                            </tr>
-                        {% endfor %}
-                    {% endif %}
-                </tbody>
-            </table>
-
-            <section class="document-footer">
-                <div>
-                    <p><strong>Driver:</strong> {{ waybill.driver_name|default:form.driver_name.value }}</p>
-                    <div class="signature-line">Driver Signature</div>
-                </div>
-                <div>
-                    <p><strong>Receiver:</strong> {{ waybill.receiver_name|default:form.receiver_name.value }}</p>
-                    <div class="signature-line">Receiver Signature</div>
+            <section class="waybill-contact-bar">
+                <div class="contact-wrapper">
+                    <p class="account">
+                        <span>0543127562 <img src="/assets/mobile money.png" alt="Mobile Money" class="contact-icon"></span>
+                        <span>0505321475 <img src="/assets/whatsapp.png" alt="WhatsApp" class="contact-icon"></span>
+                        <span>0540673202</span>
+                        <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                    </p>
+                    <p class="email">
+                        <span>Email: spaquelsmultimedia@gmail.com</span>
+                        <span>Website: www.spaquelsmultimedia.org</span>
+                    </p>
                 </div>
             </section>
-        </article>
+        </form>
         </div>
     </div>
 </section>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recents | Billing App</title>
+    <title>Home | Billing App</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,55 +25,196 @@
             <h1>Billing App</h1>
         </div>
         <nav class="app-nav" aria-label="Primary">
-        <a class="nav-link" href="index.html">Recents</a>
-            <a class="nav-link" href="invoice.html">Invoice</a>
-            <a class="nav-link" href="receipt.html">Receipt</a>
-            <a class="nav-link" href="waybill.html">Waybill</a>
+            <div class="nav-main">
+                <a class="nav-link active" href="index.html">Recents</a>
+                <a class="nav-link" href="invoice.html">Invoice</a>
+                <a class="nav-link" href="receipt.html">Receipt</a>
+                <a class="nav-link" href="waybill.html">Waybill</a>
+            </div>
+
+            <div class="nav-bottom">
+                <div class="nav-settings">
+                    <button id="nav-settings-toggle" class="nav-link button-ghost" type="button" aria-haspopup="dialog" aria-expanded="false">Settings</button>
+                    <div id="nav-settings-overlay" class="settings-overlay" hidden>
+                        <div id="nav-settings-pop" class="settings-popover" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+                        <div class="settings-header">
+                            <h4>Settings</h4>
+                            <button id="settings-close" class="settings-close" aria-label="Close">✕</button>
+                        </div>
+                        <p class="settings-note">Choose where drafts and exported PDFs should be stored. For local browser-only storage, leave paths empty.</p>
+
+                        <div class="settings-row">
+                            <label for="settings-draft-path">Draft save path</label>
+                            <div class="settings-path">
+                                <input id="settings-draft-path" type="text" placeholder="/path/to/save/drafts or leave empty for local" />
+                                <button id="settings-choose-draft" class="button-secondary">Choose…</button>
+                            </div>
+                        </div>
+
+                        <div class="settings-row">
+                            <label for="settings-pdf-path">PDF save path</label>
+                            <div class="settings-path">
+                                <input id="settings-pdf-path" type="text" placeholder="/path/to/save/pdfs or leave empty for local" />
+                                <button id="settings-choose-pdf" class="button-secondary">Choose…</button>
+                            </div>
+                        </div>
+
+                        <div class="settings-row settings-toggle">
+                            <label class="switch"><input id="settings-save-pdf" type="checkbox" /><span class="slider"></span></label>
+                            <div class="settings-toggle-label">Save PDF when saving draft</div>
+                        </div>
+
+                        <hr />
+                        <div class="settings-row">
+                            <label>Manage Customers</label>
+                            <div id="settings-customers-list"></div>
+                            <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                                <input id="settings-customer-add-input" type="text" placeholder="Add customer name" />
+                                <button id="settings-customer-add" class="button-secondary">Add</button>
+                            </div>
+                        </div>
+
+                        <input id="settings-pdf-chooser" type="file" webkitdirectory directory multiple hidden />
+                        <input id="settings-draft-chooser" type="file" webkitdirectory directory multiple hidden />
+
+                        <div class="settings-actions">
+                            <button id="settings-clear-data-btn" class="button-secondary" style="background:var(--danger);color:#fff;border:none;">Clear Data</button>
+                            <div style="flex:1"></div>
+                            <button id="settings-save-btn" class="button-secondary">Save</button>
+                            <button id="settings-save-pdf-now" class="button">Save PDF now</button>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </nav>
     </header>
 
     <main class="app-main">
-        <section class="recent-hero">
-            <div class="recent-hero-header">
-                <div class="recent-hero-title">
-                    <h2>Recents</h2>
-                </div>
+        <!-- Hero Section with Status -->
+        <section class="home-hero">
+            <div class="hero-content">
+                <h2 class="hero-title">Welcome Back</h2>
+                <p class="hero-subtitle">Manage your invoices, receipts, and waybills efficiently</p>
+                <div id="project-status" class="project-status" role="status" aria-live="polite"></div>
+            </div>
+        </section>
 
-                <div class="recent-hero-actions">
-                    <div class="recent-controls" role="group" aria-label="Project actions">
-                        <!-- import button moved to the recent-controls block below -->
-                    </div>
+        <!-- Top bar: left = search + sort, right = Recents/Saved tabs -->
+        <div class="home-topbar">
+            <div class="home-search recent-controls" role="search">
+                <div class="search-wrapper">
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input id="recent-search" class="recent-search" type="search" placeholder="Search documents..." aria-label="Search recent files">
+                </div>
+                <button id="home-show-customer-docs" class="button button-secondary" type="button" title="Show documents for customer">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Customers
+                </button>
+                <div class="recent-actions">
+                    <button id="recent-sort-toggle" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="Sort options">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="21" y1="10" x2="3" y2="10"></line>
+                            <line x1="21" y1="6" x2="3" y2="6"></line>
+                            <line x1="21" y1="14" x2="3" y2="14"></line>
+                            <line x1="21" y1="18" x2="3" y2="18"></line>
+                        </svg>
+                    </button>
+                    <ul id="recent-sort-menu" class="sort-menu" hidden>
+                        <li data-sort="newest" class="sort-item">Newest First</li>
+                        <li data-sort="oldest" class="sort-item">Oldest First</li>
+                    </ul>
                 </div>
             </div>
 
-            <div id="project-status" class="project-status" role="status" aria-live="polite"></div>
-        </section>
-
-        <!-- Recent controls: search + sort (three-dots) -->
-        <div class="recent-controls">
-            <input id="recent-search" class="recent-search" type="search" placeholder="Search recent files…" aria-label="Search recent files">
-            <!-- import button positioned above the end of the search field -->
-            <button id="project-import" class="button button-secondary import-btn" type="button">Open project file</button>
-            <div class="recent-actions">
-                <button id="recent-sort-toggle" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="Sort">⋯</button>
-                <ul id="recent-sort-menu" class="sort-menu" hidden>
-                    <li data-sort="newest" class="sort-item">Newest</li>
-                    <li data-sort="oldest" class="sort-item">Oldest</li>
-                </ul>
+            <div class="home-tabs recent-controls" role="tablist" aria-label="Home tabs">
+                <button id="home-tab-recents" class="tab-button tab-active" type="button" role="tab" aria-selected="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Recent
+                </button>
+                <button id="home-tab-drafts" class="tab-button" type="button" role="tab" aria-selected="false">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Saved
+                </button>
             </div>
         </div>
 
-        <p id="recent-projects-empty" class="empty-state">No recent projects</p>
-        <ul id="recent-projects-list" class="recent-projects" aria-live="polite" hidden></ul>
+        <div id="home-content" class="home-content-wrapper">
+            <div id="recents-panel" class="content-panel">
+                <div class="list-container">
+                    <div id="recent-list-header" class="list-header">
+                        <span class="col col-customer">Customer</span>
+                        <span class="col col-type">Type</span>
+                        <span class="col col-date">Date</span>
+                        <span class="col col-number">Number</span>
+                        <span class="col col-storage">Location</span>
+                        <span class="col col-actions">Actions</span>
+                    </div>
+                    <p id="recent-projects-empty" class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <span>No recent documents yet</span>
+                        <small>Create your first invoice, receipt, or waybill to get started</small>
+                    </p>
+                    <ul id="recent-projects-list" class="document-list" aria-live="polite" hidden></ul>
+                </div>
+            </div>
+            <div id="drafts-panel" class="content-panel" hidden>
+                <div class="list-container">
+                    <div id="drafts-list-header" class="list-header">
+                        <span class="col col-customer">Customer</span>
+                        <span class="col col-type">Type</span>
+                        <span class="col col-date">Date</span>
+                        <span class="col col-number">Number</span>
+                        <span class="col col-storage">Location</span>
+                        <span class="col col-actions">Actions</span>
+                    </div>
+                    <p id="drafts-empty" class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="12" y1="18" x2="12" y2="12"></line>
+                            <line x1="9" y1="15" x2="15" y2="15"></line>
+                        </svg>
+                        <span>No saved drafts</span>
+                        <small>Your saved documents will appear here</small>
+                    </p>
+                    <ul id="drafts-list" class="document-list" aria-live="polite" hidden></ul>
+                </div>
+            </div>
+        </div>
 
     <input id="project-import-input" type="file" accept=".billproj" hidden>
 
     <script src="../static/js/main.js" defer></script>
+    <script src="../static/js/customers.js" defer></script>
+    <script src="../static/js/drafts.js" defer></script>
     <script src="../static/js/home.js" defer></script>
+    <script src="../static/js/settings.js" defer></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             // page intentionally minimal: recent projects are rendered by home.js
         });
     </script>
+    
 </body>
 </html>
+                   

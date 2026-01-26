@@ -30,16 +30,7 @@
         <div class="module-header module-header--long">
             <h2>Waybill</h2>
             <div class="module-actions">
-                <button id="waybill-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
-                <button id="waybill-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="waybill-save" class="button button-secondary" type="button" title="Save project (.billproj)">Save</button>
-                <button id="waybill-submit" class="button" type="button" title="Download PDF" aria-label="Download PDF">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M12 3v10" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                        <path d="M7 10l5 5 5-5" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </svg>
-                </button>
+                <button id="waybill-save" class="button button-secondary" type="button" title="Save PDF">Save PDF</button>
             </div>
         </div>
 
@@ -104,73 +95,7 @@
                 </section>
             </form>
 
-            <article id="waybill-preview" class="document waybill-document" hidden>
-                <div class="waybill-letterhead">
-                    <div class="letterhead-left">
-                        <h3>WAYBILL</h3>
-                        <p>Waybill No.: <span class="js-waybill-preview-number">—</span></p>
-                        <p class="waybill-date">Date: <span class="js-waybill-preview-date">—</span></p>
-                    </div>
-                    <div class="letterhead-right">
-                        <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
-                    </div>
-                </div>
-
-                <table class="document-items">
-                    <thead>
-                        <tr>
-                            <th class="description">Description</th>
-                            <th>Qty</th>
-                            <th>Unit Price (GHC)</th>
-                            <th>Amount (GHC)</th>
-                        </tr>
-                    </thead>
-                    <tbody class="js-waybill-preview-rows"></tbody>
-                </table>
-
-                <div class="waybill-signature-grid">
-                    <div class="signature-card">
-                        <span class="signature-title">Delivered By</span>
-                        <div class="field-block">
-                            <span>Name</span>
-                            <p class="js-waybill-preview-driver" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
-                        </div>
-                        <div class="field-block">
-                            <span>Date</span>
-                            <p class="js-waybill-preview-delivery-date" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
-                        </div>
-                        <div class="signature-line">Signature</div>
-                    </div>
-                    <div class="signature-card">
-                        <span class="signature-title">Received By</span>
-                        <div class="field-block">
-                            <span>Name</span>
-                            <p class="js-waybill-preview-receiver" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
-                        </div>
-                        <div class="field-block">
-                            <span>Date</span>
-                            <p class="js-waybill-preview-received-date" style="margin: 0; padding: 0.1rem 0.25rem;">—</p>
-                        </div>
-                        <div class="signature-line">Signature</div>
-                    </div>
-                </div>
-
-                <section id="waybill-preview-contact">
-                    <div class="contact-wrapper">
-                       
-                        <p class="account">
-                            <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
-                            <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
-                            <span>0540673202</span>
-                            <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
-                        </p>
-                         <p class="email">
-                            <span>Email: spaquelsmultimedia@gmail.com</span>
-                            <span>Website: www.spaquelsmultimedia.org</span>
-                        </p>
-                    </div>
-                </section>
-                </article>
+            <!-- Preview removed: PDF/export clones the editable form directly -->
             </div>
         </div>
         <div class="module-toast" id="waybill-toast" role="status" aria-live="polite" hidden></div>

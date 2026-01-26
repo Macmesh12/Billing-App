@@ -31,12 +31,10 @@
 
 <main class="app-main">
     <section id="receipt-module" class="module" data-document-type="receipt">
-        <div class="module-header">
+            <div class="module-header">
             <h2>Receipt</h2>
             <div class="module-actions">
-                <button id="receipt-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
-                <button id="receipt-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="receipt-submit" class="button" type="button">Download PDF</button>
+                <!-- Preview removed in static build -->
             </div>
         </div>
 
@@ -116,81 +114,23 @@
                         </label>
                     </div>
                 </section>
+            <section class="receipt-contact-bar">
+                <div class="contact-wrapper">
+                    <p class="account">
+                        <span>0543127562 <img src="../static/assets/mobile money.png" alt="Mobile Money" class="contact-icon"></span>
+                        <span>0505321475 <img src="../static/assets/whatsapp.png" alt="WhatsApp" class="contact-icon"></span>
+                        <span>0540673202</span>
+                        <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                    </p>
+                    <p class="email">
+                        <span>Email: spaquelsmultimedia@gmail.com</span>
+                        <span>Website: www.spaquelsmultimedia.org</span>
+                    </p>
+                </div>
+            </section>
             </form>
 
-            <div id="receipt-preview" class="document receipt-document receipt-preview-landscape" hidden>
-                <div class="receipt-letterhead">
-                    <div class="letterhead-left">
-                        <h3>RECEIPT</h3>
-                        <p>No.: <span class="js-receipt-preview-number">—</span></p>
-                        <p class="receipt-date">Date: <span class="js-receipt-preview-date">—</span></p>
-                    </div>
-                    <div class="letterhead-right">
-                        <img src="/assets/logo.png" alt="logo-placeholder" class="logo-placeholder">
-                    </div>
-                </div>
-
-                <section class="receipt-body">
-
-                    <table class="document-items">
-                        <thead>
-                            <tr>
-                                <th class="description">Description</th>
-                                <th>Qty</th>
-                                <th>Unit Price (GHC)</th>
-                                <th>Amount (GHC)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="receipt-preview-rows"></tbody>
-                    </table>
-
-                    <div class="receipt-summary-section">
-                        <div class="receipt-payment-info">
-                            <p><strong>Payment Method:</strong> <span class="js-receipt-preview-payment-method">—</span></p>
-                            <p><strong>Amount Paid:</strong> <span class="js-receipt-preview-amount-paid">GH₵ 0.00</span></p>
-                        </div>
-
-                        <div class="receipt-totals">
-                            <div class="total-row">
-                                <span>Total Amount:</span>
-                                <span class="js-receipt-preview-total-amount">GH₵ 0.00</span>
-                            </div>
-                            <div class="total-row balance-row">
-                                <span>Balance:</span>
-                                <span class="js-receipt-preview-balance">GH₵ 0.00</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="receipt-signature">
-                    <div class="signature-left">
-                        <p><strong>Creative Director:</strong> <span class="js-receipt-preview-approved-by">Raphael Quame Agbeshie</span></p>
-                        <div class="signature-block">
-                            <img src="/assets/sign.png" alt="Creative Director Signature" class="signature-image">
-                        </div>
-                    </div>
-                    <div class="signature-right">
-                        <p><strong>Customer Name:</strong> <span class="js-receipt-preview-customer-name">—</span></p>
-                        <p style="margin-top: 1.5rem;"><strong>Issued By:</strong> <span class="js-receipt-preview-issued-by">—</span></p>
-                    </div>
-                </section>
-
-                <section id="receipt-preview-contact">
-                    <div class="contact-wrapper">
-                        <p class="email">
-                            <span>Email: spaquelsmultimedia@gmail.com</span>
-                            <span>Website: www.spaquelsmultimedia.org</span>
-                        </p>
-                        <p class="account">
-                            <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
-                            <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
-                            <span>0540673202</span>
-                            <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
-                        </p>
-                    </div>
-                </section>
-            </div>
+            <!-- Preview removed: PDF/export clones the editable form directly -->
             </div> <!-- End A4 workspace -->
         </div>
         <div class="module-toast" id="receipt-toast" role="status" aria-live="polite" hidden></div>

@@ -1,0 +1,95 @@
+{#
+Waybill template (design/templates/waybill.html) - preserved for Flutter styling reference
+#}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Waybill | Billing App{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/waybill.css' %}">
+{% endblock %}
+
+{% block content %}
+<section id="waybill-module" class="module {% if preview %}is-preview{% endif %}">
+        <div class="module-header">
+        <h2>Waybill</h2>
+        {% if not preview %}
+        <div class="module-actions">
+            <button id="waybill-submit" class="button" type="submit" form="waybill-form">Save Waybill</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="module-body">
+        <div class="a4-workspace">
+        <form id="waybill-form" class="document waybill document-editable" method="post" action="{% url 'waybill-form' %}">
+            {% csrf_token %}
+            <header class="document-header">
+                <div>
+                    <h3>WAYBILL</h3>
+                    <p>No.: {{ waybill.waybill_number|default:"" }}</p>
+                    <p>Date: {{ form.issue_date }}</p>
+                </div>
+                <div class="sender-receiver">
+                    <p><strong>Customer:</strong> {{ form.customer_name }}</p>
+                    <p><strong>Destination:</strong> {{ form.destination }}</p>
+                </div>
+            </header>
+
+            <section class="sender-receiver">
+                <p><strong>Driver:</strong> {{ form.driver_name }}</p>
+                <p><strong>Receiver:</strong> {{ form.receiver_name }}</p>
+            </section>
+
+            <input type="hidden" id="waybill-items-payload" name="items_payload" value='{{ form.items_payload.value|default:"[]" }}'>
+
+            <table class="document-items" id="waybill-items-table">
+                <thead>
+                    <tr>
+                        <th>Description of Goods</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                        {% if not preview %}<th></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            {% if not preview %}
+            <button type="button" id="waybill-add-item" class="button button-secondary">Add Item</button>
+            {% endif %}
+
+            <section class="document-footer">
+                <div>
+                    <p><strong>Driver Signature:</strong></p>
+                    <div class="signature-line"></div>
+                </div>
+                <div>
+                    <p><strong>Receiver Signature:</strong></p>
+                    <div class="signature-line"></div>
+                </div>
+            </section>
+            <section class="waybill-contact-bar">
+                <div class="contact-wrapper">
+                    <p class="account">
+                        <span>0543127562 <img src="/assets/mobile money.png" alt="Mobile Money" class="contact-icon"></span>
+                        <span>0505321475 <img src="/assets/whatsapp.png" alt="WhatsApp" class="contact-icon"></span>
+                        <span>0540673202</span>
+                        <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                    </p>
+                    <p class="email">
+                        <span>Email: spaquelsmultimedia@gmail.com</span>
+                        <span>Website: www.spaquelsmultimedia.org</span>
+                    </p>
+                </div>
+            </section>
+        </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/waybill.js' %}"></script>
+{% endblock %}

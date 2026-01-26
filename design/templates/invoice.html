@@ -1,0 +1,102 @@
+{#
+Invoice template (design/templates/invoice.html) - preserved for Flutter styling reference
+#}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Invoice | Billing App{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/invoice.css' %}">
+{% endblock %}
+
+{% block content %}
+<section id="invoice-module" class="module {% if preview %}is-preview{% endif %}">
+        <div class="module-header">
+        <h2>Invoice</h2>
+        {% if not preview %}
+        <div class="module-actions">
+            <button id="invoice-submit" class="button" type="button">Save Invoice</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="module-body">
+    <form id="invoice-form" class="document document-editable" method="post" action="{% url 'invoice-form' %}">
+            {% csrf_token %}
+
+            <header class="document-header">
+                <div>
+                    <h3>INVOICE</h3>
+                        <p class="document-number">Invoice No.: {{ invoice.invoice_number|default:"" }}</p>
+                </div>
+                <div class="document-meta">
+                    <p><strong>Date:</strong> {{ form.issue_date }}</p>
+                    <p><strong>Classification:</strong> {{ form.classification }}</p>
+                </div>
+            </header>
+
+            <section class="document-meta">
+                <p><strong>Billed To:</strong> {{ form.customer_name }}</p>
+            </section>
+
+            <input type="hidden" id="invoice-items-payload" name="items_payload" value='{{ form.items_payload.value|default:"[]" }}'>
+
+            <table class="document-items" id="invoice-items-table">
+                <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                            {% if not preview %}<th></th>{% endif %}
+                        </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+                {% if not preview %}
+                <button type="button" id="invoice-add-item" class="button button-secondary">Add Item</button>
+                {% endif %}
+
+            <section class="document-totals">
+                <p><span>Subtotal:</span> <span id="invoice-subtotal">0.00</span></p>
+                {% for row in tax_rows %}
+                    <p><span>{{ row.name|upper }} ({{ row.rate_percent|floatformat:2 }}%):</span> <span data-levy="{{ row.name }}" data-rate="{{ row.rate }}">{{ row.amount|default:"0.00" }}</span></p>
+                {% endfor %}
+                <p class="grand"><span>Grand Total:</span> <span id="invoice-grand-total">0.00</span></p>
+            </section>
+
+            <section class="invoice-signature">
+                <div class="signature-block">
+                    <img src="/assets/sign.png" alt="Signature" class="signature-image">
+                    <div class="signature-line">Signature</div>
+                    <div class="signature-meta">
+                        <p>Raphael Quame Agbeshie</p>
+                        <p>(Creative Director)</p>
+                    </div>
+                </div>
+            </section>
+
+                    <section class="invoice-contact-bar">
+                        <div class="contact-wrapper">
+                            <p class="account">
+                                <span>0543127562 <img src="/assets/mobile money.png" alt="Mobile Money" class="contact-icon"></span>
+                                <span>0505321475 <img src="/assets/whatsapp.png" alt="WhatsApp" class="contact-icon"></span>
+                                <span>0540673202</span>
+                                <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                            </p>
+                            <p class="email">
+                                <span>Email: spaquelsmultimedia@gmail.com</span>
+                                <span>Website: www.spaquelsmultimedia.org</span>
+                            </p>
+                        </div>
+                    </section>
+
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/invoice.js' %}"></script>
+{% endblock %}

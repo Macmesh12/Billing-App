@@ -8,7 +8,7 @@
 /* EDIT MODE: A3 size - Large and readable */
 .waybill-document {
     width: 297mm;
-    min-height: 420mm;
+    min-height: auto;
     margin: 0 auto;
     background: #ffffff;
     padding: 15mm 20mm;
@@ -17,16 +17,10 @@
     /* No borders, no shadows - clean white canvas */
 }
 
-/* PREVIEW MODE: A4 size - Print ready */
+/* PREVIEW MODE & PDF: Mirror edit mode exactly */
 .is-preview .waybill-document,
 .pdf-export-wrapper .waybill-document {
-    width: 210mm;
-    height: 297mm;
-    max-height: 297mm;
-    padding: 8mm 10mm;
-    overflow: hidden;
-    page-break-inside: avoid;
-    font-size: 0.9rem;
+    /* Inherit edit mode sizing - no forced dimensions */
 }
 
 /* ============================================
@@ -42,17 +36,20 @@
     align-items: flex-start;
     gap: 1.5rem;
     padding: 1rem 1.5rem;
-    border-radius: 10px;
-    border: 1px solid rgba(234,179,8,0.25);
     background: #eab308;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
     margin-bottom: 1rem;
+    margin-top: -15mm;
+    margin-left: -20mm;
+    margin-right: -20mm;
+    width: calc(100% + 40mm);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 .is-preview .waybill-letterhead,
 .pdf-export-wrapper .waybill-letterhead {
-    padding: 0.8rem 1rem;
-    margin-bottom: 0.6rem;
+    /* Inherit edit mode styling */
 }
 
 /* Left column - title, number, date */
@@ -229,8 +226,7 @@
 
 .is-preview .waybill-contact-bar,
 .pdf-export-wrapper .waybill-contact-bar {
-    padding: 0.6rem 0.8rem;
-    font-size: 0.85rem;
+    /* Inherit edit mode styling */
 }
 
 .waybill-contact-bar input,
@@ -370,4 +366,17 @@
         text-align: center;
     }
     .waybill-meta { justify-items: center; }
+}
+
+/* Ensure the Add Item button in waybill matches invoice/receipt sizing and alignment */
+#waybill-add-item {
+    display: inline-block !important;
+    width: auto !important;
+    max-width: none !important;
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.85rem !important;
+    margin-top: 0.4rem !important;
+    margin-bottom: 0.8rem !important;
+    align-self: flex-start !important;
+    text-align: center !important;
 }

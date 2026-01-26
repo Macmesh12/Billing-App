@@ -1,4 +1,4 @@
-#!/workspaces/Billing-App/backend/.venv/bin/python
+#!/workspaces/Billing-App/backend/.venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

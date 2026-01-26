@@ -4,6 +4,8 @@ Stores auto-incrementing counters for invoice, receipt, and waybill numbers.
 """
 from django.db import models
 from django.db import transaction
+import secrets
+import string
 
 
 class DocumentCounter(models.Model):
@@ -37,7 +39,10 @@ class DocumentCounter(models.Model):
         current = instance.invoice_counter
         instance.invoice_counter += 1
         instance.save()
-        return f"INV-{current:03d}"
+        # Generate SPQ + 2 uppercase letters + 4 digits
+        letters = ''.join(secrets.choice(string.ascii_uppercase) for _ in range(2))
+        digits = ''.join(secrets.choice(string.digits) for _ in range(4))
+        return f"SPQ{letters}{digits}"
     
     @classmethod
     @transaction.atomic
@@ -47,7 +52,9 @@ class DocumentCounter(models.Model):
         current = instance.receipt_counter
         instance.receipt_counter += 1
         instance.save()
-        return f"REC-{current:03d}"
+        letters = ''.join(secrets.choice(string.ascii_uppercase) for _ in range(2))
+        digits = ''.join(secrets.choice(string.digits) for _ in range(4))
+        return f"SPQ{letters}{digits}"
     
     @classmethod
     @transaction.atomic
@@ -57,7 +64,9 @@ class DocumentCounter(models.Model):
         current = instance.waybill_counter
         instance.waybill_counter += 1
         instance.save()
-        return f"WAY-{current:03d}"
+        letters = ''.join(secrets.choice(string.ascii_uppercase) for _ in range(2))
+        digits = ''.join(secrets.choice(string.digits) for _ in range(4))
+        return f"SPQ{letters}{digits}"
     
     @classmethod
     def get_current_counts(cls):
@@ -70,4 +79,4 @@ class DocumentCounter(models.Model):
         }
     
     def __str__(self):
-        return f"Counters: INV={self.invoice_counter}, REC={self.receipt_counter}, WAY={self.waybill_counter}"
+        return f"Counters: invoice={self.invoice_counter}, receipt={self.receipt_counter}, waybill={self.waybill_counter}"

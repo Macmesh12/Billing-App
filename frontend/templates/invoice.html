@@ -18,22 +18,18 @@ The same template can be rendered server-side for PDF export when 'preview' cont
 {% endblock %}
 
 {% block content %}
-<section id="invoice-module" class="module{% if preview %} is-preview{% endif %}">
-    <div class="module-header">
+<section id="invoice-module" class="module {% if preview %}is-preview{% endif %}">
+        <div class="module-header">
         <h2>Invoice</h2>
+        {% if not preview %}
         <div class="module-actions">
-            {% if invoice %}
-                <a href="{% url 'invoice-pdf' invoice.pk %}" class="button" target="_blank" rel="noopener">Download PDF</a>
-            {% endif %}
-            {% if not preview %}
-                <button id="invoice-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="invoice-submit" class="button" type="button">Save Invoice</button>
-            {% endif %}
+            <button id="invoice-submit" class="button" type="button">Save Invoice</button>
         </div>
+        {% endif %}
     </div>
 
     <div class="module-body">
-    <form id="invoice-form" class="document document-editable" method="post" action="{% url 'invoice-form' %}" {% if preview %}hidden{% endif %}>
+    <form id="invoice-form" class="document document-editable" method="post" action="{% url 'invoice-form' %}">
             {% csrf_token %}
 
             <header class="document-header">
@@ -55,17 +51,19 @@ The same template can be rendered server-side for PDF export when 'preview' cont
 
             <table class="document-items" id="invoice-items-table">
                 <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Quantity</th>
-                        <th>Unit Price</th>
-                        <th>Total</th>
-                        <th></th>
-                    </tr>
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                            {% if not preview %}<th></th>{% endif %}
+                        </tr>
                 </thead>
                 <tbody></tbody>
             </table>
-            <button type="button" id="invoice-add-item" class="button button-secondary">Add Item</button>
+                {% if not preview %}
+                <button type="button" id="invoice-add-item" class="button button-secondary">Add Item</button>
+                {% endif %}
 
             <section class="document-totals">
                 <p><span>Subtotal:</span> <span id="invoice-subtotal">0.00</span></p>
@@ -75,60 +73,33 @@ The same template can be rendered server-side for PDF export when 'preview' cont
                 <p class="grand"><span>Grand Total:</span> <span id="invoice-grand-total">0.00</span></p>
             </section>
 
+            <section class="invoice-signature">
+                <div class="signature-block">
+                    <img src="/assets/sign.png" alt="Signature" class="signature-image">
+                    <div class="signature-line">Signature</div>
+                    <div class="signature-meta">
+                        <p>Raphael Quame Agbeshie</p>
+                        <p>(Creative Director)</p>
+                    </div>
+                </div>
+            </section>
+
+                    <section class="invoice-contact-bar">
+                        <div class="contact-wrapper">
+                            <p class="account">
+                                <span>0543127562 <img src="/assets/mobile money.png" alt="Mobile Money" class="contact-icon"></span>
+                                <span>0505321475 <img src="/assets/whatsapp.png" alt="WhatsApp" class="contact-icon"></span>
+                                <span>0540673202</span>
+                                <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                            </p>
+                            <p class="email">
+                                <span>Email: spaquelsmultimedia@gmail.com</span>
+                                <span>Website: www.spaquelsmultimedia.org</span>
+                            </p>
+                        </div>
+                    </section>
+
         </form>
-
-        <div id="invoice-preview" class="document" {% if not preview %}hidden{% endif %}>
-            <header class="document-header">
-                <h3>INVOICE</h3>
-                <p class="document-number">Invoice No.: {{ invoice.invoice_number|default:"" }}</p>
-                <p class="document-date">Date: {{ invoice.issue_date|date:"F j, Y"|default:form.issue_date.value }}</p>
-            </header>
-            {% if not preview %}
-            <div class="preview-actions">
-                <button class="button button-secondary" data-exit-preview>Back to Edit</button>
-            </div>
-            {% endif %}
-
-            <section class="document-meta">
-                <p><strong>Billed To:</strong> {{ invoice.customer_name|default:form.customer_name.value }}</p>
-                <p><strong>Classification:</strong> {{ invoice.classification|default:form.classification.value }}</p>
-            </section>
-
-            <table class="document-items">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Quantity</th>
-                        <th>Unit Price</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody id="invoice-preview-rows">
-                    {% if invoice %}
-                        {% for item in invoice.items %}
-                            <tr>
-                                <td>{{ item.description }}</td>
-                                <td>{{ item.quantity|floatformat:2 }}</td>
-                                <td>{{ item.unit_price|floatformat:2 }}</td>
-                                <td>{{ item.total|floatformat:2 }}</td>
-                            </tr>
-                        {% endfor %}
-                    {% endif %}
-                </tbody>
-            </table>
-
-            <section class="document-totals">
-                <p><span>Subtotal:</span> <span id="invoice-preview-subtotal">{{ invoice.subtotal|default:"0.00"|floatformat:2 }}</span></p>
-                {% for row in tax_rows %}
-                    <p><span>{{ row.name|upper }}:</span> <span data-preview-levy="{{ row.name }}">{{ row.amount|default:"0.00" }}</span></p>
-                {% endfor %}
-                <p class="grand"><span>Grand Total:</span> <span id="invoice-preview-grand">{{ invoice.grand_total|default:"0.00"|floatformat:2 }}</span></p>
-            </section>
-
-            <footer class="document-footer">
-                <p>Thank you for your business.</p>
-            </footer>
-        </div>
     </div>
 </section>
 {% endblock %}

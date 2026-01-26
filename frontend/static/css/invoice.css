@@ -8,7 +8,7 @@
 /* EDIT MODE: document sizing - keep consistent with receipt/waybill base */
 .invoice-document {
     width: 297mm;
-    min-height: 420mm;
+    min-height: auto;
     margin: 0 auto;
     background: #ffffff;
     padding: 15mm 20mm;
@@ -36,11 +36,15 @@
     gap: 1.5rem; /* Reduced from 1.5rem */
     padding: 1rem 1.5rem; /* Reduced vertical padding */
     min-height: 180px; /* Reduced from 180px */
-    border-radius: 10px;
-    border: 1px solid rgba(234,179,8,0.25);
     background: #eab308;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
     margin-bottom: 1rem;
+    margin-top: -15mm;
+    margin-left: -20mm;
+    margin-right: -20mm;
+    width: calc(100% + 40mm);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 /* Logo centered in letterhead - middle of all sides */
@@ -60,6 +64,13 @@
     margin-bottom: 0.4rem;
     min-height: 100px; /* Reduced from 120px */
     gap: 0.6rem; /* Reduced gap */
+    /* preview uses smaller padding, pull header up for preview/pdf export too */
+    margin-top: -8mm;
+    margin-left: -10mm;
+    margin-right: -10mm;
+    width: calc(100% + 20mm);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 .is-preview .logo-placeholder,
@@ -218,6 +229,29 @@
     text-align: center; /* Center-aligned */
 }
 
+/* Ensure the Add Item button in invoice matches receipt/waybill sizing and alignment */
+.invoice-document .button-secondary[id$="-add-item"] {
+    display: inline-block;
+    width: auto;
+    padding: 0.4rem 0.8rem; /* match global "add item" sizing */
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
+    margin-bottom: 0.8rem;
+}
+
+/* Stronger, targeted rule to ensure invoice add-item matches others */
+#invoice-add-item {
+    display: inline-block !important;
+    width: auto !important;
+    max-width: none !important;
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.85rem !important;
+    margin-top: 0.4rem !important;
+    margin-bottom: 0.8rem !important;
+    align-self: flex-start !important;
+    text-align: center !important;
+}
+
 /* ============================================
    INVOICE ITEMS TABLE
    ============================================
@@ -291,6 +325,14 @@
     text-align: right; /* Right-aligned values */
 }
 
+/* When levies are hidden, make the Total stand out more */
+.invoice-total-large {
+    font-size: 1.45rem !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+    letter-spacing: 0.4px;
+}
+
 /* "With VAT" label styling */
 .summary-table .with-vat {
     color: var(--muted); /* Muted color */
@@ -305,6 +347,67 @@
     gap: 0.35rem; /* Small space between rows */
     font-size: 0.9rem; /* Standard text size */
     color: var(--muted); /* Muted color for labels */
+}
+
+/* Make the Subtotal value match the Grand Total's emphasis */
+#invoice-subtotal,
+#invoice-preview-subtotal {
+    font-size: 1.1rem; /* match .grand-total default */
+    font-weight: 900 !important;
+    color: #000000 !important;
+}
+
+/* Simple switch-style button placed below the summary in edit mode */
+.levies-switch-container {
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: flex-end; /* align to the right side of summary */
+}
+.levies-switch {
+    position: relative;
+    width: 72px;
+    height: 36px;
+    border-radius: 999px;
+    border: none;
+    background: #d1d5db;
+    cursor: pointer;
+    padding: 0;
+    transition: background-color 180ms ease;
+    box-shadow: none;
+}
+.levies-switch::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    transition: transform 180ms ease, left 180ms ease;
+}
+.levies-switch[aria-pressed="true"] {
+    background: var(--primary, #059669);
+}
+.levies-switch[aria-pressed="true"]::after {
+    transform: translateX(36px);
+}
+.levies-switch[aria-pressed="false"]::after {
+    transform: translateX(0);
+}
+/* Label beside the switch */
+.levies-switch-label {
+    margin-left: 0.6rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    align-self: center;
+}
+
+/* Make the switch and label sit nicely on small screens */
+.levies-switch-container {
+    gap: 0.5rem;
 }
 
 /* Levy values (right side) */
@@ -375,7 +478,7 @@
 /* Notes textarea (edit mode) */
 .invoice-notes textarea {
     width: 100%; /* Full width */
-    min-height: 250px; /* Increased from 180px - deeper */
+    min-height: 180px; /* Increased from 180px - deeper */
     line-height: 1.5; /* Line spacing */
     font-weight: 700; /* Bolder text */
 }
@@ -399,13 +502,25 @@
 
 /* ============================================
    INVOICE SIGNATURE SECTION
-   ============================================
+   ============================================0rem 0 0 0rem
    Displays signature image and signatory details
    ============================================ */
 
 /* Signature container */
 .invoice-signature {
     margin: 2rem 0 2.5rem; /* Spacing above and below */
+}
+
+/* Reduce vertical gap between notes and signature in edit mode */
+.document-editable .invoice-notes {
+    margin-bottom: 1rem; /* reduce space after notes when editing */
+}
+.document-editable .invoice-signature {
+    margin-top: 0.5rem; /* pull signature closer to notes in edit mode */
+    margin-bottom: 1.25rem; /* keep some breathing room before contact bar */
+}
+.document-editable .signature-block {
+    margin-top: 1% !important; /* reduce any extra top offset inside edit form */
 }
 
 /* Signature text paragraphs */

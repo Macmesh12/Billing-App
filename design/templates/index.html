@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Recents | Billing App{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="recent-hero">
+    <div class="recent-hero-header">
+        <div class="recent-hero-title">
+            <h2>Recents</h2>
+            <p class="recent-subtitle">Your most recently saved projects. Open a project or import a new one to get started.</p>
+        </div>
+    </div>
+
+    <div id="project-status" class="project-status" role="status" aria-live="polite"></div>
+</section>
+
+<!-- Top bar inside app-main: search+sort on the left, tabs on the right -->
+<div class="home-topbar">
+    <div class="home-search recent-controls" role="search">
+        <input id="recent-search" class="recent-search" type="search" placeholder="Search recent files…" aria-label="Search recent files">
+        <button id="home-show-customer-docs" class="button button-ghost" type="button" title="Show documents for customer">Customer Docs</button>
+        <button id="project-import" class="button button-secondary import-btn" type="button">Open project file</button>
+    </div>
+</div>
+
+    <div class="home-container">
+        <header class="home-header">
+            <h2>Documents</h2>
+            <div class="home-actions">
+                <button class="button" onclick="window.location.href='{% url "invoice-form" %}'">New Invoice</button>
+                <button class="button" onclick="window.location.href='{% url "receipt-form" %}'">New Receipt</button>
+                <button class="button" onclick="window.location.href='{% url "waybill-form" %}'">New Waybill</button>
+            </div>
+        </header>
+
+        <section class="recent-tables-grid">
+            <div class="recent-table-card" id="recent-documents">
+                <div class="card-head">
+                    <h3>Recent</h3>
+                    <p class="card-sub">Latest created documents</p>
+                </div>
+                <div class="card-body">
+                    <div class="list-header">
+                        <div class="col type">Type</div>
+                        <div class="col number">Number</div>
+                        <div class="col date">Date</div>
+                        <div class="col customer">Customer</div>
+                        <div class="col total">Total</div>
+                        <div class="col actions">Actions</div>
+                    </div>
+                    <div class="list-body" id="recent-list">
+                        <div class="list-row empty-row">No recent documents.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="recent-table-card" id="draft-documents">
+                <div class="card-head">
+                    <h3>Saved</h3>
+                    <p class="card-sub">Saved drafts awaiting completion</p>
+                </div>
+                <div class="card-body">
+                    <div class="list-header">
+                        <div class="col type">Type</div>
+                        <div class="col number">Number</div>
+                        <div class="col date">Date</div>
+                        <div class="col customer">Customer</div>
+                        <div class="col total">Total</div>
+                        <div class="col actions">Actions</div>
+                    </div>
+                    <div class="list-body" id="draft-list">
+                        <div class="list-row empty-row">No saved items.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}

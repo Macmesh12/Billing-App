@@ -8,6 +8,7 @@
         receipt: "Receipt",
         waybill: "Waybill",
     };
+    const DOCUMENT_TYPES = new Set(["invoice", "receipt", "waybill"]);
 
     const state = {
         recents: [],
@@ -175,43 +176,56 @@
             const nameWrap = document.createElement("p");
             nameWrap.className = "recent-project-name";
 
+            // Build a composite heading: Customer — Type — #Number
             const nameText = document.createElement("span");
             nameText.className = "recent-project-name-text";
-            nameText.textContent = entry?.name || "Untitled file";
+            const md = entry?.metadata || {};
+            const cust = md.customer || md.client || md.addressee || "";
+            const billNum = md.bill_number || md.number || md.invoice_number || md.billNumber || "";
+            const typeLabel = TYPE_LABELS[entry?.type] || (entry?.type ? entry.type.charAt(0).toUpperCase() + entry.type.slice(1) : "File");
+            // Customer column should show customer name only, fallback to entry name
+            nameText.textContent = cust || entry?.name || "Untitled file";
 
             const typeBadge = document.createElement("span");
             typeBadge.className = `recent-project-type recent-project-type--${entry?.type || "project"}`;
-            typeBadge.textContent = TYPE_LABELS[entry?.type] || "File";
+            typeBadge.textContent = typeLabel || "File";
 
             nameWrap.append(nameText, typeBadge);
 
-            const metaEl = document.createElement("p");
+            const metaEl = document.createElement("div");
             metaEl.className = "recent-project-meta";
 
-            const actionSpan = document.createElement("span");
-            actionSpan.textContent = describeAction(entry);
-            metaEl.appendChild(actionSpan);
+            const dateCol = document.createElement('span');
+            dateCol.className = 'col col-date';
+            dateCol.textContent = formatTimestamp(entry?.timestamp || entry?.lastModified || entry?.timestamp);
 
-            if (entry?.path) {
-                const pathSpan = document.createElement("span");
-                pathSpan.className = "recent-project-path";
-                pathSpan.textContent = entry.path;
-                metaEl.appendChild(pathSpan);
-            }
+            const numberCol = document.createElement('span');
+            numberCol.className = 'col col-number';
+            numberCol.textContent = entry?.metadata?.bill_number || entry?.metadata?.number || entry?.metadata?.invoice_number || '';
 
-            buildMetadataSummaries(entry).forEach((text) => {
-                if (!text) return;
-                const metaSpan = document.createElement("span");
-                metaSpan.textContent = text;
-                metaEl.appendChild(metaSpan);
-            });
+            const storageCol = document.createElement('span');
+            storageCol.className = 'col col-storage';
+            storageCol.textContent = entry?.path || '';
+
+            metaEl.appendChild(dateCol);
+            metaEl.appendChild(numberCol);
+            metaEl.appendChild(storageCol);
 
             // Add double-click handler to open the file
             li.addEventListener("dblclick", async () => {
                 await openRecentFile(entry);
             });
 
-            li.append(nameWrap, metaEl);
+            // Build columns and append in the same order as the header
+            const colName = document.createElement('div');
+            colName.className = 'col col-customer';
+            colName.appendChild(nameWrap);
+
+            const colType = document.createElement('div');
+            colType.className = 'col col-type';
+            colType.appendChild(typeBadge);
+
+            li.append(colName, colType, dateCol, numberCol, storageCol);
             listEl.appendChild(li);
         });
     }
@@ -227,11 +241,14 @@
                 const haystacks = [
                     entry?.name?.toLowerCase?.() || "",
                     entry?.type?.toLowerCase?.() || "",
-                    entry?.extension?.toLowerCase?.() || "",
+                    (entry?.extension || "").toLowerCase(),
                     entry?.path?.toLowerCase?.() || "",
+                    (formatTimestamp(entry?.timestamp || entry?.lastModified || entry?.timestamp) || "").toLowerCase()
                 ];
                 const metadataValues = entry?.metadata ? Object.values(entry.metadata).map((value) => String(value).toLowerCase()) : [];
-                return [...haystacks, ...metadataValues].some((value) => value && value.includes(term));
+                // include a full JSON dump of metadata to catch nested keys
+                const metadataDump = entry?.metadata ? JSON.stringify(entry.metadata).toLowerCase() : "";
+                return [...haystacks, ...metadataValues, metadataDump].some((value) => value && value.includes(term));
             });
         }
 
@@ -491,6 +508,54 @@
             setBusy(true);
             setStatus("Opening file…");
 
+            const entryType = (entry.type || "").toLowerCase();
+            const entryExtension = (entry.extension || "").toLowerCase();
+            const isDocumentPdf = DOCUMENT_TYPES.has(entryType) || entryExtension === "pdf";
+
+            if (isDocumentPdf) {
+                // Resolve possible path locations (entry.path or metadata fallbacks)
+                const possiblePath = entry.path || entry?.metadata?.path || entry?.metadata?.file_path || entry?.metadata?.export_path || '';
+                if (possiblePath) {
+                    // If running as Tauri/desktop app, use the native shell to open the file path
+                    if (isTauri && window.__TAURI__?.shell?.open) {
+                        try {
+                            await window.__TAURI__.shell.open(possiblePath);
+                            setStatus(`Opened ${entry.name || possiblePath}`, "success");
+                            rememberProject({ ...entry, lastAction: "open", timestamp: Date.now(), extension: entryExtension || "pdf" });
+                        } catch (err) {
+                            console.error('Tauri open failed', err);
+                            setStatus('Failed to open file with native shell.', 'error');
+                        }
+                    } else {
+                        // Not running in desktop environment - try web-safe opens
+                        try {
+                            if (/^https?:\/\//i.test(possiblePath) || possiblePath.startsWith('/')) {
+                                window.open(possiblePath, '_blank');
+                                setStatus(`Opened ${entry.name || possiblePath}` , 'success');
+                                rememberProject({ ...entry, lastAction: 'open', timestamp: Date.now(), extension: entryExtension || 'pdf' });
+                            } else if (/^file:\/\//i.test(possiblePath)) {
+                                // Browsers often block file:// navigation; still attempt it
+                                const a = document.createElement('a');
+                                a.href = possiblePath;
+                                a.target = '_blank';
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                setStatus(`Attempted to open local file: ${possiblePath}`, 'success');
+                            } else {
+                                setStatus('Cannot open this file in the browser. Please open it from the desktop app or re-import the file.', 'error');
+                            }
+                        } catch (err) {
+                            console.error('Open fallback failed', err);
+                            setStatus('Failed to open file in browser.', 'error');
+                        }
+                    }
+                } else {
+                    setStatus("File path not available. Please re-import the file.", "error");
+                }
+                return;
+            }
+
             // If we have a path and we're in Tauri, read the file
             if (entry.path && isTauri && window.__TAURI__?.fs?.readTextFile) {
                 const { fs } = window.__TAURI__;
@@ -600,6 +665,36 @@
             applyFilters();
         });
 
+        const showCustomerBtn = document.getElementById('home-show-customer-docs');
+        showCustomerBtn?.addEventListener('click', () => {
+            try {
+                let name = (state.elements.searchInput && state.elements.searchInput.value) ? state.elements.searchInput.value.trim() : '';
+                if (!name) {
+                    name = window.prompt('Customer name to list documents for:', '') || '';
+                    name = name.trim();
+                }
+                if (!name) return;
+                // Switch to drafts tab (Saved) and set search to the customer name
+                const tabDrafts = document.getElementById('home-tab-drafts');
+                const tabRecents = document.getElementById('home-tab-recents');
+                const draftsPanel = document.getElementById('drafts-panel');
+                const recentsPanel = document.getElementById('recents-panel');
+                if (tabDrafts && tabRecents && draftsPanel && recentsPanel) {
+                    tabDrafts.classList.add('button-primary');
+                    tabRecents.classList.remove('button-primary');
+                    draftsPanel.hidden = false;
+                    recentsPanel.hidden = true;
+                }
+                if (state.elements.searchInput) state.elements.searchInput.value = name;
+                state.filters.search = name.toLowerCase();
+                // If Drafts API available, re-render drafts list (it uses the search input)
+                if (window.Drafts && typeof window.Drafts.renderDraftsList === 'function') {
+                    window.Drafts.renderDraftsList();
+                } else {
+                    applyFilters();
+                }
+            } catch (e) { console.warn(e); }
+        });
         // If a native select exists (legacy), keep it working. Otherwise wire the
         // three-dots menu we added in the templates.
         if (state.elements.sortSelect) {

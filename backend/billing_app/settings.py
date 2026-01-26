@@ -115,6 +115,5 @@ TAX_SETTINGS = {
     # Tax rates configuration
     "NHIL": 0.025,
     "GETFUND": 0.025,
-    "COVID": 0.01,
     "VAT": 0.15,
 }

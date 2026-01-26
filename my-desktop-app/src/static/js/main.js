@@ -97,10 +97,13 @@
     const RECENTS_STORAGE_KEY = "billingapp.recents.v1";
     const LEGACY_RECENT_KEYS = ["billingapp.recentProjects"];
     const RECENTS_MAX_ITEMS = 50;
+    const DOCUMENT_TYPES = new Set(["invoice", "receipt", "waybill"]);
 
     const extensionForType = (type) => {
-        // All documents now use .billproj extension
-        return "billproj";
+        const normalized = (type || "").toLowerCase();
+        if (normalized === "project") return "billproj";
+        if (DOCUMENT_TYPES.has(normalized)) return "pdf";
+        return "pdf";
     };
 
     const ensureExtension = (name, ext) => {
@@ -167,7 +170,19 @@
 
     const normalizeRecentEntry = (entry) => {
         const type = (entry?.type || "project").toLowerCase();
-        const extension = entry?.extension || extensionForType(type);
+        const defaultExt = extensionForType(type);
+        const inferredExt = (() => {
+            const path = entry?.path;
+            if (!path || typeof path !== "string") return "";
+            const match = path.split(/[.]/).pop();
+            return match ? match.toLowerCase() : "";
+        })();
+        const rawExt = (entry?.extension || inferredExt || "").toLowerCase();
+        const extension = (() => {
+            if (!rawExt) return defaultExt;
+            if (DOCUMENT_TYPES.has(type) && rawExt === "billproj") return defaultExt;
+            return rawExt;
+        })();
         return {
             name: entry?.name || `Untitled ${type}`,
             path: entry?.path || null,
@@ -487,6 +502,9 @@
     helpers.saveDocument = async function ({ type, defaultName, data, metadata = {}, wrap = true }) {
         if (!type) throw new Error("Document type is required");
         const docType = type.toLowerCase();
+        if (DOCUMENT_TYPES.has(docType)) {
+            throw new Error(`saveDocument no longer supports ${docType}. Use the PDF workflow instead.`);
+        }
         const extension = extensionForType(docType) || "dat";
         const timestamp = Date.now();
         const label = docType.charAt(0).toUpperCase() + docType.slice(1);

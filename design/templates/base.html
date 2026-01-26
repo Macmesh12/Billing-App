@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Billing App{% endblock %}</title>
+        {# Main stylesheet preserved for Flutter styling reference #}
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="{% static 'css/general.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="billing-app">
+<header class="app-header">
+    <h1>Billing App</h1>
+    <nav class="app-nav" aria-label="Main navigation">
+        <div class="nav-main">
+            <a href="{% url 'home' %}" class="nav-link">Recents</a>
+            <a href="{% url 'invoice-form' %}" class="nav-link">Invoice</a>
+            <a href="{% url 'receipt-form' %}" class="nav-link">Receipt</a>
+            <a href="{% url 'waybill-form' %}" class="nav-link">Waybill</a>
+        </div>
+
+        <div class="nav-bottom">
+            <div class="nav-settings">
+                <button id="nav-settings-toggle" class="nav-link button-ghost" type="button" aria-haspopup="dialog" aria-expanded="false">Settings</button>
+            </div>
+        </div>
+    </nav>
+</header>
+<main class="app-main">
+    {% block content %}{% endblock %}
+</main>
+<script src="{% static 'js/main.js' %}"></script>
+<script src="{% static 'js/customers.js' %}"></script>
+<script src="{% static 'js/settings.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

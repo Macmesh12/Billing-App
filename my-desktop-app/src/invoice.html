@@ -84,17 +84,7 @@ DEPENDENCIES:
         <div class="module-header module-header--long">
             <h2>Invoice</h2>
             <div class="module-actions">
-                <button id="invoice-exit-preview" class="button button-secondary" type="button" hidden>Back to Edit</button>
-                <button id="invoice-preview-toggle" class="button button-secondary" type="button">Preview</button>
-                <button id="invoice-save" class="button button-secondary" type="button" title="Save project (.billproj)">Save</button>
-                <button id="invoice-submit" class="button" type="button" title="Download PDF" aria-label="Download PDF">
-                    <!-- Download icon -->
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M12 3v10" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                        <path d="M7 10l5 5 5-5" stroke="#0f1724" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </svg>
-                </button>
+                <button id="invoice-save" class="button button-secondary" type="button" title="Save PDF">Save PDF</button>
             </div>
         </div>
 
@@ -153,7 +143,7 @@ DEPENDENCIES:
                         <tr>
                             <th class="description">Description / Classification</th>
                             <th>Qty</th>
-                            <th>Cost per Unit (GHC)</th>
+                            <th>Unit Price (GHC)</th>
                             <th>Total Cost (GHC)</th>
                         </tr>
                     </thead>
@@ -185,6 +175,16 @@ DEPENDENCIES:
                     </div>
                 </div>
 
+                <section class="invoice-signature">
+                    <div class="signature-block">
+                        <img src="/assets/sign.png" alt="Signature" class="signature-image">
+                        <div class="signature-line">Signature</div>
+                        <div class="signature-meta">
+                            <p>Raphael Quame Agbeshie</p>
+                            <p>(Creative Director)</p>
+                        </div>
+                    </div>
+                </section>
                 <section class="invoice-notes">
                     <h4>Notes</h4>
                     <textarea id="invoice-notes" rows="6" aria-label="Invoice notes list">• Invoices we submit in respect of our services (any other payable charges) will be paid in full or a deposit of 70% made either by cash, bank or mobile money.
@@ -208,96 +208,7 @@ DEPENDENCIES:
                 </section>
             </form>
 
-            <div id="invoice-preview" class="document" hidden>
-
-                <div class="invoice-letterhead">
-                    <div class="letterhead-brand">
-                        <img src="/assets/logo.png" alt="Company Logo Placeholder" class="logo-placeholder">
-                    </div>
-                    <div class="letterhead-meta">
-                        <div class="letterhead-meta-left">
-                            <!-- Customer name display -->
-                            <p><strong>Customer Name:</strong></p>
-                            <p><strong><span id="invoice-preview-customer" class="invoice-preview-customer">—</span></strong></p>
-                        </div>
-                        <div class="letterhead-meta-right">
-                            <p class="document-number">Invoice No.: <span id="invoice-preview-number">INV-001</span></p>
-                            <p>Date:&nbsp;&nbsp;<span id="invoice-preview-date">—</span></p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="invoice-title">
-                    <h3>PRO-FORMA INVOICE</h3>
-                </div>
-
-                <table class="document-items">
-                    <thead>
-                        <tr>
-                            <th class="description">Description / Classification</th>
-                            <th>Qty</th>
-                            <th>Cost per Unit (GHC)</th>
-                            <th>Total Cost (GHC)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="invoice-preview-rows"></tbody>
-                </table>
-
-                <div class="invoice-summary">
-                    <table class="summary-table">
-                        <tbody>
-                            <tr>
-                                <th>Sub Total (Without VAT)</th>
-                                <td id="invoice-preview-subtotal">0.00</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div class="levies-table" id="invoice-preview-levies"></div>
-                    <div class="levy-total-row" style="color: #000000 !important; font-weight: 700 !important; opacity: 1 !important;">
-                        <span style="color: #000000 !important; font-weight: 700 !important;">Total Levies + Value</span>
-                        <span id="invoice-preview-levy-total" style="color: #000000 !important; font-weight: 700 !important;">0.00</span>
-                    </div>
-                    <div class="vat-row" style="color: #000000 !important; font-weight: 700 !important; opacity: 1 !important;">
-                        <span style="color: #000000 !important; font-weight: 700 !important;">VAT (15%)</span>
-                        <span id="invoice-preview-vat" style="color: #000000 !important; font-weight: 700 !important;">0.00</span>
-                    </div>
-                    <div class="grand-total" style="color: #000000 !important; font-weight: 700 !important; opacity: 1 !important;">
-                        <span style="color: #000000 !important; font-weight: 700 !important;">Grand Total</span>
-                        <span id="invoice-preview-grand" style="color: #000000 !important; font-weight: 700 !important;">0.00</span>
-                    </div>
-                </div>
-
-                <section class="invoice-notes">
-                    <ul id="invoice-preview-notes"></ul>
-                </section>
-
-                <section class="invoice-signature">
-                    <div class="signature-block">
-                        <img src="/assets/sign.png" alt="Signature" class="signature-image">
-                        <div class="signature-line">Signature</div>
-                        <div class="signature-meta">
-                            <p>Raphael Quame Agbeshie</p>
-                            <p>(Creative Director)</p>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="invoice-preview-contact">
-                    <div class="contact-wrapper">
-                          <p class="account">
-                            <span>0543127562 <span class="icon-placeholder">[MM]</span></span>
-                            <span>0505321475 <span class="icon-placeholder">[WA]</span></span>
-                            <span>0540673202</span>
-                            <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
-                        </p>
-                        <p class="email">
-                            <span>Email: spaquelsmultimedia@gmail.com</span>
-                            <span>Website: www.spaquelsmultimedia.org</span>
-                        </p>
-                      
-                    </div>
-                </section>
-            </div>
+            <!-- Preview view removed: export/PDF now clones the editable form directly -->
             </div> <!-- End A4 workspace -->
         </div>
 

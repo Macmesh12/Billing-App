@@ -8,7 +8,7 @@
 /* EDIT MODE: A3 size - Large and readable */
 .receipt-document {
     width: 297mm;
-    min-height: 420mm;
+    min-height: auto;
     margin: 0 auto;
     background: #ffffff;
     padding: 15mm 20mm;
@@ -38,14 +38,29 @@
 .receipt-letterhead {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 1.5rem;
     padding: 1rem 1.5rem;
-    border-radius: 10px;
-    border: 1px solid #eab308;
     background: #eab308;
-    box-shadow: inset 0 0 0 1px #eab308;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
     margin-bottom: 1rem;
+    margin-top: -15mm;
+    margin-left: -20mm;
+    margin-right: -20mm;
+    width: calc(100% + 40mm);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.is-preview .receipt-letterhead,
+.pdf-export-wrapper .receipt-letterhead {
+    /* match preview/pdf smaller padding: pull up slightly for preview/pdf */
+    margin-top: -8mm;
+    margin-left: -10mm;
+    margin-right: -10mm;
+    width: calc(100% + 20mm);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 .is-preview .receipt-letterhead,
@@ -56,39 +71,30 @@
 
 /* Left column - Receipt title, number, and date */
 .letterhead-left {
-    flex: 1; /* Take remaining space */
-    text-align: left; /* Left-align all content */
+    margin-top: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 1rem;
 }
 
-/* Receipt title heading - COMPACT */
 .letterhead-left h3 {
-    margin: 0;
-    letter-spacing: 1.5px;
+    margin: 20px 0 0.7rem 0;
     font-size: 2rem;
+    letter-spacing: 1.5px;
+    font-weight: 800;
+    color: black;
     line-height: 1.2;
-    font-weight: 800; /* Extra bold */
-    color: black; /* Full black for prominence */
 }
 
-
-
-/* Receipt number and date paragraphs */
 .letterhead-left p {
-    margin: 0; /* No margins */
-    font-weight: 700; /* Bold */
-    color: var(--text); /* Full text color */
-    letter-spacing: 0.3px; /* Reduced letter spacing */
-    font-size: 0.9rem; /* Smaller font for A5 */
+    margin: 0.3rem 0;
+    font-weight: 600;
+    color: var(--text);
+    font-size: 1rem;
 }
 
-/* Date field block in edit mode */
 .letterhead-left .field-block {
-    text-align: left; /* Left-align the field */
     margin-top: 0.3rem;
-    max-width: 180px; /* Reduce width of date input container */
 }
 
 .letterhead-left .field-block span {
@@ -98,11 +104,11 @@
 }
 
 .letterhead-left .field-block input {
-    text-align: left; /* Left-align date input */
+    text-align: left;
     font-weight: 700;
     font-size: 0.9rem;
     padding: 0.3rem 0.5rem;
-    max-width: 150px; /* Compact date input width */
+    max-width: 150px;
 }
 
 /* Right column - Logo */
@@ -111,11 +117,11 @@
 }
 
 .logo-placeholder {
-    display: block; /* Make it a block element */
-    max-width: 300px; /* allow responsive scaling */
+    display: block;
+    max-width: 220px;
     width: 100%;
-    height: auto; /* preserve aspect ratio */
-    object-fit: contain; /* scale image to fit without distortion */
+    height: auto;
+    object-fit: contain;
 }
 
 .receipt-body {
@@ -136,6 +142,47 @@
     font-weight: 700; /* Bolder labels */
     letter-spacing: 0.3px; /* Reduced letter spacing */
 }
+
+/* --- Moved from receipt.html inline styles --- */
+/* Make label fonts match the total amount font (Inter preferred) */
+.receipt-strong,
+.receipt-strong--heavy {
+    font-family: "Inter", "Arial Black", "Arial", "Helvetica Neue", sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    color: #000; /* ensure solid black */
+    letter-spacing: 0.2px;
+}
+
+/* Amount style: used by total/balance display and inputs to match visual weight */
+.receipt-amount-style,
+#receipt-total-display,
+#receipt-balance-display,
+#receipt-amount-paid,
+#receipt-customer-name,
+#receipt-issued-by,
+#receipt-payment-method {
+    font-family: "Inter", "Arial Black", "Arial", "Helvetica Neue", sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    color: #000; /* use pure black for maximum contrast */
+}
+
+/* Ensure form controls render the heavier font correctly */
+#receipt-amount-paid,
+#receipt-customer-name,
+#receipt-issued-by,
+#receipt-payment-method {
+    background: transparent;
+    border: 1px solid #ddd;
+    padding: 6px 8px;
+    border-radius: 3px;
+    color: #000; /* input text color */
+}
+
+/* Slight tweak for select to ensure text color shows on some browsers */
+#receipt-payment-method option { color: #000; }
+/* --- End moved styles --- */
 
 .receipt-amount-grid {
     display: grid;
@@ -295,22 +342,33 @@
 .receipt-signature {
     display: flex;
     justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
     margin-top: 0.8rem;
     margin-bottom: 0.6rem;
 }
 
-.signature-left,
-.signature-right {
+.signature-left {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
     margin-top: auto;
+    min-width: 160px;
 }
+
+.signature-middle {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
 .signature-right {
     display: flex;
-    flex-direction: ve;
-    gap: 0.4rem;
-    margin-top: 10px;
+    flex-direction: column;
+    gap: 0.3rem;
+    align-items: flex-end;
+    min-width: 160px;
 }
 
 /* Bold customer and issued by names */
@@ -437,4 +495,15 @@
     .letterhead-right textarea {
         text-align: center;
     }
+}
+
+/* Ensure the Add Item button in receipt matches invoice/waybill sizing and alignment */
+.receipt-body .button-secondary[id$="-add-item"] {
+    display: inline-block;
+    width: auto;
+    padding: 0.4rem 0.8rem; /* match global "add item" sizing */
+    font-size: 0.85rem;
+    justify-self: start; /* align same as other documents */
+    margin-top: 0.4rem;
+    margin-bottom: 0.8rem;
 }

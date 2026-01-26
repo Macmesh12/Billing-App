@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from http import HTTPStatus
 
 from django.conf import settings
@@ -70,6 +71,25 @@ class InvoiceDetailView(TemplateView):
         context["tax_rates"] = settings.TAX_SETTINGS
         context["tax_rows"] = _build_tax_rows(invoice)
         context["form"] = InvoiceForm(instance=invoice)
+        context["preview"] = True
+        return context
+
+
+class InvoicePrintView(TemplateView):
+    template_name = "invoice_print.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        invoice = Invoice.objects.get(pk=self.kwargs["pk"])
+        context["invoice"] = invoice
+        context["items"] = invoice.items or []
+        context["tax_rows"] = _build_tax_rows(invoice)
+        levy_total = Decimal("0.00")
+        if invoice.levies:
+            for amount in invoice.levies.values():
+                levy_total += Decimal(str(amount))
+        context["levy_total"] = levy_total
+        context["document_number"] = invoice.invoice_number
         context["preview"] = True
         return context
 

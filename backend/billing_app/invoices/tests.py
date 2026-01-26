@@ -7,8 +7,12 @@ from .services import calculator, numbering
 
 class NumberingTests(SimpleTestCase):
     def test_formats_invoice_number(self):
-        self.assertEqual(numbering.format_invoice_number(None), "INV-NEW")
-        self.assertEqual(numbering.format_invoice_number(12), "INV-00012")
+        # New documents should show placeholder
+        self.assertEqual(numbering.format_invoice_number(None), "SPQ-NEW")
+        # Generated numbers should follow SPQ + 2 uppercase letters + 4 digits
+        import re
+        val = numbering.format_invoice_number(12)
+        self.assertRegex(val, r"^SPQ[A-Z]{2}\d{4}$")
 
 
 @override_settings(TAX_SETTINGS={"NHIL": 0.025, "GETFUND": 0.025, "COVID": 0.01, "VAT": 0.15})

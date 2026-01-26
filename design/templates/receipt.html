@@ -1,0 +1,82 @@
+{#
+Receipt template (design/templates/receipt.html) - preserved for Flutter styling reference
+#}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Receipt | Billing App{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/receipt.css' %}">
+{% endblock %}
+
+{% block content %}
+<section id="receipt-module" class="module {% if preview %}is-preview{% endif %}">
+        <div class="module-header">
+        <h2>Receipt</h2>
+        {% if not preview %}
+        <div class="module-actions">
+            <button id="receipt-submit" class="button" type="submit" form="receipt-form">Save Receipt</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="module-body">
+    <form id="receipt-form" class="document receipt document-editable" method="post" action="{% url 'receipt-form' %}">
+            {% csrf_token %}
+            <div class="receipt-letterhead">
+                <div class="letterhead-left">
+                    <h3 class="title">RECEIPT</h3>
+                    <p>Receipt No.: {{ receipt.receipt_number|default:"" }}</p>
+                    <p class="receipt-date">Date: {{ form.issue_date }}</p>
+                </div>
+                <div class="letterhead-right">
+                    <div class="logo-placeholder">Your Logo</div>
+                </div>
+            </div>
+
+            <section class="receipt-body">
+                <p><strong>Received From:</strong> {{ form.received_from }}</p>
+                <p><strong>Amount:</strong> {{ form.amount }}</p>
+                <p><strong>Payment Method:</strong> {{ form.payment_method }}</p>
+                <p><strong>For:</strong> {{ form.description }}</p>
+            </section>
+
+            <section class="receipt-signature">
+                <div class="signature-left">
+                    <p><strong>Approved By:</strong> {{ form.approved_by }}</p>
+                    <div class="signature-line">Signature</div>
+                </div>
+
+                <div class="signature-middle">
+                    <p><strong>Customer Name:</strong> {{ form.received_from }}</p>
+                </div>
+
+                <div class="signature-right">
+                    <p><strong>Issued By:</strong> {{ form.approved_by }}</p>
+                </div>
+            </section>
+            <section class="receipt-contact-bar">
+                <div class="contact-wrapper">
+                    <p class="account">
+                        <span>0543127562 <img src="/assets/mobile money.png" alt="Mobile Money" class="contact-icon"></span>
+                        <span>0505321475 <img src="/assets/whatsapp.png" alt="WhatsApp" class="contact-icon"></span>
+                        <span>0540673202</span>
+                        <span><strong>BANKERS:</strong> FIDELITY BANK (2400070371317)</span>
+                    </p>
+                    <p class="email">
+                        <span>Email: spaquelsmultimedia@gmail.com</span>
+                        <span>Website: www.spaquelsmultimedia.org</span>
+                    </p>
+                </div>
+            </section>
+        </form>
+
+        <!-- Preview removed -->
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/receipt.js' %}"></script>
+{% endblock %}

@@ -89,79 +89,44 @@
         }
         console.log('[Invoice] All required elements found, continuing initialization...');
 
-        function toggleModulePreview(isPreview) {
-            // Local fallback toggle for preview mode
-            const showPreview = Boolean(isPreview);
-            moduleEl.classList.toggle("is-preview", showPreview);
-            if (showPreview) {
-                form.setAttribute("hidden", "hidden");
-            } else {
-                form.removeAttribute("hidden");
-            }
-            moduleEl.querySelectorAll(".document").forEach((doc) => {
-                if (!doc.classList.contains("document-editable")) {
-                    if (showPreview) {
-                        doc.removeAttribute("hidden");
-                    } else {
-                        doc.setAttribute("hidden", "hidden");
-                    }
-                }
-            });
-            const exitBtn = document.getElementById("invoice-exit-preview");
-            if (exitBtn) {
-                if (showPreview) exitBtn.removeAttribute("hidden");
-                else exitBtn.setAttribute("hidden", "hidden");
-            }
-        }
-
+        // Preview mode removed: no-op fallback retained for compatibility
         const togglePreview = typeof helpers.togglePreview === "function"
             ? (moduleIdentifier, isPreview) => helpers.togglePreview(moduleIdentifier, isPreview)
-            : (moduleIdentifier, isPreview) => {
-                if (moduleIdentifier === moduleId) {
-                    toggleModulePreview(isPreview);
-                }
-            };
+            : () => {};
         // Function to toggle between edit and preview modes with fallback
 
         const config = window.BILLING_APP_CONFIG || {};
-        // Global config object from window
-    const API_BASE = config.apiBaseUrl || (window.location ? window.location.origin : "http://127.0.0.1:8765");
-        // Base URL for API calls
+            // Global config object from window
+        const API_BASE = config.apiBaseUrl || (window.location ? window.location.origin : "http://127.0.0.1:8765");
+            // Base URL for API calls
+        const isTauri = Boolean(window.__TAURI__);
 
     const elements = {
         // Object containing references to key DOM elements
         itemsPayload: document.getElementById("invoice-items-payload"),
         itemsTableBody: document.querySelector("#invoice-items-table tbody"),
-        previewRows: document.getElementById("invoice-preview-rows"),
         subtotal: document.getElementById("invoice-subtotal"),
         levyTotal: document.getElementById("invoice-levy-total"),
         vat: document.getElementById("invoice-vat"),
         grandTotal: document.getElementById("invoice-grand-total"),
-        previewSubtotal: document.getElementById("invoice-preview-subtotal"),
-        previewLevyTotal: document.getElementById("invoice-preview-levy-total"),
-        previewVat: document.getElementById("invoice-preview-vat"),
-        previewGrand: document.getElementById("invoice-preview-grand"),
         levyContainer: document.getElementById("invoice-levies"),
-        previewLevyContainer: document.getElementById("invoice-preview-levies"),
         addItemBtn: document.getElementById("invoice-add-item"),
-        previewToggleBtn: document.getElementById("invoice-preview-toggle"),
-        exitPreviewBtn: document.getElementById("invoice-exit-preview"),
+        leviesToggleBtn: document.getElementById("invoice-levies-toggle"),
+        leviesToggleLabel: document.getElementById("invoice-levies-toggle-label"),
+        
     submitBtn: document.getElementById("invoice-submit"),
     saveBtn: document.getElementById("invoice-save"),
+    saveDraftBtn: document.getElementById("invoice-save-draft"),
         toast: document.getElementById("invoice-toast"),
         invoiceNumber: document.getElementById("invoice-number"),
-        previewNumber: document.getElementById("invoice-preview-number"),
-        previewCustomer: document.getElementById("invoice-preview-customer"),
-        previewClassification: document.getElementById("invoice-preview-classification"),
-        previewDate: document.getElementById("invoice-preview-date"),
-        previewCompanyName: document.getElementById("invoice-preview-company-name"),
-        previewCompanyInfo: document.getElementById("invoice-preview-company-info"),
-        previewClientRef: document.getElementById("invoice-preview-client-ref"),
-        previewIntro: document.getElementById("invoice-preview-intro"),
-        previewNotesList: document.getElementById("invoice-preview-notes"),
-        previewSignatory: document.getElementById("invoice-preview-signatory"),
-        previewContact: document.getElementById("invoice-preview-contact"),
+        // preview elements intentionally omitted (preview UI removed)
     };
+
+    // Subtotal label and rows
+    const subtotalLabelEl = document.getElementById("invoice-subtotal-label");
+    const levyTotalRowEl = document.getElementById("invoice-levy-total-row");
+    const vatRowEl = document.getElementById("invoice-vat-row");
+    const grandTotalRowEl = document.getElementById("invoice-grand-total-row");
 
     const inputs = {
         // Object containing references to form input elements
@@ -177,18 +142,26 @@
         contact: document.getElementById("invoice-contact"),
     };
 
-    // Helper function to generate random 6-digit number
-    function generateRandomNumber() {
-        return Math.floor(100000 + Math.random() * 900000).toString();
-    }
+        // Helper function to generate SPQ + 2 uppercase letters + 4 digits
+        function generateSPQNumber() {
+            const letters = Array.from({ length: 2 }, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+            const digits = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join('');
+            return `SPQ${letters}${digits}`;
+        }
 
     const state = {
         // Application state object
-        items: [],
+        items: [
+            { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true },
+            { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+            { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+        ],
         levies: [],
         invoiceId: null,
-        invoiceNumber: generateRandomNumber(),
+        invoiceNumber: generateSPQNumber(),
+        draftId: null,
         isSaving: false,
+        showLevies: true,
     };
 
     // Increment document number helper: preserves prefix and zero-padding
@@ -244,7 +217,8 @@
             customer_name: inputs.customer?.value || "",
             classification: inputs.classification?.value || "",
             issue_date: inputs.issueDate?.value || "",
-            items_payload: JSON.stringify(state.items),
+            // Only include enabled (non-placeholder) items in the payload
+            items_payload: JSON.stringify(serializeItems()),
         };
     }
 
@@ -267,6 +241,15 @@
             return null;
         }
         return response.json();
+    }
+
+    function buildAbsoluteUrl(path) {
+        try {
+            return new URL(path, API_BASE).toString();
+        } catch (error) {
+            console.warn('Failed to build absolute URL', error);
+            return path;
+        }
     }
 
     function valueOrPlaceholder(field, fallback = "—") {
@@ -299,12 +282,17 @@
     }
 
     function renderLevyPlaceholders() {
-        // Function to render levy placeholders in edit and preview sections
-        if (!elements.levyContainer || !elements.previewLevyContainer) return;
+        // Function to render levy placeholders in edit section and optionally preview
+        if (!elements.levyContainer) return;
         elements.levyContainer.innerHTML = "";
-        elements.previewLevyContainer.innerHTML = "";
         levyValueMap.clear();
-        previewLevyValueMap.clear();
+
+        const previewContainer = document.getElementById("invoice-preview-levies");
+        const hasPreview = Boolean(previewContainer);
+        if (hasPreview) {
+            previewContainer.innerHTML = "";
+            previewLevyValueMap.clear();
+        }
 
         state.levies
             .filter(({ isVat }) => !isVat)
@@ -315,70 +303,105 @@
             const valueEl = line.querySelector("[data-levy]");
             levyValueMap.set(name, valueEl);
 
-            const previewLine = document.createElement("p");
-            previewLine.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-preview-levy="${name}">0.00</span>`;
-            elements.previewLevyContainer.appendChild(previewLine);
-            const previewVal = previewLine.querySelector("[data-preview-levy]");
-            previewLevyValueMap.set(name, previewVal);
+            if (hasPreview) {
+                const previewLine = document.createElement("p");
+                previewLine.innerHTML = `<span>${name} (${(rate * 100).toFixed(2)}%):</span> <span data-preview-levy="${name}">0.00</span>`;
+                previewContainer.appendChild(previewLine);
+                const previewVal = previewLine.querySelector("[data-preview-levy]");
+                previewLevyValueMap.set(name, previewVal);
+            }
             });
+
+            // show/hide the levy area based on state.showLevies
+            try {
+                if (!state.showLevies) {
+                    if (elements.levyContainer) elements.levyContainer.style.display = 'none';
+                    if (levyTotalRowEl) levyTotalRowEl.style.display = 'none';
+                    if (vatRowEl) vatRowEl.style.display = 'none';
+                    if (grandTotalRowEl) grandTotalRowEl.style.display = 'none';
+                    if (subtotalLabelEl) subtotalLabelEl.textContent = 'Total';
+                    // emphasize the total value in edit
+                    if (elements.subtotal) elements.subtotal.classList.add('invoice-total-large');
+                    // emphasize preview subtotal only if it exists
+                    const previewSubtotalEl = document.getElementById('invoice-preview-subtotal');
+                    if (previewSubtotalEl) previewSubtotalEl.classList.add('invoice-total-large');
+                } else {
+                    if (elements.levyContainer) elements.levyContainer.style.display = '';
+                    if (levyTotalRowEl) levyTotalRowEl.style.display = '';
+                    if (vatRowEl) vatRowEl.style.display = '';
+                    if (grandTotalRowEl) grandTotalRowEl.style.display = '';
+                    if (subtotalLabelEl) subtotalLabelEl.textContent = 'Sub Total (Without VAT)';
+                    if (elements.subtotal) elements.subtotal.classList.remove('invoice-total-large');
+                    const previewSubtotalEl = document.getElementById('invoice-preview-subtotal');
+                    if (previewSubtotalEl) previewSubtotalEl.classList.remove('invoice-total-large');
+                }
+            } catch (e) { /* ignore */ }
     }
 
     function renderItems() {
-        // Function to render invoice items in table and preview - always show 10 rows
+        // Render only the actual items in the table and preview; don't show placeholder rows by default.
         const tableBody = elements.itemsTableBody;
         const previewBody = elements.previewRows;
         if (tableBody) tableBody.innerHTML = "";
         if (previewBody) previewBody.innerHTML = "";
 
-        // Render exactly 10 rows
-        for (let index = 0; index < 10; index++) {
-            const item = state.items[index];
-            
-            // Edit mode row
-            const row = document.createElement("tr");
-            if (item) {
-                row.innerHTML = `
-                    <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
-                    <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
-                    <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
-                    <td class="row-total">${formatCurrency(item.total || 0)}</td>
-                    <td><button type="button" class="btn-remove-row" data-remove="${index}" aria-label="Remove row" title="Remove this item">×</button></td>
+        // Render one row per item in state.items (no fixed limit)
+        state.items.forEach((item, index) => {
+            if (item && item.enabled === false) {
+                // Placeholder row: not active until Add Item enables it
+                const placeholder = document.createElement("tr");
+                placeholder.className = 'item-placeholder';
+                placeholder.innerHTML = `
+                    <td class="placeholder-cell">&nbsp;</td>
+                    <td class="placeholder-cell">&nbsp;</td>
+                    <td class="placeholder-cell">&nbsp;</td>
+                    <td class="row-total">&nbsp;</td>
+                    <td></td>
                 `;
-            } else {
-                row.innerHTML = `
-                    <td>&nbsp;</td>
+                tableBody?.appendChild(placeholder);
+
+                const previewRow = document.createElement("tr");
+                previewRow.innerHTML = `
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                 `;
-                row.classList.add("empty-row");
+                previewBody?.appendChild(previewRow);
+                return;
             }
+
+            // Active edit row
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td><input type="text" data-field="description" data-index="${index}" value="${item.description || ""}" /></td>
+                <td><input type="number" step="0.01" data-field="quantity" data-index="${index}" value="${item.quantity || 0}" /></td>
+                <td><input type="number" step="0.01" data-field="unit_price" data-index="${index}" value="${item.unit_price || 0}" /></td>
+                <td class="row-total">${formatCurrency(item.total || 0)}</td>
+                <td><button type="button" class="btn-remove-row" data-remove="${index}" aria-label="Remove row" title="Remove this item">×</button></td>
+            `;
             tableBody?.appendChild(row);
 
             // Preview mode row
             const previewRow = document.createElement("tr");
-            if (item) {
-                previewRow.innerHTML = `
-                    <td>${item.description || ""}</td>
-                    <td>${formatQuantity(item.quantity || 0)}</td>
-                    <td>${formatCurrency(item.unit_price || 0)}</td>
-                    <td>${formatCurrency(item.total || 0)}</td>
-                `;
-            } else {
-                previewRow.innerHTML = `
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                `;
-                previewRow.classList.add("empty-row");
-            }
+            previewRow.innerHTML = `
+                <td>${item.description || ""}</td>
+                <td>${formatQuantity(item.quantity || 0)}</td>
+                <td>${formatCurrency(item.unit_price || 0)}</td>
+                <td>${formatCurrency(item.total || 0)}</td>
+            `;
             previewBody?.appendChild(previewRow);
-        }
+        });
 
         if (elements.itemsPayload) {
-            elements.itemsPayload.value = JSON.stringify(state.items);
+            // Only include enabled rows in the payload
+            const payloadItems = state.items.filter(i => i && i.enabled !== false).map((it) => ({
+                description: it.description || "",
+                quantity: parseNumber(it.quantity || 0),
+                unit_price: parseNumber(it.unit_price || 0),
+                total: parseNumber(it.total || 0),
+            }));
+            elements.itemsPayload.value = JSON.stringify(payloadItems);
         }
 
         recalcTotals();
@@ -386,43 +409,58 @@
 
     function recalcTotals() {
         // Function to recalculate and update totals display
-        const subtotal = state.items.reduce((sum, item) => sum + parseNumber(item.total), 0);
+        const subtotal = state.items.reduce((sum, item) => {
+            if (!item || item.enabled === false) return sum;
+            return sum + parseNumber(item.total);
+        }, 0);
         elements.subtotal && (elements.subtotal.textContent = formatCurrency(subtotal));
         elements.previewSubtotal && (elements.previewSubtotal.textContent = formatCurrency(subtotal));
-
         let levyTotal = 0;
         let vatAmount = 0;
 
-        state.levies.forEach(({ name, rate, isVat }) => {
-            const amount = subtotal * rate;
-            if (isVat) {
-                vatAmount = amount;
-                return;
-            }
-            const levyEl = levyValueMap.get(name);
-            if (levyEl) {
-                levyEl.textContent = formatCurrency(amount);
-            }
-            const previewEl = previewLevyValueMap.get(name);
-            if (previewEl) {
-                previewEl.textContent = formatCurrency(amount);
-            }
-            levyTotal += amount;
-        });
+        if (state.showLevies) {
+            state.levies.forEach(({ name, rate, isVat }) => {
+                const amount = subtotal * rate;
+                if (isVat) {
+                    vatAmount = amount;
+                    return;
+                }
+                const levyEl = levyValueMap.get(name);
+                if (levyEl) {
+                    levyEl.textContent = formatCurrency(amount);
+                }
+                const previewEl = previewLevyValueMap.get(name);
+                if (previewEl) {
+                    previewEl.textContent = formatCurrency(amount);
+                }
+                levyTotal += amount;
+            });
+        } else {
+            // zero out displayed levy values
+            levyValueMap.forEach((el) => { if (el) el.textContent = formatCurrency(0); });
+            previewLevyValueMap.forEach((el) => { if (el) el.textContent = formatCurrency(0); });
+            if (elements.levyTotal) elements.levyTotal.textContent = formatCurrency(0);
+            if (elements.previewLevyTotal) elements.previewLevyTotal.textContent = formatCurrency(0);
+            if (elements.vat) elements.vat.textContent = formatCurrency(0);
+            if (elements.previewVat) elements.previewVat.textContent = formatCurrency(0);
+        }
 
-    const totalLeviesAndValue = subtotal + levyTotal;
-    elements.levyTotal && (elements.levyTotal.textContent = formatCurrency(totalLeviesAndValue));
-    elements.previewLevyTotal && (elements.previewLevyTotal.textContent = formatCurrency(totalLeviesAndValue));
+        const totalLeviesAndValue = subtotal + levyTotal;
+        elements.levyTotal && (elements.levyTotal.textContent = formatCurrency(totalLeviesAndValue));
+        elements.previewLevyTotal && (elements.previewLevyTotal.textContent = formatCurrency(totalLeviesAndValue));
         elements.vat && (elements.vat.textContent = formatCurrency(vatAmount));
         elements.previewVat && (elements.previewVat.textContent = formatCurrency(vatAmount));
 
-        const grandTotal = subtotal + levyTotal + vatAmount;
+        const grandTotal = state.showLevies ? (subtotal + levyTotal + vatAmount) : subtotal;
         elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(grandTotal));
         elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(grandTotal));
     }
 
     function computeLocalTotals() {
-        const subtotal = state.items.reduce((sum, item) => sum + parseNumber(item.total), 0);
+        // Only include enabled items when computing local totals
+        const subtotal = (state.items || [])
+            .filter((item) => item && item.enabled !== false)
+            .reduce((sum, item) => sum + parseNumber(item.total), 0);
         const levyBreakdown = {};
         let levySum = 0;
         let vatAmount = 0;
@@ -448,8 +486,8 @@
 
     function serializeItems() {
         return state.items
+            .filter((item) => item && item.enabled !== false)
             .filter((item) => {
-                if (!item) return false;
                 const desc = (item.description || "").trim();
                 const quantity = parseNumber(item.quantity);
                 const price = parseNumber(item.unit_price);
@@ -547,6 +585,24 @@
             elements.previewVat && (elements.previewVat.textContent = vatFormatted);
             const subtotalNumber = Number(result.subtotal || 0);
             const totalLeviesAndValue = subtotalNumber + levySum;
+            // If levies are hidden, zero them out locally
+            if (!state.showLevies) {
+                elements.levyTotal && (elements.levyTotal.textContent = formatCurrency(0));
+                elements.previewLevyTotal && (elements.previewLevyTotal.textContent = formatCurrency(0));
+                elements.vat && (elements.vat.textContent = formatCurrency(0));
+                elements.previewVat && (elements.previewVat.textContent = formatCurrency(0));
+                const grandTotal = subtotalNumber;
+                elements.grandTotal && (elements.grandTotal.textContent = formatCurrency(grandTotal));
+                elements.previewGrand && (elements.previewGrand.textContent = formatCurrency(grandTotal));
+                return {
+                    subtotal: subtotalNumber,
+                    levyTotal: 0,
+                    vat: 0,
+                    grandTotal: subtotalNumber,
+                    levies: {},
+                };
+            }
+
             elements.levyTotal && (elements.levyTotal.textContent = formatCurrency(totalLeviesAndValue));
             elements.previewLevyTotal && (elements.previewLevyTotal.textContent = formatCurrency(totalLeviesAndValue));
 
@@ -578,20 +634,33 @@
 
     const debouncedServerTotals = debounce(calculateServerTotals, 300);
 
-    async function handlePreviewToggle() {
-        // Function to handle preview toggle button click
-        // Ensure preview table reflects latest items before switching view
-        renderItems();
-        syncPreviewFromForm();
-        await calculateServerTotals();
-        togglePreview(moduleId, true);
-    }
+    // Preview UI removed — handler deleted
 
     async function preparePreviewSnapshot() {
         renderItems();
         syncPreviewFromForm();
         const totals = await calculateServerTotals();
         return totals || computeLocalTotals();
+    }
+
+    async function openPreview() {
+        // Prepare preview contents first
+        await preparePreviewSnapshot();
+        // Prefer the dedicated preview element if present, otherwise the editable form
+        const docEl = moduleEl.querySelector('.module-preview') || moduleEl.querySelector('.document') || document.getElementById('invoice-form');
+        if (!docEl) {
+            showToast('Document not found for preview', 'error');
+            return;
+        }
+        // Use global helper to show overlay preview; if not available, fallback to download preview
+        // Use in-place preview if available
+        try {
+            togglePreview(moduleId, true);
+            return;
+        } catch (err) {
+            console.error('Failed to toggle in-place preview', err);
+        }
+        showToast('Preview unavailable', 'error');
     }
 
     async function downloadInvoicePdf() {
@@ -606,21 +675,115 @@
         
         await preparePreviewSnapshot();
         
-        const previewEl = document.getElementById("invoice-preview");
-        if (!previewEl) {
-            showToast("Preview element not found", "error");
+        // Clone the editable form element directly to preserve edit page styling
+        const docEl = document.getElementById("invoice-form");
+        if (!docEl) {
+            showToast("Document element not found for PDF export", "error");
             return;
         }
 
-        // Create a wrapper for PDF export with exact preview styling
+        // Create a wrapper off-screen that allows natural document sizing
         const exportWrapper = document.createElement("div");
-        exportWrapper.className = "module is-preview pdf-export-wrapper";
+        exportWrapper.className = "module";
         exportWrapper.setAttribute("aria-hidden", "true");
-        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0; width: 210mm;";
+        exportWrapper.style.cssText = "position: fixed; left: -9999px; top: 0;";
         
-        const clone = previewEl.cloneNode(true);
+        const clone = docEl.cloneNode(true);
         clone.removeAttribute("hidden");
         clone.setAttribute("data-pdf-clone", "true");
+        clone.classList.remove('document-editable', 'is-preview', 'module-preview');
+        // Let the clone use its natural CSS-defined size (297mm from .invoice-document)
+        // Sanitize clone: remove interactive controls and convert form fields to static text
+        (function sanitizeCloneForPdf(root) {
+            if (!root) return;
+            // Remove common interactive controls and preview artifacts
+            const removeSelectors = [
+                'button',
+                '.button',
+                '.button-icon',
+                '.btn-remove-row',
+                '[id$="-preview-toggle"]',
+                '[id$="-exit-preview"]',
+                '.module-actions',
+                '.module-toast',
+                '.preview-overlay',
+                '.preview-close',
+                '.preview-input-value',
+                '.preview-input-block',
+                '.levies-switch-container',
+                '.levies-switch',
+                '.levies-switch-label',
+                '#invoice-levies-toggle',
+                '#invoice-levies-toggle-label'
+            ];
+            removeSelectors.forEach((sel) => {
+                root.querySelectorAll(sel).forEach((n) => n.remove());
+            });
+
+            // Remove any elements that use data-remove controls
+            root.querySelectorAll('[data-remove]').forEach(n => n.remove());
+
+            // Remove hidden payloads and scripts (prevent raw JSON or debug payloads from showing)
+            root.querySelectorAll('input[type="hidden"], [id$="-payload"], script').forEach(n => n.remove());
+
+            // Replace inputs, textareas and selects with static spans (preserve value or placeholder)
+            function escapeHtml(s) {
+                return String(s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            function replaceWithText(node, text) {
+                const value = text || '';
+                // Preserve textarea line breaks by using a block with <br>
+                if (node.tagName && node.tagName.toLowerCase() === 'textarea') {
+                    const div = document.createElement('div');
+                    if (node.id) div.id = node.id;
+                    div.classList.add('pdf-replacement');
+                    div.style.cssText = 'background: transparent; border: none; font: inherit; color: inherit; display: block; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word;';
+                    div.innerHTML = escapeHtml(value).replace(/\n/g, '<br>');
+                    node.parentNode && node.parentNode.replaceChild(div, node);
+                    return;
+                }
+
+                const span = document.createElement('span');
+                span.textContent = value;
+                // Preserve id so CSS rules targeting the original input still apply in the clone
+                if (node.id) span.id = node.id;
+                span.classList.add('pdf-replacement');
+                span.style.cssText = 'background: transparent; border: none; font: inherit; color: inherit; display: inline-block; white-space: normal; overflow-wrap: break-word; word-break: break-word;';
+                node.parentNode && node.parentNode.replaceChild(span, node);
+            }
+
+            root.querySelectorAll('input, textarea, select').forEach((el) => {
+                try {
+                    // Skip inputs inside placeholder cells (keep empty for clean PDF table)
+                    const isInPlaceholder = el.closest('.item-placeholder, .placeholder-cell');
+                    if (isInPlaceholder) {
+                        el.remove();
+                        return;
+                    }
+                    if (el.tagName.toLowerCase() === 'select') {
+                        const text = (el.options && el.options[el.selectedIndex]) ? el.options[el.selectedIndex].text : (el.value || '');
+                        replaceWithText(el, text);
+                        return;
+                    }
+                    const type = (el.getAttribute('type') || '').toLowerCase();
+                    if (type === 'checkbox' || type === 'radio') {
+                        const span = document.createElement('span');
+                        span.textContent = el.checked ? '✓' : '';
+                        span.style.cssText = 'font-weight:700; color: inherit;';
+                        el.parentNode && el.parentNode.replaceChild(span, el);
+                        return;
+                    }
+                    replaceWithText(el, el.value || el.placeholder || '');
+                } catch (e) { /* ignore */ }
+            });
+
+            // Ensure levy toggle labels (text) are removed if present
+            root.querySelectorAll('[id$="-levies-toggle-label"]').forEach(n => n.remove());
+        })(clone);
         
         // Force visibility on summary elements with inline styles AND background
         const levyTotalRow = clone.querySelector('.levy-total-row');
@@ -661,6 +824,8 @@
         // The preview element itself is the document
         exportWrapper.appendChild(clone);
         document.body.appendChild(exportWrapper);
+        // Give the browser a frame to render the off-screen clone so html2canvas can capture it
+        await new Promise((resolve) => requestAnimationFrame(resolve));
 
         let filename = state.invoiceNumber || "invoice";
         if (!filename.toLowerCase().endsWith(".pdf")) {
@@ -685,47 +850,40 @@
                 })
             );
 
-            const A4_PX_WIDTH = 794; // 210mm at ~96 DPI
-            const A4_PX_HEIGHT = 1122; // 297mm at ~96 DPI
-            clone.style.width = A4_PX_WIDTH + "px";
-            clone.style.maxWidth = A4_PX_WIDTH + "px";
+            // Force layout recalc and measure natural document size
+            clone.offsetHeight; // Force reflow
+            const rect = clone.getBoundingClientRect();
+            const widthPx = Math.ceil(rect.width) || Math.ceil(clone.offsetWidth) || 1122;
+            const heightPx = Math.ceil(rect.height) || Math.ceil(clone.offsetHeight) || 1587;
+            const renderScale = 2;
 
             const canvas = await window.html2canvas(clone, {
-                scale: 2,
+                scale: renderScale,
                 useCORS: true,
                 allowTaint: true, // Allow cross-origin images
                 backgroundColor: "#ffffff",
                 logging: false,
-                width: A4_PX_WIDTH,
-                height: Math.max(A4_PX_HEIGHT, clone.scrollHeight),
-                foreignObjectRendering: false, // Disable to force better text rendering
+                width: widthPx,
+                height: heightPx,
+                foreignObjectRendering: false,
                 removeContainer: true,
             });
 
             const { jsPDF } = window.jspdf;
+
+            const imgData = canvas.toDataURL("image/png");
+            // Compute PDF dimensions in mm based purely on rendered pixel size
+            const pxPerMm = 96 / 25.4; // ~3.7795 px per mm at 96DPI
+            const widthMm = Math.max(1, widthPx / pxPerMm);
+            const heightMm = Math.max(1, heightPx / pxPerMm);
             const pdf = new jsPDF({
-                orientation: "portrait",
+                orientation: widthMm >= heightMm ? "landscape" : "portrait",
                 unit: "mm",
-                format: "a4",
+                format: [widthMm, heightMm],
                 compress: true,
             });
 
-            const imgData = canvas.toDataURL("image/png");
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            let renderWidth = pdfWidth;
-            let renderHeight = (canvas.height * renderWidth) / canvas.width;
-
-            if (renderHeight > pdfHeight) {
-                const ratio = pdfHeight / renderHeight;
-                renderHeight = pdfHeight;
-                renderWidth = renderWidth * ratio;
-            }
-
-            const offsetX = (pdfWidth - renderWidth) / 2;
-            const offsetY = (pdfHeight - renderHeight) / 2;
-
-            pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight, undefined, "FAST");
+            pdf.addImage(imgData, "PNG", 0, 0, widthMm, heightMm, undefined, "FAST");
             
             // Check if running in Tauri desktop app
             console.log('[Invoice] Checking Tauri availability:', {
@@ -736,46 +894,110 @@
                 hasWriteBinaryFile: !!window.__TAURI__?.fs?.writeBinaryFile
             });
             
+            const result = { cancelled: false, path: null, name: filename };
             if (window.__TAURI__?.dialog?.save && window.__TAURI__?.fs?.writeBinaryFile) {
-                console.log('[Invoice] Using Tauri native save dialog');
-                // Tauri: Show save dialog and write PDF
                 const { dialog, fs } = window.__TAURI__;
-                let savePath = await dialog.save({
-                    defaultPath: filename,
-                    filters: [{ name: "PDF Document", extensions: ["pdf"] }],
-                });
-                
-                console.log('[Invoice] Save dialog result:', savePath);
-                
-                if (!savePath) {
-                    showToast("PDF save cancelled", "info");
-                    return;
-                }
-                
-                if (!savePath.toLowerCase().endsWith(".pdf")) {
-                    savePath = `${savePath}.pdf`;
-                }
-                
-                // Get PDF as Uint8Array and write to file
+                let savePath = await dialog.save({ defaultPath: filename, filters: [{ name: "PDF Document", extensions: ["pdf"] }] });
+                if (!savePath) { showToast("PDF save cancelled", "info"); return { cancelled: true }; }
+                if (!savePath.toLowerCase().endsWith(".pdf")) savePath = `${savePath}.pdf`;
                 const pdfData = pdf.output("arraybuffer");
                 const uint8Array = new Uint8Array(pdfData);
-                console.log('[Invoice] PDF data prepared, size:', uint8Array.length, 'bytes');
-                
-                // Use the same API as the working save function
                 await fs.writeBinaryFile({ path: savePath, contents: uint8Array });
-                console.log('[Invoice] File written successfully to:', savePath);
-                showToast("PDF saved successfully!");
+                result.path = savePath;
+                result.name = (savePath && savePath.split(/[\\/]/).pop()) || filename;
+                showToast("PDF saved successfully!", "success");
             } else {
-                console.log('[Invoice] Falling back to browser download');
-                // Browser: Direct download
                 pdf.save(filename);
-                showToast("PDF downloaded successfully!");
+                showToast("PDF downloaded successfully!", "success");
             }
+
+            // Record recent
+            try {
+                if (typeof helpers.recordRecent === "function" && !result.cancelled) {
+                    helpers.recordRecent({
+                        name: result.name,
+                        path: result.path,
+                        type: "invoice",
+                        extension: "pdf",
+                        lastAction: "save",
+                        timestamp: Date.now(),
+                        metadata: {
+                            number: state.invoiceNumber,
+                            customer: inputs.customer?.value || "",
+                            issue_date: inputs.issueDate?.value || "",
+                            grand_total: Number((await preparePreviewSnapshot())?.grandTotal || 0),
+                        },
+                    });
+                }
+            } catch (e) { /* ignore */ }
+            return result;
         } catch (error) {
             console.error("PDF generation error:", error);
             showToast("Failed to generate PDF: " + error.message, "error");
         } finally {
             document.body.removeChild(exportWrapper);
+        }
+    }
+
+    async function persistInvoiceForPrint() {
+        await preparePreviewSnapshot();
+        const payload = buildPayload();
+        const body = JSON.stringify(payload);
+        if (state.invoiceId) {
+            const updated = await callApi(`/invoices/api/${state.invoiceId}/`, {
+                method: "PUT",
+                body,
+            });
+            if (updated?.invoice_number) {
+                state.invoiceNumber = updated.invoice_number;
+                if (elements.invoiceNumber) {
+                    elements.invoiceNumber.textContent = state.invoiceNumber;
+                }
+                if (elements.previewNumber) {
+                    elements.previewNumber.textContent = state.invoiceNumber;
+                }
+            }
+            return state.invoiceId;
+        }
+        const created = await callApi("/invoices/api/create/", {
+            method: "POST",
+            body,
+        });
+        if (created?.id) {
+            state.invoiceId = created.id;
+        }
+        if (created?.invoice_number) {
+            state.invoiceNumber = created.invoice_number;
+            if (elements.invoiceNumber) {
+                elements.invoiceNumber.textContent = state.invoiceNumber;
+            }
+            if (elements.previewNumber) {
+                elements.previewNumber.textContent = state.invoiceNumber;
+            }
+        }
+        return state.invoiceId;
+    }
+
+    async function handleNativePrint() {
+        try {
+            showToast("Preparing system print…", "info");
+            const invoiceId = await persistInvoiceForPrint();
+            if (!invoiceId) {
+                showToast("Unable to prepare invoice for printing.", "error");
+                return;
+            }
+            const url = new URL(`/invoices/${invoiceId}/print/`, API_BASE);
+            url.searchParams.set("auto_print", "1");
+            url.searchParams.set("close_after", "1");
+            const opened = window.open(url.toString(), "_blank", "noopener=yes");
+            if (!opened) {
+                showToast("Allow pop-ups to print this invoice.", "error");
+                return;
+            }
+            showToast("System print dialog opened.", "success");
+        } catch (error) {
+            console.error("Native print failed", error);
+            showToast("Failed to open print window.", "error");
         }
     }
 
@@ -786,9 +1008,12 @@
         elements.submitBtn?.setAttribute("disabled", "disabled");
 
         try {
-            await downloadInvoicePdf();
-            // Increment the counter after successful PDF download
-            await incrementInvoiceNumber();
+            if (isTauri) {
+                await handleNativePrint();
+                return;
+            }
+            const result = await downloadInvoicePdf();
+            if (!result?.cancelled) await incrementInvoiceNumber();
         } finally {
             state.isSaving = false;
             elements.submitBtn?.removeAttribute("disabled");
@@ -797,37 +1022,25 @@
 
     async function saveInvoiceFile() {
         if (state.isSaving) return;
-        if (typeof helpers.saveDocument !== "function") {
-            showToast("Save helper unavailable.", "error");
-            return;
-        }
+        // Use PDF workflow for save
+        if (state.isSaving) return;
         state.isSaving = true;
         elements.saveBtn?.setAttribute("disabled", "disabled");
         elements.submitBtn?.setAttribute("disabled", "disabled");
-
         try {
             showToast("Saving invoice…", "info");
-            const totals = await preparePreviewSnapshot();
-            const payload = buildInvoiceDocumentPayload(totals);
-            const metadata = {
-                number: state.invoiceNumber,
-                customer: inputs.customer?.value || "",
-                issue_date: inputs.issueDate?.value || "",
-                grand_total: Number(payload?.totals?.grand_total || 0),
-            };
-            const result = await helpers.saveDocument({
-                type: "invoice",
-                defaultName: state.invoiceNumber || "invoice",
-                data: payload,
-                metadata,
-            });
-            if (result?.cancelled) {
-                showToast("Invoice save cancelled.", "info");
-                return;
+            if (isTauri) {
+                await handleNativePrint();
+                showToast("Print window opened.", "success");
+            } else {
+                const result = await downloadInvoicePdf();
+                if (result?.cancelled) {
+                    showToast("Invoice save cancelled.", "info");
+                    return;
+                }
+                showToast("Invoice saved.", "success");
+                if (!result?.cancelled) await incrementInvoiceNumber();
             }
-            showToast("Invoice saved.", "success");
-            // Increment the counter after successful save
-            await incrementInvoiceNumber();
         } catch (error) {
             console.error(error);
             showToast("Failed to save invoice.", "error");
@@ -887,9 +1100,11 @@
                     if (inputs.contact) inputs.contact.value = data.contact || "";
                     
                     const receivedItems = Array.isArray(data.items) ? data.items : [];
-                    state.items = receivedItems.length ? receivedItems : [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+                    state.items = receivedItems.length ? receivedItems : [];
                     renderItems();
                     syncPreviewFromForm();
+                    // If we were asked to open directly in preview mode, toggle preview
+                    if (openDoc.preview) togglePreview(moduleId, true);
                     return;
                 }
             }
@@ -900,7 +1115,12 @@
         // Function to load existing invoice data if ID in URL
         const id = getQueryParam("id");
         if (!id) {
-            state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+            // Start with three rows: first enabled, next two are placeholders
+            state.items = [
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true },
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+            ];
             renderItems();
             return;
         }
@@ -914,11 +1134,16 @@
             if (inputs.classification) inputs.classification.value = data.classification || "";
             if (inputs.issueDate && data.issue_date) inputs.issueDate.value = data.issue_date;
             const receivedItems = Array.isArray(data.items) ? data.items : [];
-            state.items = receivedItems.length ? receivedItems : [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+            state.items = receivedItems.length ? receivedItems : [];
             renderItems();
         } catch (error) {
             console.error("Failed to load invoice", error);
-            state.items = [{ description: "", quantity: 0, unit_price: 0, total: 0 }];
+            // Fallback to three rows with placeholders
+            state.items = [
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true },
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+                { description: "", quantity: 0, unit_price: 0, total: 0, enabled: false },
+            ];
             renderItems();
         }
         syncPreviewFromForm();
@@ -959,31 +1184,82 @@
         });
 
         elements.addItemBtn?.addEventListener("click", () => {
-            if (state.items.length >= 10) {
-                showToast("Maximum 10 items allowed", "error");
-                return;
+            // If there are placeholder rows (enabled === false), enable the first one
+            const placeholderIndex = state.items.findIndex(it => it && it.enabled === false);
+            if (placeholderIndex !== -1) {
+                state.items[placeholderIndex] = { description: "", quantity: 0, unit_price: 0, total: 0, enabled: true };
+            } else {
+                // Append a single empty row when Add Item is clicked. No artificial limit.
+                state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0, enabled: true });
             }
-            state.items.push({ description: "", quantity: 0, unit_price: 0, total: 0 });
             renderItems();
             debouncedServerTotals();
         });
 
-        elements.previewToggleBtn?.addEventListener("click", () => {
-            handlePreviewToggle();
-        });
+        // Preview toggle removed (no preview button in markup)
 
         // Save invoice as .inv document
         elements.saveBtn?.addEventListener("click", () => {
             saveInvoiceFile();
         });
 
+        // Save draft to localStorage using Drafts API
+        elements.saveDraftBtn?.addEventListener('click', async () => {
+            try {
+                showToast('Saving draft…', 'info');
+                const totals = await preparePreviewSnapshot();
+                const payload = buildInvoiceDocumentPayload(totals);
+                const metadata = {
+                    bill_number: state.invoiceNumber,
+                    customer: inputs.customer?.value || '',
+                    issue_date: inputs.issueDate?.value || '',
+                    grand_total: (totals && totals.grandTotal) || null,
+                };
+                if (!window.Drafts || typeof window.Drafts.saveDraft !== 'function') {
+                    showToast('Draft API not available', 'error');
+                    return;
+                }
+                const res = await window.Drafts.saveDraft('invoice', payload, metadata, state.draftId);
+                if (res && res.id) {
+                    state.draftId = res.id;
+                    showToast('Draft saved', 'success');
+                } else {
+                    showToast('Draft saved', 'success');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to save draft', 'error');
+            }
+        });
+
         elements.submitBtn?.addEventListener("click", () => {
             handleSave();
         });
 
-        elements.exitPreviewBtn?.addEventListener("click", () => {
-            togglePreview(moduleId, false);
+        // Preview button removed from markup; preview toggle no-op
+
+        // Levies toggle: show/hide levies & VAT from display and calculations
+        elements.leviesToggleBtn?.addEventListener('click', (ev) => {
+            try {
+                state.showLevies = !state.showLevies;
+                if (elements.leviesToggleBtn) {
+                    elements.leviesToggleBtn.setAttribute('aria-pressed', state.showLevies ? 'true' : 'false');
+                }
+                // Re-render levy placeholders and totals
+                renderLevyPlaceholders();
+                recalcTotals();
+            } catch (e) { console.warn(e); }
         });
+
+        // Ensure aria state reflects default on load
+        try {
+            if (elements.leviesToggleBtn) elements.leviesToggleBtn.setAttribute('aria-pressed', state.showLevies ? 'true' : 'false');
+        } catch (e) { /* ignore */ }
+
+        // Wire the exit preview button
+        // Exit preview button removed from markup; no-op
+
+        // Exit preview button removed (no preview button in markup)
 
         const liveSyncFields = [
             inputs.customer,
@@ -1006,8 +1282,8 @@
 
     async function loadNextInvoiceNumber() {
         // Generate a new random 6-digit invoice number
-        console.log('[Invoice] Generating new random invoice number');
-        state.invoiceNumber = generateRandomNumber();
+        console.log('[Invoice] Generating new SPQ invoice number');
+        state.invoiceNumber = generateSPQNumber();
         console.log('[Invoice] Generated invoice number:', state.invoiceNumber);
         if (elements.invoiceNumber) {
             elements.invoiceNumber.textContent = state.invoiceNumber;
@@ -1021,7 +1297,7 @@
 
     async function incrementInvoiceNumber() {
         // Generate a new random 6-digit invoice number after successful PDF download
-        state.invoiceNumber = generateRandomNumber();
+        state.invoiceNumber = generateSPQNumber();
         elements.invoiceNumber && (elements.invoiceNumber.textContent = state.invoiceNumber);
         elements.previewNumber && (elements.previewNumber.textContent = state.invoiceNumber);
         console.log('[Invoice] Generated new invoice number for next document:', state.invoiceNumber);
