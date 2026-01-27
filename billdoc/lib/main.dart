@@ -37,7 +37,16 @@ class BillingApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const HomeScreen(),
+      // Temporary debug home to verify the app window renders correctly.
+      // Replace with `HomeScreen()` after confirming UI appears.
+      home: const Scaffold(
+        body: Center(
+          child: Text(
+            'App is running — debug screen',
+            style: TextStyle(fontSize: 18),
+          ),
+        ),
+      ),
     );
   }
 }
