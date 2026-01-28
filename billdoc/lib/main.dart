@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'screens/home_screen.dart';
 import 'providers/app_state.dart';
+import 'screens/home_screen.dart';
 
 void main() {
   runApp(
@@ -30,23 +30,14 @@ class BillingApp extends StatelessWidget {
           primary: const Color(0xFFEAB308),
           secondary: const Color(0xFFFBBF24),
         ),
-        cardTheme: const CardTheme(
+        cardTheme: const CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
         ),
       ),
-      // Temporary debug home to verify the app window renders correctly.
-      // Replace with `HomeScreen()` after confirming UI appears.
-      home: const Scaffold(
-        body: Center(
-          child: Text(
-            'App is running — debug screen',
-            style: TextStyle(fontSize: 18),
-          ),
-        ),
-      ),
+      home: const HomeScreen(),
     );
   }
 }

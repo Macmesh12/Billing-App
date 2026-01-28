@@ -88,17 +88,6 @@ class ApiService {
     throw Exception('Failed to get invoice config: ${response.statusCode}');
   }
 
-  /// Get invoice configuration (tax settings)
-  static Future<Map<String, dynamic>> getInvoiceConfig() async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/invoices/api/config/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to get invoice config: ${response.statusCode}');
-  }
-
   // ============================================================================
   // RECEIPT APIs
   // ============================================================================
@@ -142,17 +131,6 @@ class ApiService {
       return jsonDecode(response.body);
     }
     throw Exception('Failed to update receipt: ${response.body}');
-  }
-
-  /// Download receipt PDF
-  static Future<http.Response> downloadReceiptPDF(int id) async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/receipts/$id/pdf/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return response;
-    }
-    throw Exception('Failed to download receipt PDF: ${response.statusCode}');
   }
 
   /// Download receipt PDF

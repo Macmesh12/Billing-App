@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:path_provider/path_provider.dart';
 import '../providers/app_state.dart';
+import '../models/invoice.dart';
 import '../widgets/custom_button.dart';
 import '../services/api_service.dart';
 
@@ -60,7 +60,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 4),
                 ),
@@ -78,10 +78,12 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
 
   Widget _buildEditView(BuildContext context, AppState appState) {
     final invoice = appState.invoiceData;
+    final settings = appState.settings;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header
         const Text(
           'INVOICE',
           style: TextStyle(
@@ -106,12 +108,61 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _buildTextField(
-                label: 'Date',
-                value: invoice.date,
-                onChanged: (v) => appState.updateInvoiceData(
-                  invoice.copyWith(date: v),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Date',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF374151),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: () async {
+                      final DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        final formattedDate = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                        appState.updateInvoiceData(
+                          invoice.copyWith(date: formattedDate),
+                        );
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade400),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            invoice.date.isEmpty
+                                ? 'Select Date'
+                                : invoice.date,
+                            style: TextStyle(
+                              color: invoice.date.isEmpty
+                                  ? Colors.grey
+                                  : Colors.black,
+                            ),
+                          ),
+                          const Icon(Icons.calendar_today, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -119,79 +170,338 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         const SizedBox(height: 16),
 
         _buildTextField(
-          label: 'Classification',
-          value: invoice.classification,
-          onChanged: (v) => appState.updateInvoiceData(
-            invoice.copyWith(classification: v),
-          ),
+          label: 'Issuer',
+          value: invoice.issuer,
+          onChanged: (v) =>
+              appState.updateInvoiceData(invoice.copyWith(issuer: v)),
         ),
         const SizedBox(height: 24),
 
         // Customer Details
-        const Text(
-          'Customer Details',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Customer Details',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            if (settings.enableCustomerManagement &&
+                settings.customers.isNotEmpty)
+              _buildCustomerDropdown(appState, invoice),
+          ],
         ),
         const SizedBox(height: 16),
 
         _buildTextField(
           label: 'Customer Name',
           value: invoice.customerName,
-          onChanged: (v) => appState.updateInvoiceData(
-            invoice.copyWith(customerName: v),
+          onChanged: (v) =>
+              appState.updateInvoiceData(invoice.copyWith(customerName: v)),
+        ),
+        const SizedBox(height: 16),
+        const SizedBox(height: 16),
+        const SizedBox(height: 24),
+
+        // Line Items
+        const Text(
+          'Line Items',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+
+        ...List.generate(invoice.items.length, (index) {
+          final item = invoice.items[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: _buildTextField(
+                            label: 'Description',
+                            value: item.description,
+                            onChanged: (v) {
+                              final newItems = List<InvoiceItem>.from(
+                                invoice.items,
+                              );
+                              newItems[index] = item.copyWith(description: v);
+                              appState.updateInvoiceData(
+                                invoice.copyWith(items: newItems),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildTextField(
+                            label: 'Qty',
+                            value: item.quantity.toString(),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) {
+                              final newItems = List<InvoiceItem>.from(
+                                invoice.items,
+                              );
+                              newItems[index] = item.copyWith(
+                                quantity: int.tryParse(v) ?? 1,
+                              );
+                              appState.updateInvoiceData(
+                                invoice.copyWith(items: newItems),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            label: 'Unit Price',
+                            value: item.unitPrice.toString(),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) {
+                              final newItems = List<InvoiceItem>.from(
+                                invoice.items,
+                              );
+                              newItems[index] = item.copyWith(
+                                unitPrice: double.tryParse(v) ?? 0,
+                              );
+                              appState.updateInvoiceData(
+                                invoice.copyWith(items: newItems),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildTextField(
+                            label: 'Discount',
+                            value: item.discount.toString(),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) {
+                              final newItems = List<InvoiceItem>.from(
+                                invoice.items,
+                              );
+                              newItems[index] = item.copyWith(
+                                discount: double.tryParse(v) ?? 0,
+                              );
+                              appState.updateInvoiceData(
+                                invoice.copyWith(items: newItems),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Amount',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: Colors.grey.shade50,
+                                ),
+                                child: Text(
+                                  'GHS ${item.amount.toStringAsFixed(2)}',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            if (invoice.items.length > 1) {
+                              final newItems = List<InvoiceItem>.from(
+                                invoice.items,
+                              );
+                              newItems.removeAt(index);
+                              appState.updateInvoiceData(
+                                invoice.copyWith(items: newItems),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+
+        OutlinedButton.icon(
+          icon: const Icon(Icons.add),
+          label: const Text('Add Line Item'),
+          onPressed: () {
+            final newItems = List<InvoiceItem>.from(invoice.items)
+              ..add(InvoiceItem());
+            appState.updateInvoiceData(invoice.copyWith(items: newItems));
+          },
+        ),
+        const SizedBox(height: 24),
+
+        // Tax Toggle
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.amber.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.amber.shade200),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Apply Taxes (NHIL, GETFund, VAT)',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              Switch(
+                value: settings.applyTax,
+                activeThumbColor: const Color(0xFFEAB308),
+                activeTrackColor: const Color(0xFFEAB308).withAlpha(128),
+                onChanged: (value) {
+                  appState.updateSettings(settings.copyWith(applyTax: value));
+                },
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
 
-        _buildTextField(
-          label: 'Address',
-          value: invoice.customerAddress,
-          onChanged: (v) => appState.updateInvoiceData(
-            invoice.copyWith(customerAddress: v),
+        // Totals Summary
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
           ),
-        ),
-        const SizedBox(height: 16),
-
-        _buildTextField(
-          label: 'City',
-          value: invoice.customerCity,
-          onChanged: (v) => appState.updateInvoiceData(
-            invoice.copyWith(customerCity: v),
+          child: Column(
+            children: [
+              _buildTotalRow('Subtotal', invoice.subtotal, 'GHS'),
+              if (settings.applyTax) ...[
+                _buildTotalRow(
+                  'NHIL (${settings.nhilRate}%)',
+                  invoice.calculateNhil(settings.nhilRate),
+                  'GHS',
+                ),
+                _buildTotalRow(
+                  'GETFund (${settings.getfundRate}%)',
+                  invoice.calculateGetfund(settings.getfundRate),
+                  'GHS',
+                ),
+                _buildTotalRow(
+                  'VAT (${settings.vatRate}%)',
+                  invoice.calculateVat(settings.vatRate),
+                  'GHS',
+                ),
+              ],
+              const Divider(),
+              _buildTotalRow(
+                'GRAND TOTAL',
+                invoice.calculateGrandTotal(
+                  applyTax: settings.applyTax,
+                  nhilRate: settings.nhilRate,
+                  getfundRate: settings.getfundRate,
+                  vatRate: settings.vatRate,
+                ),
+                'GHS',
+                isTotal: true,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 24),
 
-        // Notes
-        _buildTextField(
-          label: 'Notes',
-          value: invoice.notes,
-          maxLines: 3,
-          onChanged: (v) => appState.updateInvoiceData(
-            invoice.copyWith(notes: v),
-          ),
-        ),
         const SizedBox(height: 32),
 
-        CustomButton(
-          text: 'Preview Invoice',
-          icon: Icons.visibility,
-          onPressed: () => setState(() => isEditMode = false),
+        // Action Buttons
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            OutlinedButton.icon(
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('Save as Draft'),
+              onPressed: () {
+                appState.saveInvoiceAsDraft(invoice);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invoice saved as draft')),
+                );
+              },
+            ),
+            const SizedBox(width: 16),
+            CustomButton(
+              text: 'Preview Invoice',
+              icon: Icons.visibility,
+              onPressed: () => setState(() => isEditMode = false),
+            ),
+          ],
         ),
       ],
     );
   }
 
   Widget _buildPreviewView(BuildContext context, invoice) {
+    final settings = Provider.of<AppState>(context).settings;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'INVOICE',
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFEAB308),
-          ),
+        // Header with logo
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Always show logo.png from assets
+                Image.asset(
+                  'assets/images/logo.png',
+                  height: 80,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    // Fallback if logo not found
+                    return const Icon(
+                      Icons.business,
+                      size: 60,
+                      color: Color(0xFFEAB308),
+                    );
+                  },
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text(
+                  'INVOICE',
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFEAB308),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         const Divider(height: 32, thickness: 2),
         Row(
@@ -200,28 +510,46 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Invoice Number', style: TextStyle(color: Colors.grey)),
-                Text(invoice.invoiceNumber, style: const TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Invoice Number',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                Text(
+                  invoice.invoiceNumber,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 const Text('Date', style: TextStyle(color: Colors.grey)),
-                Text(invoice.date, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  invoice.date,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ],
         ),
+        if (invoice.classification.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Classification: ${invoice.classification}',
+            style: const TextStyle(fontStyle: FontStyle.italic),
+          ),
+        ],
         const SizedBox(height: 24),
-        const Text('Bill To:', style: TextStyle(color: Colors.grey, fontSize: 12)),
+        const Text(
+          'Bill To:',
+          style: TextStyle(color: Colors.grey, fontSize: 12),
+        ),
         const SizedBox(height: 8),
         Text(
           invoice.customerName,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        Text(invoice.customerAddress),
-        Text(invoice.customerCity),
+        const SizedBox(height: 32),
         const SizedBox(height: 32),
         Container(
           decoration: BoxDecoration(
@@ -234,56 +562,194 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(8),
+                  ),
                 ),
                 child: const Row(
                   children: [
-                    Expanded(flex: 3, child: Text('Description', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Qty', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Price', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Amount', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        'Description',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Qty',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Price',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Discount',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Amount',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              ...invoice.lineItems.map((item) => Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: Colors.grey.shade200)),
+              ...invoice.items.map(
+                (item) => Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.shade200),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(flex: 3, child: Text(item.description)),
-                        Expanded(child: Text('${item.qty}', textAlign: TextAlign.right)),
-                        Expanded(child: Text('₵${item.unitPrice.toStringAsFixed(2)}', textAlign: TextAlign.right)),
-                        Expanded(child: Text('₵${item.amount.toStringAsFixed(2)}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold))),
-                      ],
-                    ),
-                  )),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(flex: 3, child: Text(item.description)),
+                      Expanded(
+                        child: Text(
+                          '${item.quantity}',
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'GHS ${item.unitPrice.toStringAsFixed(2)}',
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'GHS ${item.discount.toStringAsFixed(2)}',
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'GHS ${item.amount.toStringAsFixed(2)}',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 24),
         Column(
           children: [
-            _buildTotalRow('Subtotal', invoice.subtotal),
-            _buildTotalRow('NHIL (2.5%)', invoice.nhil),
-            _buildTotalRow('GETFUND (2.5%)', invoice.getFund),
-            _buildTotalRow('VAT (15%)', invoice.vat),
+            _buildTotalRow('Subtotal', invoice.subtotal, 'GHS'),
+            if (settings.applyTax) ...[
+              _buildTotalRow(
+                'NHIL (${settings.nhilRate}%)',
+                invoice.calculateNhil(settings.nhilRate),
+                'GHS',
+              ),
+              _buildTotalRow(
+                'GETFund (${settings.getfundRate}%)',
+                invoice.calculateGetfund(settings.getfundRate),
+                'GHS',
+              ),
+              _buildTotalRow(
+                'VAT (${settings.vatRate}%)',
+                invoice.calculateVat(settings.vatRate),
+                'GHS',
+              ),
+            ],
             const Divider(),
-            _buildTotalRow('TOTAL', invoice.total, isTotal: true),
+            _buildTotalRow(
+              'GRAND TOTAL',
+              invoice.calculateGrandTotal(
+                applyTax: settings.applyTax,
+                nhilRate: settings.nhilRate,
+                getfundRate: settings.getfundRate,
+                vatRate: settings.vatRate,
+              ),
+              'GHS',
+              isTotal: true,
+            ),
           ],
         ),
         const SizedBox(height: 24),
-        if (invoice.notes.isNotEmpty) ...[
+        if (settings.invoiceNote.isNotEmpty) ...[
           const Text('Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text(invoice.notes, style: const TextStyle(color: Colors.grey)),
+          Text(settings.invoiceNote, style: const TextStyle(color: Colors.grey)),
         ],
+        const SizedBox(height: 32),        // Payment Terms
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.yellow.shade50,
+            border: Border.all(color: Colors.yellow.shade700),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            '100% payment before job is done. Money paid is not refundable.',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        const SizedBox(height: 32),
+        // Management Signature (fixed asset)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Image.asset(
+                    'assets/images/sign.png',
+                    height: 80,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Management Signature',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
       ],
     );
   }
 
-  Widget _buildTotalRow(String label, double amount, {bool isTotal = false}) {
+  Widget _buildTotalRow(
+    String label,
+    double amount,
+    String currency, {
+    bool isTotal = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -301,9 +767,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           ),
           const SizedBox(width: 24),
           SizedBox(
-            width: 100,
+            width: 120,
             child: Text(
-              '₵${amount.toStringAsFixed(2)}',
+              '$currency ${amount.toStringAsFixed(2)}',
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
@@ -321,6 +787,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     required String value,
     required Function(String) onChanged,
     int maxLines = 1,
+    TextInputType? keyboardType,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,12 +804,14 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         TextFormField(
           initialValue: value,
           maxLines: maxLines,
+          keyboardType: keyboardType,
           onChanged: onChanged,
           decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
         ),
       ],
@@ -355,24 +824,26 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       try {
         final result = await ApiService.createInvoice({
           'customer_name': invoice.customerName,
-          'customer_address': invoice.customerAddress,
-          'customer_city': invoice.customerCity,
           'classification': invoice.classification,
           'issue_date': invoice.date,
-          'items_payload': invoice.lineItems.map((i) => {
-            'description': i.description,
-            'qty': i.qty,
-            'unit_price': i.unitPrice,
-            'amount': i.amount,
-          }).toList(),
+          'items_payload': invoice.lineItems
+              .map(
+                (i) => {
+                  'description': i.description,
+                  'qty': i.qty,
+                  'unit_price': i.unitPrice,
+                  'amount': i.amount,
+                },
+              )
+              .toList(),
           'notes': invoice.notes,
         });
         savedInvoiceId = result['id'];
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to save invoice: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to save invoice: $e')));
         }
         return;
       }
@@ -381,21 +852,54 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     // Download PDF from Django
     try {
       final response = await ApiService.downloadInvoicePDF(savedInvoiceId!);
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('\${directory.path}/invoice_\${invoice.invoiceNumber}.pdf');
+      final file = File('invoice_${invoice.invoiceNumber}.pdf');
       await file.writeAsBytes(response.bodyBytes);
-      
+
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF saved to \${file.path}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('PDF saved to \${file.path}')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to export PDF: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to export PDF: $e')));
       }
     }
+  }
+
+  Widget _buildCustomerDropdown(AppState appState, Invoice invoice) {
+    final customers = appState.settings.customers;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          hint: const Text('Select Customer'),
+          value: null,
+          items: customers.map((customer) {
+            return DropdownMenuItem(
+              value: customer.id,
+              child: Text(customer.name),
+            );
+          }).toList(),
+          onChanged: (customerId) {
+            if (customerId != null) {
+              final customer = customers.firstWhere((c) => c.id == customerId);
+              appState.updateInvoiceData(
+                invoice.copyWith(
+                  customerName: customer.name,
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    );
   }
 }

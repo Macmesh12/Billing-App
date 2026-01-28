@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
+import '../models/document_item.dart';
 import '../widgets/left_nav.dart';
 import '../widgets/top_bar.dart';
 import '../widgets/custom_card.dart';
@@ -9,6 +10,7 @@ import '../widgets/document_list.dart';
 import 'invoice_screen.dart';
 import 'receipt_screen.dart';
 import 'waybill_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,11 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 LeftNav(
                   activeView: appState.activeView,
                   onNavigate: (view) {
-                    if (view == 'settings') {
-                      _showSettingsDialog(context);
-                    } else {
-                      appState.setActiveView(view);
-                    }
+                    appState.setActiveView(view);
                   },
                 ),
 
@@ -52,11 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     activeView: appState.activeView,
                     onNavigate: (view) {
                       Navigator.pop(context);
-                      if (view == 'settings') {
-                        _showSettingsDialog(context);
-                      } else {
-                        appState.setActiveView(view);
-                      }
+                      appState.setActiveView(view);
                     },
                   ),
                 )
@@ -76,6 +70,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const WaybillScreen();
       case 'drafts':
         return _buildDraftsView(context, appState);
+      case 'settings':
+        return const SettingsScreen();
       case 'home':
       default:
         return _buildHomeView(context, appState);
@@ -150,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 16),
                 DocumentList(
-                  documents: _getDocuments(appState),
+                  documents: _getDocuments(appState).cast<DocumentItem>(),
                   onView: (id) {
                     if (appState.activeTab == 'invoices') {
                       appState.setActiveView('invoice');
@@ -232,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 24),
 
                 DocumentList(
-                  documents: _getDraftDocuments(appState),
+                  documents: _getDraftDocuments(appState).cast<DocumentItem>(),
                   onView: (id) {
                     if (appState.activeTab == 'invoices') {
                       appState.setActiveView('invoice');
@@ -442,31 +438,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'waybills';
   }
 
-  List _getDocuments(AppState appState) {
+  List<dynamic> _getDocuments(AppState appState) {
     if (appState.activeTab == 'invoices') return appState.recentInvoices;
     if (appState.activeTab == 'receipts') return appState.recentReceipts;
     return appState.recentWaybills;
   }
 
-  List _getDraftDocuments(AppState appState) {
+  List<dynamic> _getDraftDocuments(AppState appState) {
     if (appState.activeTab == 'invoices') return appState.draftInvoices;
     if (appState.activeTab == 'receipts') return appState.draftReceipts;
     return appState.draftWaybills;
-  }
-
-  void _showSettingsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Settings'),
-        content: const Text('Settings screen coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
   }
 }

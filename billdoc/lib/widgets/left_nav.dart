@@ -28,7 +28,7 @@ class LeftNav extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'BillingPro',
+                  'BillingDoc',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -94,7 +94,7 @@ class LeftNav extends StatelessWidget {
             child: NavLink(
               icon: Icons.settings_outlined,
               label: 'Settings',
-              active: false,
+              active: activeView == 'settings',
               onTap: () => onNavigate('settings'),
             ),
           ),
