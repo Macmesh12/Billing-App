@@ -95,29 +95,14 @@ class InvoicePrintView(TemplateView):
 
 
 def invoice_pdf(request: HttpRequest, pk: int) -> HttpResponse:
+    from billing_app.pdf_generator import generate_invoice_pdf
+    
     invoice = Invoice.objects.get(pk=pk)
-    html_string = render(
-        request,
-        "invoice.html",
-        {
-            "invoice": invoice,
-            "preview": True,
-            "tax_rates": settings.TAX_SETTINGS,
-            "tax_rows": _build_tax_rows(invoice),
-            "form": InvoiceForm(instance=invoice),
-        },
-    ).content.decode("utf-8")
-
-    # Lazy import to avoid loading GTK libraries at module import time
-    try:
-        from weasyprint import HTML
-    except (ImportError, OSError):  # OSError for missing GTK libraries
-        response = HttpResponse(html_string, content_type="text/html")
-        response["X-WeasyPrint-Disabled"] = "1"
-        return response
-
-    pdf_file = HTML(string=html_string).write_pdf()
-    response = HttpResponse(pdf_file, content_type="application/pdf")
+    
+    # Generate PDF using ReportLab
+    pdf_buffer = generate_invoice_pdf(invoice, settings.TAX_SETTINGS)
+    
+    response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
     response["Content-Disposition"] = f"attachment; filename={invoice.invoice_number}.pdf"
     return response
 

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../models/document_item.dart';
+import '../models/invoice.dart';
+import '../models/receipt.dart';
+import '../models/waybill.dart';
+import '../services/api_service.dart';
 import '../widgets/left_nav.dart';
 import '../widgets/top_bar.dart';
 import '../widgets/custom_card.dart';
@@ -125,10 +129,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.add,
                   onPressed: () {
                     if (appState.activeTab == 'invoices') {
+                      // Generate new invoice number and create fresh invoice
+                      final newInvoice = Invoice(
+                        invoiceNumber: Invoice.generateInvoiceNumber(),
+                        date: DateTime.now().toString().split(' ')[0],
+                      );
+                      appState.updateInvoiceData(newInvoice);
                       appState.setActiveView('invoice');
                     } else if (appState.activeTab == 'receipts') {
+                      // Generate new receipt number and create fresh receipt
+                      final newReceipt = Receipt(
+                        receiptNumber: Receipt.generateReceiptNumber(),
+                        date: DateTime.now().toString().split(' ')[0],
+                      );
+                      appState.updateReceiptData(newReceipt);
                       appState.setActiveView('receipt');
                     } else {
+                      // Generate new waybill number and create fresh waybill
+                      final newWaybill = Waybill(
+                        waybillNumber: Waybill.generateWaybillNumber(),
+                        date: DateTime.now().toString().split(' ')[0],
+                      );
+                      appState.updateWaybillData(newWaybill);
                       appState.setActiveView('waybill');
                     }
                   },
@@ -146,7 +168,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 16),
                 DocumentList(
-                  documents: _getDocuments(appState).cast<DocumentItem>(),
+                  documents: _getDocuments(appState).map((doc) {
+                    if (doc is Invoice) return doc.toDocumentItem();
+                    if (doc is Receipt) return doc.toDocumentItem();
+                    if (doc is Waybill) return doc.toDocumentItem();
+                    return doc as DocumentItem;
+                  }).toList(),
                   onView: (id) {
                     if (appState.activeTab == 'invoices') {
                       appState.setActiveView('invoice');
@@ -216,10 +243,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.add,
                   onPressed: () {
                     if (appState.activeTab == 'invoices') {
+                      // Generate new invoice number and create fresh invoice
+                      final newInvoice = Invoice(
+                        invoiceNumber: Invoice.generateInvoiceNumber(),
+                        date: DateTime.now().toString().split(' ')[0],
+                      );
+                      appState.updateInvoiceData(newInvoice);
                       appState.setActiveView('invoice');
                     } else if (appState.activeTab == 'receipts') {
+                      // Generate new receipt number and create fresh receipt
+                      final newReceipt = Receipt(
+                        receiptNumber: Receipt.generateReceiptNumber(),
+                        date: DateTime.now().toString().split(' ')[0],
+                      );
+                      appState.updateReceiptData(newReceipt);
                       appState.setActiveView('receipt');
                     } else {
+                      // Generate new waybill number and create fresh waybill
+                      final newWaybill = Waybill(
+                        waybillNumber: Waybill.generateWaybillNumber(),
+                        date: DateTime.now().toString().split(' ')[0],
+                      );
+                      appState.updateWaybillData(newWaybill);
                       appState.setActiveView('waybill');
                     }
                   },
@@ -228,7 +273,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 24),
 
                 DocumentList(
-                  documents: _getDraftDocuments(appState).cast<DocumentItem>(),
+                  documents: _getDraftDocuments(appState).map((doc) {
+                    if (doc is Invoice) return doc.toDocumentItem();
+                    if (doc is Receipt) return doc.toDocumentItem();
+                    if (doc is Waybill) return doc.toDocumentItem();
+                    return doc as DocumentItem;
+                  }).toList(),
                   onView: (id) {
                     if (appState.activeTab == 'invoices') {
                       appState.setActiveView('invoice');
@@ -270,12 +320,18 @@ class _HomeScreenState extends State<HomeScreen> {
             physics: const NeverScrollableScrollPhysics(),
             childAspectRatio: 3,
             children: [
-              _buildStatCard(
-                icon: Icons.trending_up,
-                iconColor: const Color(0xFFEAB308),
-                iconBg: const Color(0xFFFEF3C7),
-                label: 'Total Revenue',
-                value: '₵27,550.75',
+              FutureBuilder<Map<String, dynamic>>(
+                future: ApiService.getInvoiceStats(),
+                builder: (context, snapshot) {
+                  final revenue = snapshot.data?['total_estimated_revenue']?.toString() ?? '0.00';
+                  return _buildStatCard(
+                    icon: Icons.trending_up,
+                    iconColor: const Color(0xFFEAB308),
+                    iconBg: const Color(0xFFFEF3C7),
+                    label: 'Total Estimated Revenue',
+                    value: snapshot.hasData ? '₵$revenue' : 'Loading...',
+                  );
+                },
               ),
               _buildStatCard(
                 icon: Icons.description,
@@ -307,12 +363,18 @@ class _HomeScreenState extends State<HomeScreen> {
             physics: const NeverScrollableScrollPhysics(),
             childAspectRatio: 3,
             children: [
-              _buildStatCard(
-                icon: Icons.trending_up,
-                iconColor: const Color(0xFF10B981),
-                iconBg: const Color(0xFFD1FAE5),
-                label: 'Total Received',
-                value: '₵17,151.25',
+              FutureBuilder<Map<String, dynamic>>(
+                future: ApiService.getReceiptStats(),
+                builder: (context, snapshot) {
+                  final received = snapshot.data?['total_money_received']?.toString() ?? '0.00';
+                  return _buildStatCard(
+                    icon: Icons.trending_up,
+                    iconColor: const Color(0xFF10B981),
+                    iconBg: const Color(0xFFD1FAE5),
+                    label: 'Total Received',
+                    value: snapshot.hasData ? '₵$received' : 'Loading...',
+                  );
+                },
               ),
               _buildStatCard(
                 icon: Icons.receipt,

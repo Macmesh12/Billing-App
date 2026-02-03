@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:printing/printing.dart';
@@ -5,6 +6,8 @@ import '../providers/app_state.dart';
 import '../widgets/custom_button.dart';
 import '../utils/pdf_generator.dart';
 import '../models/receipt.dart';
+import '../services/api_service.dart';
+import 'package:path/path.dart' as path;
 
 class ReceiptScreen extends StatefulWidget {
   const ReceiptScreen({super.key});
@@ -15,6 +18,7 @@ class ReceiptScreen extends StatefulWidget {
 
 class _ReceiptScreenState extends State<ReceiptScreen> {
   bool isEditMode = true;
+  int? savedReceiptId;
 
   @override
   Widget build(BuildContext context) {
@@ -398,6 +402,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                 onChanged: (v) => appState.updateReceiptData(
                   receipt.copyWith(receiptNumber: v),
                 ),
+                readOnly: true,
               ),
             ),
             const SizedBox(width: 16),
@@ -766,7 +771,94 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
   }
 
   Future<void> _exportPDF(BuildContext context, receipt) async {
-    final pdf = await PDFGenerator.generateReceiptPDF(receipt);
-    await Printing.layoutPdf(onLayout: (format) => pdf.save());
+    final appState = Provider.of<AppState>(context, listen: false);
+    final pdfExportPath = appState.settings.pdfExportPath;
+
+    if (pdfExportPath.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please set PDF export path in Settings'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading dialog
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 24),
+                  Text('Generating PDF...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    try {
+      // First save the receipt to Django if not already saved
+      if (savedReceiptId == null) {
+        final result = await ApiService.createReceipt({
+          'received_from': receipt.receivedFrom,
+          'issue_date': receipt.date,
+          'amount': receipt.amount,
+          'payment_method': receipt.paymentMethod,
+          'description': receipt.description,
+          'approved_by': receipt.approvedBy,
+        });
+        savedReceiptId = result['id'];
+      }
+
+      // Download PDF from Django backend
+      final response = await ApiService.downloadReceiptPDF(savedReceiptId!);
+
+      // Create receipts subfolder in pdfExportPath
+      final receiptsDir = Directory(path.join(pdfExportPath, 'receipts'));
+      if (!await receiptsDir.exists()) {
+        await receiptsDir.create(recursive: true);
+      }
+
+      // Save PDF file with receipt number and customer name
+      final sanitizedCustomer = receipt.customerName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final fileName = '${receipt.receiptNumber}_$sanitizedCustomer.pdf';
+      final file = File(path.join(receiptsDir.path, fileName));
+      await file.writeAsBytes(response.bodyBytes);
+
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF exported successfully to ${file.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to export PDF: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 }

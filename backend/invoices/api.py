@@ -16,6 +16,8 @@ from .models import Invoice
 # Import Invoice model
 from .services.calculator import calculate_totals
 # Import calculate_totals function
+from django.db.models import Sum, Q
+# Import Django aggregation functions
 
 
 def _cors(response: HttpResponse) -> HttpResponse:
@@ -123,3 +125,22 @@ def get_config(request: HttpRequest) -> HttpResponse:
         "tax_settings": settings.TAX_SETTINGS,
     }
     return _cors(JsonResponse(data))
+
+
+def get_stats(request: HttpRequest) -> HttpResponse:
+    # API endpoint to get invoice statistics
+    """Get total estimated revenue from all invoices."""
+    if request.method == "OPTIONS":
+        return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
+    
+    # Calculate total estimated revenue from grand_total field
+    total_revenue = Invoice.objects.aggregate(
+        total=Sum('grand_total')
+    )['total'] or 0
+    
+    total_count = Invoice.objects.count()
+    
+    return _cors(JsonResponse({
+        "total_estimated_revenue": float(total_revenue),
+        "total_invoices": total_count,
+    }))

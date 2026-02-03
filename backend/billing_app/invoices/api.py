@@ -9,6 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 # Import CSRF exempt decorator
 from django.conf import settings
 # Import Django settings
+from django.db.models import Sum
+# Import Django aggregation functions
 
 from .forms import InvoiceForm
 # Import InvoiceForm
@@ -123,3 +125,23 @@ def get_config(request: HttpRequest) -> HttpResponse:
         "tax_settings": settings.TAX_SETTINGS,
     }
     return _cors(JsonResponse(data))
+
+
+@csrf_exempt
+def get_stats(request: HttpRequest) -> HttpResponse:
+    # API endpoint to get invoice statistics
+    """Get total estimated revenue from all invoices."""
+    if request.method == "OPTIONS":
+        return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
+    
+    # Calculate total estimated revenue from grand_total field
+    total_revenue = Invoice.objects.aggregate(
+        total=Sum('grand_total')
+    )['total'] or 0
+    
+    total_count = Invoice.objects.count()
+    
+    return _cors(JsonResponse({
+        "total_estimated_revenue": float(total_revenue),
+        "total_invoices": total_count,
+    }))

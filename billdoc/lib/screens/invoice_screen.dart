@@ -5,6 +5,7 @@ import '../providers/app_state.dart';
 import '../models/invoice.dart';
 import '../widgets/custom_button.dart';
 import '../services/api_service.dart';
+import 'package:path/path.dart' as path;
 
 class InvoiceScreen extends StatefulWidget {
   const InvoiceScreen({super.key});
@@ -104,6 +105,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 onChanged: (v) => appState.updateInvoiceData(
                   invoice.copyWith(invoiceNumber: v),
                 ),
+                readOnly: true,
               ),
             ),
             const SizedBox(width: 16),
@@ -532,13 +534,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
             ),
           ],
         ),
-        if (invoice.classification.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Classification: ${invoice.classification}',
-            style: const TextStyle(fontStyle: FontStyle.italic),
-          ),
-        ],
+
         const SizedBox(height: 24),
         const Text(
           'Bill To:',
@@ -788,6 +784,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     required Function(String) onChanged,
     int maxLines = 1,
     TextInputType? keyboardType,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -805,13 +802,20 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           initialValue: value,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          onChanged: onChanged,
+          onChanged: readOnly ? null : onChanged,
+          readOnly: readOnly,
+          style: TextStyle(
+            color: readOnly ? Colors.grey.shade700 : Colors.black,
+            fontWeight: readOnly ? FontWeight.w600 : FontWeight.normal,
+          ),
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 12,
             ),
+            filled: readOnly,
+            fillColor: readOnly ? Colors.grey.shade100 : null,
           ),
         ),
       ],
@@ -819,52 +823,100 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
   }
 
   Future<void> _exportPDF(BuildContext context, invoice) async {
-    if (savedInvoiceId == null) {
-      // First save the invoice to Django
-      try {
+    final appState = Provider.of<AppState>(context, listen: false);
+    final pdfExportPath = appState.settings.pdfExportPath;
+
+    if (pdfExportPath.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please set PDF export path in Settings'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading dialog
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 24),
+                  Text('Generating PDF...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    try {
+      // First save the invoice to Django if not already saved
+      if (savedInvoiceId == null) {
         final result = await ApiService.createInvoice({
           'customer_name': invoice.customerName,
-          'classification': invoice.classification,
           'issue_date': invoice.date,
-          'items_payload': invoice.lineItems
+          'items_payload': invoice.items
               .map(
                 (i) => {
                   'description': i.description,
-                  'qty': i.qty,
+                  'qty': i.quantity,
                   'unit_price': i.unitPrice,
+                  'discount': i.discount,
                   'amount': i.amount,
                 },
               )
               .toList(),
-          'notes': invoice.notes,
         });
         savedInvoiceId = result['id'];
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Failed to save invoice: $e')));
-        }
-        return;
       }
-    }
 
-    // Download PDF from Django
-    try {
+      // Download PDF from Django backend
       final response = await ApiService.downloadInvoicePDF(savedInvoiceId!);
-      final file = File('invoice_${invoice.invoiceNumber}.pdf');
+
+      // Create invoices subfolder in pdfExportPath
+      final invoicesDir = Directory(path.join(pdfExportPath, 'invoices'));
+      if (!await invoicesDir.exists()) {
+        await invoicesDir.create(recursive: true);
+      }
+
+      // Save PDF file with invoice number and customer name
+      final sanitizedCustomer = invoice.customerName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final fileName = '${invoice.invoiceNumber}_$sanitizedCustomer.pdf';
+      final file = File(path.join(invoicesDir.path, fileName));
       await file.writeAsBytes(response.bodyBytes);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('PDF saved to \${file.path}')));
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF exported successfully to ${file.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to export PDF: $e')));
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to export PDF: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     }
   }

@@ -2,6 +2,7 @@
 /// 
 /// This file demonstrates how to use the ApiService to interact with the Django backend.
 /// All examples include proper error handling.
+library;
 
 import 'api_service.dart';
 import 'dart:io';

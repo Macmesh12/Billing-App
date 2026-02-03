@@ -14,6 +14,7 @@ urlpatterns = [
         path("calculate-preview/", api.calculate_preview, name="api-invoice-calc"),
         path("create/", api.create_invoice, name="api-invoice-create"),
         path("config/", api.get_config, name="api-invoice-config"),
+        path("stats/", api.get_stats, name="api-invoice-stats"),
         path("<int:pk>/", api.get_invoice, name="api-invoice-get"),
     ])),
 ]

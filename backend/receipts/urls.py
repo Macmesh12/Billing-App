@@ -9,6 +9,7 @@ urlpatterns = [
     path("<int:pk>/pdf/", views.receipt_pdf, name="receipt-pdf"),
     path("api/", include([
         path("create/", api.create_receipt, name="api-receipt-create"),
+        path("stats/", api.get_stats, name="api-receipt-stats"),
         path("<int:pk>/", api.get_receipt, name="api-receipt-get"),
     ])),
 ]

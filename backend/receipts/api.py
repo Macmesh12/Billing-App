@@ -12,6 +12,8 @@ from .forms import ReceiptForm
 # Import ReceiptForm
 from .models import Receipt
 # Import Receipt model
+from django.db.models import Sum
+# Import Django aggregation functions
 
 
 def _cors(response: HttpResponse) -> HttpResponse:
@@ -76,3 +78,23 @@ def get_receipt(request: HttpRequest, pk: int) -> HttpResponse:
             "receipt_number": receipt.receipt_number,
         }))
     return _cors(HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED))
+
+
+@csrf_exempt
+def get_stats(request: HttpRequest) -> HttpResponse:
+    # API endpoint to get receipt statistics
+    """Get total money received from all receipts."""
+    if request.method == "OPTIONS":
+        return _cors(HttpResponse(status=HTTPStatus.NO_CONTENT))
+    
+    # Calculate total money received from amount field
+    total_received = Receipt.objects.aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+    
+    total_count = Receipt.objects.count()
+    
+    return _cors(JsonResponse({
+        "total_money_received": float(total_received),
+        "total_receipts": total_count,
+    }))

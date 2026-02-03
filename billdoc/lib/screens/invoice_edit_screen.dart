@@ -359,7 +359,7 @@ class _InvoiceEditScreenState extends State<InvoiceEditScreen> {
           SizedBox(
             width: 100,
             child: Text(
-              '${(item.quantity * item.unitPrice).toStringAsFixed(2)}',
+              (item.quantity * item.unitPrice).toStringAsFixed(2),
               textAlign: TextAlign.right,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),

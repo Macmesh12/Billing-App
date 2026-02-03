@@ -34,22 +34,13 @@ class WaybillDetailView(TemplateView):
 
 
 def waybill_pdf(request: HttpRequest, pk: int) -> HttpResponse:
+    from billing_app.pdf_generator import generate_waybill_pdf
+    
     waybill = Waybill.objects.get(pk=pk)
-    html_string = render(
-        request,
-        "waybill.html",
-        {"waybill": waybill, "preview": True, "form": WaybillForm(instance=waybill)},
-    ).content.decode("utf-8")
-
-    # Lazy import to avoid loading GTK libraries at module import time
-    try:
-        from weasyprint import HTML
-    except (ImportError, OSError):  # OSError for missing GTK libraries
-        response = HttpResponse(html_string, content_type="text/html")
-        response["X-WeasyPrint-Disabled"] = "1"
-        return response
-
-    pdf_file = HTML(string=html_string).write_pdf()
-    response = HttpResponse(pdf_file, content_type="application/pdf")
+    
+    # Generate PDF using ReportLab
+    pdf_buffer = generate_waybill_pdf(waybill)
+    
+    response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
     response["Content-Disposition"] = f"attachment; filename={numbering.format_waybill_number(waybill.pk)}.pdf"
     return response

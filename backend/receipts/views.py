@@ -34,22 +34,13 @@ class ReceiptDetailView(TemplateView):
 
 
 def receipt_pdf(request: HttpRequest, pk: int) -> HttpResponse:
+    from billing_app.pdf_generator import generate_receipt_pdf
+    
     receipt = Receipt.objects.get(pk=pk)
-    html_string = render(
-        request,
-        "receipt.html",
-        {"receipt": receipt, "preview": True, "form": ReceiptForm(instance=receipt)},
-    ).content.decode("utf-8")
-
-    # Lazy import to avoid loading GTK libraries at module import time
-    try:
-        from weasyprint import HTML
-    except (ImportError, OSError):  # OSError for missing GTK libraries
-        response = HttpResponse(html_string, content_type="text/html")
-        response["X-WeasyPrint-Disabled"] = "1"
-        return response
-
-    pdf_file = HTML(string=html_string).write_pdf()
-    response = HttpResponse(pdf_file, content_type="application/pdf")
+    
+    # Generate PDF using ReportLab
+    pdf_buffer = generate_receipt_pdf(receipt)
+    
+    response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
     response["Content-Disposition"] = f"attachment; filename={numbering.format_receipt_number(receipt.pk)}.pdf"
     return response

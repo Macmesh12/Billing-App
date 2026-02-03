@@ -1,3 +1,6 @@
+import 'document_item.dart';
+import 'dart:math';
+
 class WaybillItem {
   String description;
   int quantity;
@@ -55,6 +58,14 @@ class Waybill {
   final String driverPhone;
   final List<WaybillItem> items;
   final String specialInstructions;
+
+  // Generate waybill number: WBL-YYYY-XXXX (XXXX = 4 random digits)
+  static String generateWaybillNumber() {
+    final year = DateTime.now().year;
+    final random = Random();
+    final randomDigits = (1000 + random.nextInt(9000)).toString();
+    return 'WBL-$year-$randomDigits';
+  }
 
   Waybill({
     this.waybillNumber = '',
@@ -122,6 +133,18 @@ class Waybill {
       driverPhone: driverPhone ?? this.driverPhone,
       items: items ?? this.items,
       specialInstructions: specialInstructions ?? this.specialInstructions,
+    );
+  }
+
+  DocumentItem toDocumentItem() {
+    return DocumentItem(
+      id: waybillNumber,
+      customer: consigneeName,
+      type: 'Waybill',
+      date: date,
+      number: waybillNumber,
+      location: destinationLocation,
+      amount: totalWeight,
     );
   }
 }

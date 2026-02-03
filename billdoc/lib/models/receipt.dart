@@ -1,3 +1,6 @@
+import 'document_item.dart';
+import 'dart:math';
+
 class ReceiptItem {
   final String description;
   final int quantity;
@@ -36,7 +39,7 @@ class ReceiptItem {
     final qtyVal = json['qty'] ?? json['quantity'] ?? 1;
     final upVal = json['unit_price'] ?? json['unitPrice'] ?? 0.0;
     final quantity = qtyVal is int ? qtyVal : int.tryParse(qtyVal.toString()) ?? 1;
-    final unitPrice = upVal is int ? (upVal as int).toDouble() : (upVal as double);
+    final unitPrice = upVal is int ? (upVal).toDouble() : (upVal as double);
     return ReceiptItem(
       description: json['description'] ?? '',
       quantity: quantity,
@@ -53,6 +56,20 @@ class Receipt {
   final List<ReceiptItem> items;
   final double amountReceived;
   final String paymentMethod;
+
+  // Generate receipt number: RCP-YYYY-XXXX (XXXX = 4 random digits)
+  static String generateReceiptNumber() {
+    final year = DateTime.now().year;
+    final random = Random();
+    final randomDigits = (1000 + random.nextInt(9000)).toString();
+    return 'RCP-$year-$randomDigits';
+  }
+
+  // Alternative names for compatibility
+  String get receivedFrom => customerName;
+  String get approvedBy => issuer;
+  String get description => items.map((i) => i.description).join(', ');
+  double get amount => totalAmount;
 
   Receipt({
     this.receiptNumber = '',
@@ -88,11 +105,24 @@ class Receipt {
     );
   }
 
+  DocumentItem toDocumentItem() {
+    return DocumentItem(
+      id: receiptNumber,
+      customer: customerName,
+      type: 'Receipt',
+      date: date,
+      number: receiptNumber,
+      location: 'Local',
+      amount: totalAmount,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'receiptNumber': receiptNumber,
       'date': date,
       'customerName': customerName,
+      'issuer': issuer,
       'items': items.map((i) => i.toJson()).toList(),
       'amountReceived': amountReceived,
       'paymentMethod': paymentMethod,

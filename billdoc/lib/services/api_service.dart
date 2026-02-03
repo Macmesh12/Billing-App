@@ -88,6 +88,17 @@ class ApiService {
     throw Exception('Failed to get invoice config: ${response.statusCode}');
   }
 
+  /// Get invoice statistics (total estimated revenue)
+  static Future<Map<String, dynamic>> getInvoiceStats() async {
+    final response = await http
+        .get(Uri.parse('$baseUrl/invoices/api/stats/'))
+        .timeout(timeout);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to get invoice stats: ${response.statusCode}');
+  }
+
   // ============================================================================
   // RECEIPT APIs
   // ============================================================================
@@ -142,6 +153,17 @@ class ApiService {
       return response;
     }
     throw Exception('Failed to download receipt PDF: ${response.statusCode}');
+  }
+
+  /// Get receipt statistics (total money received)
+  static Future<Map<String, dynamic>> getReceiptStats() async {
+    final response = await http
+        .get(Uri.parse('$baseUrl/receipts/api/stats/'))
+        .timeout(timeout);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to get receipt stats: ${response.statusCode}');
   }
 
   // ============================================================================

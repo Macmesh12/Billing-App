@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:printing/printing.dart';
@@ -5,6 +6,8 @@ import '../providers/app_state.dart';
 import '../widgets/custom_button.dart';
 import '../utils/pdf_generator.dart';
 import '../models/waybill.dart';
+import '../services/api_service.dart';
+import 'package:path/path.dart' as path;
 
 class WaybillScreen extends StatefulWidget {
   const WaybillScreen({super.key});
@@ -15,6 +18,7 @@ class WaybillScreen extends StatefulWidget {
 
 class _WaybillScreenState extends State<WaybillScreen> {
   bool isEditMode = true;
+  int? savedWaybillId;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +105,7 @@ class _WaybillScreenState extends State<WaybillScreen> {
                 onChanged: (v) => appState.updateWaybillData(
                   waybill.copyWith(waybillNumber: v),
                 ),
+                readOnly: true,
               ),
             ),
             const SizedBox(width: 16),
@@ -702,6 +707,7 @@ class _WaybillScreenState extends State<WaybillScreen> {
     required String value,
     required Function(String) onChanged,
     int maxLines = 1,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -718,8 +724,14 @@ class _WaybillScreenState extends State<WaybillScreen> {
         TextFormField(
           initialValue: value,
           maxLines: maxLines,
-          onChanged: onChanged,
+          onChanged: readOnly ? null : onChanged,
+          readOnly: readOnly,
+          style: readOnly
+              ? const TextStyle(fontWeight: FontWeight.bold)
+              : null,
           decoration: InputDecoration(
+            filled: readOnly,
+            fillColor: readOnly ? Colors.grey.shade100 : null,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
@@ -800,7 +812,100 @@ class _WaybillScreenState extends State<WaybillScreen> {
   }
 
   Future<void> _exportPDF(BuildContext context, waybill) async {
-    final pdf = await PDFGenerator.generateWaybillPDF(waybill);
-    await Printing.layoutPdf(onLayout: (format) => pdf.save());
+    final appState = Provider.of<AppState>(context, listen: false);
+    final pdfExportPath = appState.settings.pdfExportPath;
+
+    if (pdfExportPath.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please set PDF export path in Settings'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading dialog
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 24),
+                  Text('Generating PDF...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    try {
+      // First save the waybill to Django if not already saved
+      if (savedWaybillId == null) {
+        final result = await ApiService.createWaybill({
+          'shipper_name': waybill.shipperName,
+          'consignee_name': waybill.consigneeName,
+          'issue_date': waybill.date,
+          'items_payload': waybill.items
+              .map(
+                (i) => {
+                  'description': i.description,
+                  'quantity': i.quantity,
+                  'weight': i.weight,
+                },
+              )
+              .toList(),
+        });
+        savedWaybillId = result['id'];
+      }
+
+      // Download PDF from Django backend
+      final response = await ApiService.downloadWaybillPDF(savedWaybillId!);
+
+      // Create waybills subfolder in pdfExportPath
+      final waybillsDir = Directory(path.join(pdfExportPath, 'waybills'));
+      if (!await waybillsDir.exists()) {
+        await waybillsDir.create(recursive: true);
+      }
+
+      // Save PDF file with waybill number and consignee name
+      final sanitizedConsignee = waybill.consigneeName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final fileName = '${waybill.waybillNumber}_$sanitizedConsignee.pdf';
+      final file = File(path.join(waybillsDir.path, fileName));
+      await file.writeAsBytes(response.bodyBytes);
+
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF exported successfully to ${file.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to export PDF: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../providers/app_state.dart';
 import '../widgets/custom_button.dart';
 import '../models/customer.dart';
@@ -51,7 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ]),
                   const SizedBox(height: 32),
                   _buildSection('File Paths', [
-                    _buildTextField(
+                    _buildFolderPicker(
                       label: 'Draft Save Path',
                       value: settings.draftSavePath,
                       onChanged: (v) => appState.updateSettings(
@@ -59,7 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField(
+                    _buildFolderPicker(
                       label: 'PDF Export Path',
                       value: settings.pdfExportPath,
                       onChanged: (v) => appState.updateSettings(
@@ -159,14 +160,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   CustomButton(
                     text: 'Save Settings',
                     icon: Icons.save,
-                    onPressed: () {
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Settings saved successfully'),
-                          ),
-                        );
-                        appState.setActiveView('home');
+                        // Refresh documents from the new paths
+                        await appState.refreshDocuments();
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Settings saved successfully'),
+                            ),
+                          );
+                          appState.setActiveView('home');
+                        }
                       }
                     },
                   ),
@@ -233,6 +239,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
               vertical: 12,
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFolderPicker({
+    required String label,
+    required String value,
+    required Function(String) onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF374151),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey.shade50,
+                ),
+                child: Text(
+                  value.isEmpty ? 'No folder selected' : value,
+                  style: TextStyle(
+                    color: value.isEmpty ? Colors.grey : Colors.black,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.folder_open),
+              label: const Text('Browse'),
+              onPressed: () async {
+                String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+                if (selectedDirectory != null) {
+                  onChanged(selectedDirectory);
+                }
+              },
+            ),
+          ],
         ),
       ],
     );

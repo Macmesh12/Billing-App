@@ -5,6 +5,7 @@ import '../models/receipt.dart';
 import '../models/waybill.dart';
 import '../models/settings.dart';
 import '../models/customer.dart';
+import '../services/storage_service.dart';
 
 class AppState with ChangeNotifier {
   String _activeView = 'home';
@@ -13,6 +14,7 @@ class AppState with ChangeNotifier {
   Receipt _receiptData = Receipt();
   Waybill _waybillData = Waybill();
   AppSettings _settings = AppSettings();
+  bool _setupComplete = false;
 
   // Lists for recent and draft items
   List<Invoice> _recentInvoices = [];
@@ -28,6 +30,7 @@ class AppState with ChangeNotifier {
   Receipt get receiptData => _receiptData;
   Waybill get waybillData => _waybillData;
   AppSettings get settings => _settings;
+  bool get setupComplete => _setupComplete;
 
   List<Invoice> get recentInvoices => _recentInvoices;
   List<Invoice> get draftInvoices => _draftInvoices;
@@ -67,7 +70,10 @@ class AppState with ChangeNotifier {
   }
 
   // Save invoice as draft
-  void saveInvoiceAsDraft(Invoice invoice) {
+  Future<void> saveInvoiceAsDraft(Invoice invoice) async {
+    // Save to file system
+    await StorageService.saveInvoiceDraft(invoice, _settings.draftSavePath);
+    
     // Remove if already exists
     _draftInvoices.removeWhere((i) => i.invoiceNumber == invoice.invoiceNumber);
     // Add to beginning of list
@@ -80,7 +86,10 @@ class AppState with ChangeNotifier {
   }
 
   // Save invoice to recents (finalized)
-  void saveInvoiceToRecents(Invoice invoice) {
+  Future<void> saveInvoiceToRecents(Invoice invoice) async {
+    // Save to file system
+    await StorageService.saveInvoiceToRecents(invoice, _settings.pdfExportPath);
+    
     // Remove from drafts if exists
     _draftInvoices.removeWhere((i) => i.invoiceNumber == invoice.invoiceNumber);
     // Remove from recents if already exists
@@ -97,7 +106,8 @@ class AppState with ChangeNotifier {
   }
 
   // Save receipt as draft
-  void saveReceiptAsDraft(Receipt receipt) {
+  Future<void> saveReceiptAsDraft(Receipt receipt) async {
+    await StorageService.saveReceiptDraft(receipt, _settings.draftSavePath);
     _draftReceipts.removeWhere((r) => r.receiptNumber == receipt.receiptNumber);
     _draftReceipts.insert(0, receipt);
     if (_draftReceipts.length > 50) {
@@ -107,7 +117,8 @@ class AppState with ChangeNotifier {
   }
 
   // Save receipt to recents
-  void saveReceiptToRecents(Receipt receipt) {
+  Future<void> saveReceiptToRecents(Receipt receipt) async {
+    await StorageService.saveReceiptToRecents(receipt, _settings.pdfExportPath);
     _draftReceipts.removeWhere((r) => r.receiptNumber == receipt.receiptNumber);
     _recentReceipts.removeWhere(
       (r) => r.receiptNumber == receipt.receiptNumber,
@@ -120,7 +131,8 @@ class AppState with ChangeNotifier {
   }
 
   // Save waybill as draft
-  void saveWaybillAsDraft(Waybill waybill) {
+  Future<void> saveWaybillAsDraft(Waybill waybill) async {
+    await StorageService.saveWaybillDraft(waybill, _settings.draftSavePath);
     _draftWaybills.removeWhere((w) => w.waybillNumber == waybill.waybillNumber);
     _draftWaybills.insert(0, waybill);
     if (_draftWaybills.length > 50) {
@@ -130,7 +142,8 @@ class AppState with ChangeNotifier {
   }
 
   // Save waybill to recents
-  void saveWaybillToRecents(Waybill waybill) {
+  Future<void> saveWaybillToRecents(Waybill waybill) async {
+    await StorageService.saveWaybillToRecents(waybill, _settings.pdfExportPath);
     _draftWaybills.removeWhere((w) => w.waybillNumber == waybill.waybillNumber);
     _recentWaybills.removeWhere(
       (w) => w.waybillNumber == waybill.waybillNumber,
@@ -143,17 +156,20 @@ class AppState with ChangeNotifier {
   }
 
   // Delete from drafts
-  void deleteInvoiceDraft(Invoice invoice) {
+  Future<void> deleteInvoiceDraft(Invoice invoice) async {
+    await StorageService.deleteInvoiceDraft(invoice, _settings.draftSavePath);
     _draftInvoices.removeWhere((i) => i.invoiceNumber == invoice.invoiceNumber);
     notifyListeners();
   }
 
-  void deleteReceiptDraft(Receipt receipt) {
+  Future<void> deleteReceiptDraft(Receipt receipt) async {
+    await StorageService.deleteReceiptDraft(receipt, _settings.draftSavePath);
     _draftReceipts.removeWhere((r) => r.receiptNumber == receipt.receiptNumber);
     notifyListeners();
   }
 
-  void deleteWaybillDraft(Waybill waybill) {
+  Future<void> deleteWaybillDraft(Waybill waybill) async {
+    await StorageService.deleteWaybillDraft(waybill, _settings.draftSavePath);
     _draftWaybills.removeWhere((w) => w.waybillNumber == waybill.waybillNumber);
     notifyListeners();
   }
@@ -181,5 +197,40 @@ class AppState with ChangeNotifier {
     customers.removeWhere((c) => c.id == customerId);
     _settings = _settings.copyWith(customers: customers);
     notifyListeners();
+  }
+
+  void completeSetup() {
+    _setupComplete = true;
+    notifyListeners();
+    // Load documents from file system after setup
+    loadAllDocuments();
+  }
+
+  // Load all documents from file system
+  Future<void> loadAllDocuments() async {
+    if (_settings.draftSavePath.isEmpty && _settings.pdfExportPath.isEmpty) {
+      return;
+    }
+
+    try {
+      // Load drafts
+      _draftInvoices = await StorageService.loadInvoiceDrafts(_settings.draftSavePath);
+      _draftReceipts = await StorageService.loadReceiptDrafts(_settings.draftSavePath);
+      _draftWaybills = await StorageService.loadWaybillDrafts(_settings.draftSavePath);
+
+      // Load recents
+      _recentInvoices = await StorageService.loadRecentInvoices(_settings.pdfExportPath);
+      _recentReceipts = await StorageService.loadRecentReceipts(_settings.pdfExportPath);
+      _recentWaybills = await StorageService.loadRecentWaybills(_settings.pdfExportPath);
+
+      notifyListeners();
+    } catch (e) {
+      print('Error loading documents: $e');
+    }
+  }
+
+  // Refresh documents (call this when paths change)
+  Future<void> refreshDocuments() async {
+    await loadAllDocuments();
   }
 }
