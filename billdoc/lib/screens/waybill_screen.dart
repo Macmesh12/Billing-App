@@ -1,10 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:printing/printing.dart';
 import '../providers/app_state.dart';
 import '../widgets/custom_button.dart';
-import '../utils/pdf_generator.dart';
 import '../models/waybill.dart';
 import '../services/api_service.dart';
 import 'package:path/path.dart' as path;
@@ -19,6 +17,34 @@ class WaybillScreen extends StatefulWidget {
 class _WaybillScreenState extends State<WaybillScreen> {
   bool isEditMode = true;
   int? savedWaybillId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNextWaybillNumber();
+  }
+
+  Future<void> _loadNextWaybillNumber() async {
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final waybill = appState.waybillData;
+      
+      // Only fetch new number if current waybill number is empty or a placeholder
+      if (waybill.waybillNumber.isEmpty || waybill.waybillNumber.startsWith('WB-')) {
+        final nextNumber = await ApiService.getNextWaybillNumber(increment: false);
+        appState.updateWaybillData(waybill.copyWith(waybillNumber: nextNumber));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load waybill number: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

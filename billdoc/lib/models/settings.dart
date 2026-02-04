@@ -47,4 +47,34 @@ class AppSettings {
       invoiceNote: invoiceNote ?? this.invoiceNote,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'applyTax': applyTax,
+      'nhilRate': nhilRate,
+      'getfundRate': getfundRate,
+      'vatRate': vatRate,
+      'enableCustomerManagement': enableCustomerManagement,
+      'customers': customers.map((c) => c.toJson()).toList(),
+      'draftSavePath': draftSavePath,
+      'pdfExportPath': pdfExportPath,
+      'invoiceNote': invoiceNote,
+    };
+  }
+
+  factory AppSettings.fromJson(Map<String, dynamic> json) {
+    return AppSettings(
+      applyTax: json['applyTax'] as bool? ?? true,
+      nhilRate: (json['nhilRate'] as num?)?.toDouble() ?? 2.5,
+      getfundRate: (json['getfundRate'] as num?)?.toDouble() ?? 2.5,
+      vatRate: (json['vatRate'] as num?)?.toDouble() ?? 15.0,
+      enableCustomerManagement: json['enableCustomerManagement'] as bool? ?? false,
+      customers: (json['customers'] as List?)
+          ?.map((c) => Customer.fromJson(c as Map<String, dynamic>))
+          .toList() ?? [],
+      draftSavePath: json['draftSavePath'] as String? ?? '',
+      pdfExportPath: json['pdfExportPath'] as String? ?? '',
+      invoiceNote: json['invoiceNote'] as String? ?? '',
+    );
+  }
 }

@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:path/path.dart' as path;
 import '../providers/app_state.dart';
 import '../models/document_item.dart';
 import '../models/invoice.dart';
@@ -175,23 +177,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     return doc as DocumentItem;
                   }).toList(),
                   onView: (id) {
+                    // Load the selected document and navigate to edit
                     if (appState.activeTab == 'invoices') {
+                      final invoice = appState.recentInvoices.firstWhere(
+                        (i) => i.invoiceNumber == id,
+                        orElse: () => Invoice(),
+                      );
+                      appState.updateInvoiceData(invoice);
                       appState.setActiveView('invoice');
                     } else if (appState.activeTab == 'receipts') {
+                      final receipt = appState.recentReceipts.firstWhere(
+                        (r) => r.receiptNumber == id,
+                        orElse: () => Receipt(),
+                      );
+                      appState.updateReceiptData(receipt);
                       appState.setActiveView('receipt');
                     } else {
+                      final waybill = appState.recentWaybills.firstWhere(
+                        (w) => w.waybillNumber == id,
+                        orElse: () => Waybill(),
+                      );
+                      appState.updateWaybillData(waybill);
                       appState.setActiveView('waybill');
                     }
                   },
-                  onDownload: (id) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Downloading document $id')),
-                    );
+                  onDownload: (id) async {
+                    await _downloadRecentPdf(context, appState, id);
                   },
-                  onDelete: (id) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Deleting document $id')),
-                    );
+                  onDelete: (id) async {
+                    await _deleteRecent(context, appState, id);
                   },
                 ),
               ],
@@ -241,31 +255,67 @@ class _HomeScreenState extends State<HomeScreen> {
                 CustomButton(
                   text: _getCreateButtonText(appState.activeTab),
                   icon: Icons.add,
-                  onPressed: () {
+                  onPressed: () async {
                     if (appState.activeTab == 'invoices') {
-                      // Generate new invoice number and create fresh invoice
-                      final newInvoice = Invoice(
-                        invoiceNumber: Invoice.generateInvoiceNumber(),
-                        date: DateTime.now().toString().split(' ')[0],
-                      );
-                      appState.updateInvoiceData(newInvoice);
-                      appState.setActiveView('invoice');
+                      // Get next invoice number from backend
+                      try {
+                        final nextNumber = await ApiService.getNextInvoiceNumber(increment: false);
+                        final newInvoice = Invoice(
+                          invoiceNumber: nextNumber,
+                          date: DateTime.now().toString().split(' ')[0],
+                        );
+                        appState.updateInvoiceData(newInvoice);
+                        appState.setActiveView('invoice');
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to generate invoice number: $e'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      }
                     } else if (appState.activeTab == 'receipts') {
-                      // Generate new receipt number and create fresh receipt
-                      final newReceipt = Receipt(
-                        receiptNumber: Receipt.generateReceiptNumber(),
-                        date: DateTime.now().toString().split(' ')[0],
-                      );
-                      appState.updateReceiptData(newReceipt);
-                      appState.setActiveView('receipt');
+                      // Get next receipt number from backend
+                      try {
+                        final nextNumber = await ApiService.getNextReceiptNumber(increment: false);
+                        final newReceipt = Receipt(
+                          receiptNumber: nextNumber,
+                          date: DateTime.now().toString().split(' ')[0],
+                        );
+                        appState.updateReceiptData(newReceipt);
+                        appState.setActiveView('receipt');
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to generate receipt number: $e'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      }
                     } else {
-                      // Generate new waybill number and create fresh waybill
-                      final newWaybill = Waybill(
-                        waybillNumber: Waybill.generateWaybillNumber(),
-                        date: DateTime.now().toString().split(' ')[0],
-                      );
-                      appState.updateWaybillData(newWaybill);
-                      appState.setActiveView('waybill');
+                      // Get next waybill number from backend
+                      try {
+                        final nextNumber = await ApiService.getNextWaybillNumber(increment: false);
+                        final newWaybill = Waybill(
+                          waybillNumber: nextNumber,
+                          date: DateTime.now().toString().split(' ')[0],
+                        );
+                        appState.updateWaybillData(newWaybill);
+                        appState.setActiveView('waybill');
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to generate waybill number: $e'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      }
                     }
                   },
                 ),
@@ -280,23 +330,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     return doc as DocumentItem;
                   }).toList(),
                   onView: (id) {
+                    // Load the selected draft and navigate to edit
                     if (appState.activeTab == 'invoices') {
+                      final invoice = appState.draftInvoices.firstWhere(
+                        (i) => i.invoiceNumber == id,
+                        orElse: () => Invoice(),
+                      );
+                      appState.updateInvoiceData(invoice);
                       appState.setActiveView('invoice');
                     } else if (appState.activeTab == 'receipts') {
+                      final receipt = appState.draftReceipts.firstWhere(
+                        (r) => r.receiptNumber == id,
+                        orElse: () => Receipt(),
+                      );
+                      appState.updateReceiptData(receipt);
                       appState.setActiveView('receipt');
                     } else {
+                      final waybill = appState.draftWaybills.firstWhere(
+                        (w) => w.waybillNumber == id,
+                        orElse: () => Waybill(),
+                      );
+                      appState.updateWaybillData(waybill);
                       appState.setActiveView('waybill');
                     }
                   },
-                  onDownload: (id) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Downloading draft $id')),
-                    );
+                  onDownload: (id) async {
+                    await _downloadDraftPdf(context, appState, id);
                   },
-                  onDelete: (id) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Deleting draft $id')),
-                    );
+                  onDelete: (id) async {
+                    await _deleteDraft(context, appState, id);
                   },
                 ),
               ],
@@ -510,5 +572,352 @@ class _HomeScreenState extends State<HomeScreen> {
     if (appState.activeTab == 'invoices') return appState.draftInvoices;
     if (appState.activeTab == 'receipts') return appState.draftReceipts;
     return appState.draftWaybills;
+  }
+
+  // Download PDF for draft documents
+  Future<void> _downloadDraftPdf(BuildContext context, AppState appState, String id) async {
+    final pdfExportPath = appState.settings.pdfExportPath;
+    
+    if (pdfExportPath.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please set PDF export path in Settings'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 24),
+                  Text('Generating PDF...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    try {
+      if (appState.activeTab == 'invoices') {
+        final invoice = appState.draftInvoices.firstWhere((i) => i.invoiceNumber == id);
+        await _generateInvoicePdf(context, invoice, pdfExportPath);
+      } else if (appState.activeTab == 'receipts') {
+        final receipt = appState.draftReceipts.firstWhere((r) => r.receiptNumber == id);
+        await _generateReceiptPdf(context, receipt, pdfExportPath);
+      } else {
+        final waybill = appState.draftWaybills.firstWhere((w) => w.waybillNumber == id);
+        await _generateWaybillPdf(context, waybill, pdfExportPath);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Download PDF for recent documents
+  Future<void> _downloadRecentPdf(BuildContext context, AppState appState, String id) async {
+    final pdfExportPath = appState.settings.pdfExportPath;
+    
+    if (pdfExportPath.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please set PDF export path in Settings'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 24),
+                  Text('Generating PDF...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    try {
+      if (appState.activeTab == 'invoices') {
+        final invoice = appState.recentInvoices.firstWhere((i) => i.invoiceNumber == id);
+        await _generateInvoicePdf(context, invoice, pdfExportPath);
+      } else if (appState.activeTab == 'receipts') {
+        final receipt = appState.recentReceipts.firstWhere((r) => r.receiptNumber == id);
+        await _generateReceiptPdf(context, receipt, pdfExportPath);
+      } else {
+        final waybill = appState.recentWaybills.firstWhere((w) => w.waybillNumber == id);
+        await _generateWaybillPdf(context, waybill, pdfExportPath);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _generateInvoicePdf(BuildContext context, Invoice invoice, String pdfExportPath) async {
+    try {
+      // Create invoice on backend and get PDF
+      final result = await ApiService.createInvoice({
+        'customer_name': invoice.customerName,
+        'issue_date': invoice.date,
+        'items_payload': invoice.items.map((i) => {
+          'description': i.description,
+          'qty': i.quantity,
+          'unit_price': i.unitPrice,
+          'discount': i.discount,
+          'amount': i.amount,
+        }).toList(),
+      });
+      
+      final invoiceId = result['id'];
+      final response = await ApiService.downloadInvoicePDF(invoiceId);
+
+      // Create invoices subfolder
+      final invoicesDir = Directory(path.join(pdfExportPath, 'invoices'));
+      if (!await invoicesDir.exists()) {
+        await invoicesDir.create(recursive: true);
+      }
+
+      // Save PDF file
+      final sanitizedCustomer = invoice.customerName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final fileName = '${invoice.invoiceNumber}_$sanitizedCustomer.pdf';
+      final file = File(path.join(invoicesDir.path, fileName));
+      await file.writeAsBytes(response.bodyBytes);
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF saved to ${file.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> _generateReceiptPdf(BuildContext context, Receipt receipt, String pdfExportPath) async {
+    try {
+      // Create receipt on backend and get PDF
+      final result = await ApiService.createReceipt({
+        'received_from': receipt.customerName,
+        'issue_date': receipt.date,
+        'amount': receipt.totalAmount,
+        'payment_method': receipt.paymentMethod,
+        'description': receipt.items.isNotEmpty ? receipt.items.first.description : '',
+        'approved_by': receipt.issuer,
+      });
+      
+      final receiptId = result['id'];
+      final response = await ApiService.downloadReceiptPDF(receiptId);
+
+      // Create receipts subfolder
+      final receiptsDir = Directory(path.join(pdfExportPath, 'receipts'));
+      if (!await receiptsDir.exists()) {
+        await receiptsDir.create(recursive: true);
+      }
+
+      // Save PDF file
+      final sanitizedCustomer = receipt.customerName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final fileName = '${receipt.receiptNumber}_$sanitizedCustomer.pdf';
+      final file = File(path.join(receiptsDir.path, fileName));
+      await file.writeAsBytes(response.bodyBytes);
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF saved to ${file.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> _generateWaybillPdf(BuildContext context, Waybill waybill, String pdfExportPath) async {
+    try {
+      // Create waybill on backend and get PDF
+      final result = await ApiService.createWaybill({
+        'consignee_name': waybill.consigneeName,
+        'consignee_address': waybill.consigneeAddress,
+        'destination': waybill.destinationLocation,
+        'issue_date': waybill.date,
+        'items_payload': waybill.items.map((i) => {
+          'description': i.description,
+          'quantity': i.quantity,
+          'weight': i.weight,
+          'unit': i.unit,
+        }).toList(),
+      });
+      
+      final waybillId = result['id'];
+      final response = await ApiService.downloadWaybillPDF(waybillId);
+
+      // Create waybills subfolder
+      final waybillsDir = Directory(path.join(pdfExportPath, 'waybills'));
+      if (!await waybillsDir.exists()) {
+        await waybillsDir.create(recursive: true);
+      }
+
+      // Save PDF file
+      final sanitizedCustomer = waybill.consigneeName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final fileName = '${waybill.waybillNumber}_$sanitizedCustomer.pdf';
+      final file = File(path.join(waybillsDir.path, fileName));
+      await file.writeAsBytes(response.bodyBytes);
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF saved to ${file.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Delete draft document
+  Future<void> _deleteDraft(BuildContext context, AppState appState, String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Draft'),
+        content: const Text('Are you sure you want to delete this draft?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        if (appState.activeTab == 'invoices') {
+          final invoice = appState.draftInvoices.firstWhere((i) => i.invoiceNumber == id);
+          await appState.deleteInvoiceDraft(invoice);
+        } else if (appState.activeTab == 'receipts') {
+          final receipt = appState.draftReceipts.firstWhere((r) => r.receiptNumber == id);
+          await appState.deleteReceiptDraft(receipt);
+        } else {
+          final waybill = appState.draftWaybills.firstWhere((w) => w.waybillNumber == id);
+          await appState.deleteWaybillDraft(waybill);
+        }
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Draft deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete draft: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // Delete recent document
+  Future<void> _deleteRecent(BuildContext context, AppState appState, String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Document'),
+        content: const Text('Are you sure you want to delete this document?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Document deleted'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 }

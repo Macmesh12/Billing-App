@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/invoice.dart';
 import '../models/receipt.dart';
 import '../models/waybill.dart';
@@ -23,6 +25,10 @@ class AppState with ChangeNotifier {
   List<Receipt> _draftReceipts = [];
   List<Waybill> _recentWaybills = [];
   List<Waybill> _draftWaybills = [];
+
+  AppState() {
+    _loadSettings();
+  }
 
   String get activeView => _activeView;
   String get activeTab => _activeTab;
@@ -66,7 +72,34 @@ class AppState with ChangeNotifier {
 
   void updateSettings(AppSettings settings) {
     _settings = settings;
+    _saveSettings();
     notifyListeners();
+  }
+
+  // Load settings from SharedPreferences
+  Future<void> _loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final settingsJson = prefs.getString('app_settings');
+      if (settingsJson != null) {
+        final Map<String, dynamic> json = jsonDecode(settingsJson);
+        _settings = AppSettings.fromJson(json);
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error loading settings: $e');
+    }
+  }
+
+  // Save settings to SharedPreferences
+  Future<void> _saveSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final settingsJson = jsonEncode(_settings.toJson());
+      await prefs.setString('app_settings', settingsJson);
+    } catch (e) {
+      print('Error saving settings: $e');
+    }
   }
 
   // Save invoice as draft
@@ -179,6 +212,7 @@ class AppState with ChangeNotifier {
     final customers = List<Customer>.from(_settings.customers);
     customers.add(customer);
     _settings = _settings.copyWith(customers: customers);
+    _saveSettings();
     notifyListeners();
   }
 
@@ -188,6 +222,7 @@ class AppState with ChangeNotifier {
     if (index != -1) {
       customers[index] = customer;
       _settings = _settings.copyWith(customers: customers);
+      _saveSettings();
       notifyListeners();
     }
   }
@@ -196,6 +231,7 @@ class AppState with ChangeNotifier {
     final customers = List<Customer>.from(_settings.customers);
     customers.removeWhere((c) => c.id == customerId);
     _settings = _settings.copyWith(customers: customers);
+    _saveSettings();
     notifyListeners();
   }
 

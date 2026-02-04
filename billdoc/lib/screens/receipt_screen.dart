@@ -1,10 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:printing/printing.dart';
 import '../providers/app_state.dart';
 import '../widgets/custom_button.dart';
-import '../utils/pdf_generator.dart';
 import '../models/receipt.dart';
 import '../services/api_service.dart';
 import 'package:path/path.dart' as path;
@@ -19,6 +17,34 @@ class ReceiptScreen extends StatefulWidget {
 class _ReceiptScreenState extends State<ReceiptScreen> {
   bool isEditMode = true;
   int? savedReceiptId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNextReceiptNumber();
+  }
+
+  Future<void> _loadNextReceiptNumber() async {
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final receipt = appState.receiptData;
+      
+      // Only fetch new number if current receipt number is empty or a placeholder
+      if (receipt.receiptNumber.isEmpty || receipt.receiptNumber.startsWith('RCP-')) {
+        final nextNumber = await ApiService.getNextReceiptNumber(increment: false);
+        appState.updateReceiptData(receipt.copyWith(receiptNumber: nextNumber));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load receipt number: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -740,6 +766,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
     required Function(String) onChanged,
     int maxLines = 1,
     TextInputType? keyboardType,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -757,6 +784,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
           initialValue: value,
           maxLines: maxLines,
           keyboardType: keyboardType,
+          readOnly: readOnly,
           onChanged: onChanged,
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

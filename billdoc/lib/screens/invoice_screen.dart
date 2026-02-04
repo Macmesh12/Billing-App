@@ -19,6 +19,34 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
   int? savedInvoiceId;
 
   @override
+  void initState() {
+    super.initState();
+    _loadNextInvoiceNumber();
+  }
+
+  Future<void> _loadNextInvoiceNumber() async {
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final invoice = appState.invoiceData;
+      
+      // Only fetch new number if current invoice number is empty or a placeholder
+      if (invoice.invoiceNumber.isEmpty || invoice.invoiceNumber.startsWith('INV-')) {
+        final nextNumber = await ApiService.getNextInvoiceNumber(increment: false);
+        appState.updateInvoiceData(invoice.copyWith(invoiceNumber: nextNumber));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load invoice number: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final invoice = appState.invoiceData;
@@ -399,6 +427,15 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           child: Column(
             children: [
               _buildTotalRow('Subtotal', invoice.subtotal, 'GHS'),
+              if (invoice.customerPreviousBalance > 0) ...[
+                const Divider(height: 16),
+                _buildTotalRow(
+                  'Previous Balance',
+                  invoice.customerPreviousBalance,
+                  'GHS',
+                  color: Colors.orange,
+                ),
+              ],
               if (settings.applyTax) ...[
                 _buildTotalRow(
                   'NHIL (${settings.nhilRate}%)',
@@ -424,7 +461,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                   nhilRate: settings.nhilRate,
                   getfundRate: settings.getfundRate,
                   vatRate: settings.vatRate,
-                ),
+                ) + invoice.customerPreviousBalance,
                 'GHS',
                 isTotal: true,
               ),
@@ -649,6 +686,15 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         Column(
           children: [
             _buildTotalRow('Subtotal', invoice.subtotal, 'GHS'),
+            if (invoice.customerPreviousBalance > 0) ...[
+              const Divider(height: 16),
+              _buildTotalRow(
+                'Previous Balance',
+                invoice.customerPreviousBalance,
+                'GHS',
+                color: Colors.orange,
+              ),
+            ],
             if (settings.applyTax) ...[
               _buildTotalRow(
                 'NHIL (${settings.nhilRate}%)',
@@ -674,7 +720,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 nhilRate: settings.nhilRate,
                 getfundRate: settings.getfundRate,
                 vatRate: settings.vatRate,
-              ),
+              ) + invoice.customerPreviousBalance,
               'GHS',
               isTotal: true,
             ),
@@ -745,7 +791,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     double amount,
     String currency, {
     bool isTotal = false,
+    Color? color,
   }) {
+    final textColor = color ?? (isTotal ? Colors.black : Colors.black87);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -758,6 +806,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
               style: TextStyle(
                 fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
                 fontSize: isTotal ? 16 : 14,
+                color: textColor,
               ),
             ),
           ),
@@ -770,6 +819,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
               style: TextStyle(
                 fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
                 fontSize: isTotal ? 18 : 14,
+                color: textColor,
               ),
             ),
           ),
@@ -933,7 +983,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           hint: const Text('Select Customer'),
-          value: null,
+          value: invoice.customerId.isEmpty ? null : invoice.customerId,
           items: customers.map((customer) {
             return DropdownMenuItem(
               value: customer.id,
@@ -945,7 +995,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
               final customer = customers.firstWhere((c) => c.id == customerId);
               appState.updateInvoiceData(
                 invoice.copyWith(
+                  customerId: customer.id,
                   customerName: customer.name,
+                  customerPreviousBalance: customer.previousBalance,
                 ),
               );
             }

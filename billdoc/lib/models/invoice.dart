@@ -46,6 +46,8 @@ class Invoice {
   final String date;
   final String dueDate;
   final String customerName;
+  final String customerId;
+  final double customerPreviousBalance;
   final String issuer;
   
   final List<InvoiceItem> items;
@@ -65,6 +67,8 @@ class Invoice {
     this.date = '',
     this.dueDate = '',
     this.customerName = '',
+    this.customerId = '',
+    this.customerPreviousBalance = 0.0,
     this.issuer = '',
     List<InvoiceItem>? items,
     this.subtotalOverride,
@@ -106,6 +110,8 @@ class Invoice {
     String? date,
     String? dueDate,
     String? customerName,
+    String? customerId,
+    double? customerPreviousBalance,
     String? issuer,
     List<InvoiceItem>? items,
     double? subtotalOverride,
@@ -116,6 +122,8 @@ class Invoice {
       date: date ?? this.date,
       dueDate: dueDate ?? this.dueDate,
       customerName: customerName ?? this.customerName,
+      customerId: customerId ?? this.customerId,
+      customerPreviousBalance: customerPreviousBalance ?? this.customerPreviousBalance,
       issuer: issuer ?? this.issuer,
       items: items ?? this.items,
       subtotalOverride: subtotalOverride ?? this.subtotalOverride,
