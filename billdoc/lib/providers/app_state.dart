@@ -8,6 +8,7 @@ import '../models/waybill.dart';
 import '../models/settings.dart';
 import '../models/customer.dart';
 import '../services/storage_service.dart';
+import '../services/pdf_service.dart';
 
 class AppState with ChangeNotifier {
   String _activeView = 'home';
@@ -73,6 +74,7 @@ class AppState with ChangeNotifier {
   void updateSettings(AppSettings settings) {
     _settings = settings;
     _saveSettings();
+    _loadInvoicesFromStorage();
     notifyListeners();
   }
 
@@ -86,8 +88,21 @@ class AppState with ChangeNotifier {
         _settings = AppSettings.fromJson(json);
         notifyListeners();
       }
+      await _loadInvoicesFromStorage();
     } catch (e) {
       print('Error loading settings: $e');
+    }
+  }
+
+  Future<void> _loadLocalInvoices() async {
+    try {
+      final drafts = await _invoiceRepo.getDraftInvoices();
+      final finals = await _invoiceRepo.getFinalizedInvoices();
+      _draftInvoices = drafts.map((r) => r.invoice).toList();
+      _recentInvoices = finals.map((r) => r.invoice).toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading local invoices: $e');
     }
   }
 
@@ -102,40 +117,28 @@ class AppState with ChangeNotifier {
     }
   }
 
+  Future<void> _loadInvoicesFromStorage() async {
+    try {
+      // Load drafts and finalized invoices from shared paths if configured
+      _draftInvoices = await StorageService.loadInvoiceDrafts(_settings.draftSavePath);
+      _recentInvoices = await StorageService.loadRecentInvoices(_settings.pdfExportPath);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading invoices from storage: $e');
+    }
+  }
+
   // Save invoice as draft
   Future<void> saveInvoiceAsDraft(Invoice invoice) async {
-    // Save to file system
     await StorageService.saveInvoiceDraft(invoice, _settings.draftSavePath);
-    
-    // Remove if already exists
-    _draftInvoices.removeWhere((i) => i.invoiceNumber == invoice.invoiceNumber);
-    // Add to beginning of list
-    _draftInvoices.insert(0, invoice);
-    // Keep only last 50 drafts
-    if (_draftInvoices.length > 50) {
-      _draftInvoices = _draftInvoices.sublist(0, 50);
-    }
-    notifyListeners();
+    await _loadInvoicesFromStorage();
   }
 
   // Save invoice to recents (finalized)
   Future<void> saveInvoiceToRecents(Invoice invoice) async {
-    // Save to file system
     await StorageService.saveInvoiceToRecents(invoice, _settings.pdfExportPath);
-    
-    // Remove from drafts if exists
-    _draftInvoices.removeWhere((i) => i.invoiceNumber == invoice.invoiceNumber);
-    // Remove from recents if already exists
-    _recentInvoices.removeWhere(
-      (i) => i.invoiceNumber == invoice.invoiceNumber,
-    );
-    // Add to beginning of recents
-    _recentInvoices.insert(0, invoice);
-    // Keep only last 100 recents
-    if (_recentInvoices.length > 100) {
-      _recentInvoices = _recentInvoices.sublist(0, 100);
-    }
-    notifyListeners();
+    await PdfService.generateAndSave(invoice, directory: _settings.pdfExportPath);
+    await _loadInvoicesFromStorage();
   }
 
   // Save receipt as draft
@@ -191,8 +194,7 @@ class AppState with ChangeNotifier {
   // Delete from drafts
   Future<void> deleteInvoiceDraft(Invoice invoice) async {
     await StorageService.deleteInvoiceDraft(invoice, _settings.draftSavePath);
-    _draftInvoices.removeWhere((i) => i.invoiceNumber == invoice.invoiceNumber);
-    notifyListeners();
+    await _loadInvoicesFromStorage();
   }
 
   Future<void> deleteReceiptDraft(Receipt receipt) async {

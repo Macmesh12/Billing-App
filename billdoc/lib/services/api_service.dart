@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'calculator.dart';
+import 'settings_service.dart';
 
 class ApiService {
   // Base URL for Django backend - update this with your actual backend URL
@@ -10,7 +12,35 @@ class ApiService {
   // INVOICE APIs
   // ============================================================================
 
-  /// Calculate invoice preview totals without saving
+  /// Calculate invoice totals locally using Flutter calculator
+  /// Falls back to API if local calculation fails
+  static Future<Map<String, dynamic>> calculateInvoiceTotalsLocal(
+    List<Map<String, dynamic>> items, {
+    bool useApiAsBackup = true,
+  }) async {
+    try {
+      // Get tax settings
+      final taxSettings = await SettingsService.getTaxSettings();
+      
+      // Calculate using local Dart calculator
+      final totals = Calculator.calculateTotals(items, taxSettings);
+      
+      return totals.toJson();
+    } catch (e) {
+      print('Local calculation failed: $e');
+      
+      if (useApiAsBackup) {
+        // Fallback to API calculation
+        return calculateInvoicePreview({
+          'items_payload': jsonEncode(items),
+        });
+      }
+      
+      rethrow;
+    }
+  }
+
+  /// Calculate invoice preview totals without saving (API-based)
   static Future<Map<String, dynamic>> calculateInvoicePreview(Map<String, dynamic> data) async {
     final response = await http
         .post(
