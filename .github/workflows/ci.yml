@@ -4,7 +4,6 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'backend/**'
       - 'billdoc/**'
       - '.github/workflows/**'
   pull_request:
@@ -12,58 +11,12 @@ on:
 
 env:
   FLUTTER_VERSION: '3.41.0'
-  PYTHON_VERSION: '3.11'
 
 jobs:
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Test Backend Build
-  # ─────────────────────────────────────────────────────────────────────────────
-  test-backend:
-    name: Test Backend Build
-    runs-on: windows-latest
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-          cache-dependency-path: 'backend/requirements.txt'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-
-      - name: Run Django tests
-        working-directory: backend
-        run: python manage.py test invoices receipts waybills --verbosity=2
-
-      - name: Test PyInstaller build
-        run: |
-          pip install pyinstaller
-          cd backend
-          pyinstaller --noconfirm --clean --log-level=WARN --onedir --name billing-backend runner.py
-
-      - name: Verify executable exists
-        run: |
-          if (Test-Path "backend/dist/billing-backend/billing-backend.exe") {
-            Write-Host "✓ Backend executable created successfully"
-          } else {
-            Write-Error "✗ Backend executable not found"
-            exit 1
-          }
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Test Flutter Build
-  # ─────────────────────────────────────────────────────────────────────────────
   test-flutter:
     name: Test Flutter Build
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -86,11 +39,6 @@ jobs:
         working-directory: billdoc
         run: flutter analyze --no-fatal-infos
 
-      - name: Run tests
-        working-directory: billdoc
-        run: flutter test
-        continue-on-error: true  # Continue even if no tests exist
-
       - name: Build Windows release
         working-directory: billdoc
         run: flutter build windows --release
@@ -98,8 +46,8 @@ jobs:
       - name: Verify executable exists
         run: |
           if (Test-Path "billdoc/build/windows/x64/runner/Release/billdoc.exe") {
-            Write-Host "✓ Flutter executable created successfully"
+            Write-Host "billdoc.exe created successfully"
           } else {
-            Write-Error "✗ Flutter executable not found"
+            Write-Error "billdoc.exe not found"
             exit 1
           }

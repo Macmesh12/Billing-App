@@ -5,6 +5,7 @@ import '../providers/app_state.dart';
 import '../widgets/custom_button.dart';
 import '../models/receipt.dart';
 import '../services/api_service.dart';
+import '../services/pdf_service.dart';
 import 'package:path/path.dart' as path;
 
 class ReceiptScreen extends StatefulWidget {
@@ -16,7 +17,6 @@ class ReceiptScreen extends StatefulWidget {
 
 class _ReceiptScreenState extends State<ReceiptScreen> {
   bool isEditMode = true;
-  int? savedReceiptId;
 
   @override
   void initState() {
@@ -838,21 +838,8 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
     }
 
     try {
-      // First save the receipt to Django if not already saved
-      if (savedReceiptId == null) {
-        final result = await ApiService.createReceipt({
-          'received_from': receipt.receivedFrom,
-          'issue_date': receipt.date,
-          'amount': receipt.amount,
-          'payment_method': receipt.paymentMethod,
-          'description': receipt.description,
-          'approved_by': receipt.approvedBy,
-        });
-        savedReceiptId = result['id'];
-      }
-
-      // Download PDF from Django backend
-      final response = await ApiService.downloadReceiptPDF(savedReceiptId!);
+      // Generate PDF locally
+      final pdfBytes = await PdfService.generateReceiptPdfData(receipt);
 
       // Create receipts subfolder in pdfExportPath
       final receiptsDir = Directory(path.join(pdfExportPath, 'receipts'));
@@ -864,7 +851,10 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       final sanitizedCustomer = receipt.customerName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
       final fileName = '${receipt.receiptNumber}_$sanitizedCustomer.pdf';
       final file = File(path.join(receiptsDir.path, fileName));
-      await file.writeAsBytes(response.bodyBytes);
+      await file.writeAsBytes(pdfBytes);
+
+      // Also save as finalized
+      await appState.saveReceiptToRecents(receipt);
 
       if (context.mounted) {
         Navigator.pop(context); // Close loading dialog

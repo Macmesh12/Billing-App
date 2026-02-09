@@ -5,6 +5,7 @@ import '../providers/app_state.dart';
 import '../models/invoice.dart';
 import '../widgets/custom_button.dart';
 import '../services/api_service.dart';
+import '../services/pdf_service.dart';
 import 'package:path/path.dart' as path;
 
 class InvoiceScreen extends StatefulWidget {
@@ -16,7 +17,6 @@ class InvoiceScreen extends StatefulWidget {
 
 class _InvoiceScreenState extends State<InvoiceScreen> {
   bool isEditMode = true;
-  int? savedInvoiceId;
 
   @override
   void initState() {
@@ -912,28 +912,8 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     }
 
     try {
-      // First save the invoice to Django if not already saved
-      if (savedInvoiceId == null) {
-        final result = await ApiService.createInvoice({
-          'customer_name': invoice.customerName,
-          'issue_date': invoice.date,
-          'items_payload': invoice.items
-              .map(
-                (i) => {
-                  'description': i.description,
-                  'qty': i.quantity,
-                  'unit_price': i.unitPrice,
-                  'discount': i.discount,
-                  'amount': i.amount,
-                },
-              )
-              .toList(),
-        });
-        savedInvoiceId = result['id'];
-      }
-
-      // Download PDF from Django backend
-      final response = await ApiService.downloadInvoicePDF(savedInvoiceId!);
+      // Generate PDF locally
+      final pdfBytes = await PdfService.generateInvoicePdfData(invoice);
 
       // Create invoices subfolder in pdfExportPath
       final invoicesDir = Directory(path.join(pdfExportPath, 'invoices'));
@@ -945,7 +925,10 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       final sanitizedCustomer = invoice.customerName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
       final fileName = '${invoice.invoiceNumber}_$sanitizedCustomer.pdf';
       final file = File(path.join(invoicesDir.path, fileName));
-      await file.writeAsBytes(response.bodyBytes);
+      await file.writeAsBytes(pdfBytes);
+
+      // Also save as finalized
+      await appState.saveInvoiceToRecents(invoice);
 
       if (context.mounted) {
         Navigator.pop(context); // Close loading dialog

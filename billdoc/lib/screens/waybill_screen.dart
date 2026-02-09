@@ -5,6 +5,7 @@ import '../providers/app_state.dart';
 import '../widgets/custom_button.dart';
 import '../models/waybill.dart';
 import '../services/api_service.dart';
+import '../services/pdf_service.dart';
 import 'package:path/path.dart' as path;
 
 class WaybillScreen extends StatefulWidget {
@@ -16,7 +17,6 @@ class WaybillScreen extends StatefulWidget {
 
 class _WaybillScreenState extends State<WaybillScreen> {
   bool isEditMode = true;
-  int? savedWaybillId;
 
   @override
   void initState() {
@@ -877,27 +877,8 @@ class _WaybillScreenState extends State<WaybillScreen> {
     }
 
     try {
-      // First save the waybill to Django if not already saved
-      if (savedWaybillId == null) {
-        final result = await ApiService.createWaybill({
-          'shipper_name': waybill.shipperName,
-          'consignee_name': waybill.consigneeName,
-          'issue_date': waybill.date,
-          'items_payload': waybill.items
-              .map(
-                (i) => {
-                  'description': i.description,
-                  'quantity': i.quantity,
-                  'weight': i.weight,
-                },
-              )
-              .toList(),
-        });
-        savedWaybillId = result['id'];
-      }
-
-      // Download PDF from Django backend
-      final response = await ApiService.downloadWaybillPDF(savedWaybillId!);
+      // Generate PDF locally
+      final pdfBytes = await PdfService.generateWaybillPdfData(waybill);
 
       // Create waybills subfolder in pdfExportPath
       final waybillsDir = Directory(path.join(pdfExportPath, 'waybills'));
@@ -909,7 +890,10 @@ class _WaybillScreenState extends State<WaybillScreen> {
       final sanitizedConsignee = waybill.consigneeName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
       final fileName = '${waybill.waybillNumber}_$sanitizedConsignee.pdf';
       final file = File(path.join(waybillsDir.path, fileName));
-      await file.writeAsBytes(response.bodyBytes);
+      await file.writeAsBytes(pdfBytes);
+
+      // Also save as finalized
+      await appState.saveWaybillToRecents(waybill);
 
       if (context.mounted) {
         Navigator.pop(context); // Close loading dialog

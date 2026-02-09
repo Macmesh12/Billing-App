@@ -94,18 +94,6 @@ class AppState with ChangeNotifier {
     }
   }
 
-  Future<void> _loadLocalInvoices() async {
-    try {
-      final drafts = await _invoiceRepo.getDraftInvoices();
-      final finals = await _invoiceRepo.getFinalizedInvoices();
-      _draftInvoices = drafts.map((r) => r.invoice).toList();
-      _recentInvoices = finals.map((r) => r.invoice).toList();
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading local invoices: $e');
-    }
-  }
-
   // Save settings to SharedPreferences
   Future<void> _saveSettings() async {
     try {

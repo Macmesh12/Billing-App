@@ -1,344 +1,150 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'dart:typed_data';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'calculator.dart';
 import 'settings_service.dart';
+import 'pdf_service.dart';
+import 'storage_service.dart';
+import '../models/invoice.dart';
+import '../models/receipt.dart';
+import '../models/waybill.dart';
 
+/// Fully local service — no backend HTTP calls.
+/// Provides document numbering, calculation, PDF generation, and stats
+/// using only local storage and the Dart calculator.
 class ApiService {
-  // Base URL for Django backend - update this with your actual backend URL
-  static const String baseUrl = 'http://localhost:8765';
-  static const Duration timeout = Duration(seconds: 30);
+  static const String _invoiceCounterKey = 'counter_invoice';
+  static const String _receiptCounterKey = 'counter_receipt';
+  static const String _waybillCounterKey = 'counter_waybill';
 
   // ============================================================================
-  // INVOICE APIs
+  // Document Number Generation (sequential, persisted via SharedPreferences)
   // ============================================================================
 
-  /// Calculate invoice totals locally using Flutter calculator
-  /// Falls back to API if local calculation fails
+  static Future<String> getNextInvoiceNumber({bool increment = false}) async {
+    return _nextNumber('INV', _invoiceCounterKey, increment: increment);
+  }
+
+  static Future<String> getNextReceiptNumber({bool increment = false}) async {
+    return _nextNumber('RCP', _receiptCounterKey, increment: increment);
+  }
+
+  static Future<String> getNextWaybillNumber({bool increment = false}) async {
+    return _nextNumber('WBL', _waybillCounterKey, increment: increment);
+  }
+
+  static Future<String> _nextNumber(String prefix, String key,
+      {bool increment = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    int current = prefs.getInt(key) ?? 0;
+    int next = current + 1;
+    if (increment) {
+      await prefs.setInt(key, next);
+    }
+    final year = DateTime.now().year;
+    return '$prefix-$year-${next.toString().padLeft(4, '0')}';
+  }
+
+  // ============================================================================
+  // Invoice — local calculation
+  // ============================================================================
+
+  /// Calculate invoice totals locally using Dart calculator
   static Future<Map<String, dynamic>> calculateInvoiceTotalsLocal(
     List<Map<String, dynamic>> items, {
-    bool useApiAsBackup = true,
+    bool useApiAsBackup = false,
   }) async {
-    try {
-      // Get tax settings
-      final taxSettings = await SettingsService.getTaxSettings();
-      
-      // Calculate using local Dart calculator
-      final totals = Calculator.calculateTotals(items, taxSettings);
-      
-      return totals.toJson();
-    } catch (e) {
-      print('Local calculation failed: $e');
-      
-      if (useApiAsBackup) {
-        // Fallback to API calculation
-        return calculateInvoicePreview({
-          'items_payload': jsonEncode(items),
-        });
-      }
-      
-      rethrow;
-    }
+    final taxSettings = await SettingsService.getTaxSettings();
+    final totals = Calculator.calculateTotals(items, taxSettings);
+    return totals.toJson();
   }
 
-  /// Calculate invoice preview totals without saving (API-based)
-  static Future<Map<String, dynamic>> calculateInvoicePreview(Map<String, dynamic> data) async {
-    final response = await http
-        .post(
-          Uri.parse('$baseUrl/invoices/api/calculate-preview/'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(data),
-        )
-        .timeout(timeout);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to calculate invoice preview: ${response.body}');
-  }
+  // ============================================================================
+  // Invoice Stats (computed from local files)
+  // ============================================================================
 
-  /// Create a new invoice
-  static Future<Map<String, dynamic>> createInvoice(Map<String, dynamic> data) async {
-    final response = await http
-        .post(
-          Uri.parse('$baseUrl/invoices/api/create/'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(data),
-        )
-        .timeout(timeout);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to create invoice: ${response.body}');
-  }
-
-  /// Get invoice by ID
-  static Future<Map<String, dynamic>> getInvoice(int id) async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/invoices/api/$id/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to get invoice: ${response.statusCode}');
-  }
-
-  /// Update an existing invoice
-  static Future<Map<String, dynamic>> updateInvoice(int id, Map<String, dynamic> data) async {
-    final response = await http
-        .put(
-          Uri.parse('$baseUrl/invoices/api/$id/'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(data),
-        )
-        .timeout(timeout);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to update invoice: ${response.body}');
-  }
-
-  /// Download invoice PDF
-  static Future<http.Response> downloadInvoicePDF(int id) async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/invoices/$id/pdf/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return response;
-    }
-    throw Exception('Failed to download invoice PDF: ${response.statusCode}');
-  }
-
-  /// Get invoice configuration (tax settings)
-  static Future<Map<String, dynamic>> getInvoiceConfig() async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/invoices/api/config/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to get invoice config: ${response.statusCode}');
-  }
-
-  /// Get invoice statistics (total estimated revenue)
   static Future<Map<String, dynamic>> getInvoiceStats() async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/invoices/api/stats/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+    final prefs = await SharedPreferences.getInstance();
+    final exportPath = prefs.getString('app_settings') != null
+        ? _extractPath(prefs.getString('app_settings')!, 'pdfExportPath')
+        : '';
+    if (exportPath.isEmpty) {
+      return {'total_estimated_revenue': '0.00'};
     }
-    throw Exception('Failed to get invoice stats: ${response.statusCode}');
+    final invoices = await StorageService.loadRecentInvoices(exportPath);
+    double total = 0;
+    for (final inv in invoices) {
+      total += inv.grandTotal;
+    }
+    return {'total_estimated_revenue': total.toStringAsFixed(2)};
   }
 
-  // ============================================================================
-  // RECEIPT APIs
-  // ============================================================================
-
-  /// Create a new receipt
-  static Future<Map<String, dynamic>> createReceipt(Map<String, dynamic> data) async {
-    final response = await http
-        .post(
-          Uri.parse('$baseUrl/receipts/api/create/'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(data),
-        )
-        .timeout(timeout);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to create receipt: ${response.body}');
-  }
-
-  /// Get receipt by ID
-  static Future<Map<String, dynamic>> getReceipt(int id) async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/receipts/api/$id/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to get receipt: ${response.statusCode}');
-  }
-
-  /// Update an existing receipt
-  static Future<Map<String, dynamic>> updateReceipt(int id, Map<String, dynamic> data) async {
-    final response = await http
-        .put(
-          Uri.parse('$baseUrl/receipts/api/$id/'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(data),
-        )
-        .timeout(timeout);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to update receipt: ${response.body}');
-  }
-
-  /// Download receipt PDF
-  static Future<http.Response> downloadReceiptPDF(int id) async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/receipts/$id/pdf/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return response;
-    }
-    throw Exception('Failed to download receipt PDF: ${response.statusCode}');
-  }
-
-  /// Get receipt statistics (total money received)
   static Future<Map<String, dynamic>> getReceiptStats() async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/receipts/api/stats/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+    final prefs = await SharedPreferences.getInstance();
+    final exportPath = prefs.getString('app_settings') != null
+        ? _extractPath(prefs.getString('app_settings')!, 'pdfExportPath')
+        : '';
+    if (exportPath.isEmpty) {
+      return {'total_money_received': '0.00'};
     }
-    throw Exception('Failed to get receipt stats: ${response.statusCode}');
+    final receipts = await StorageService.loadRecentReceipts(exportPath);
+    double total = 0;
+    for (final r in receipts) {
+      total += r.totalAmount;
+    }
+    return {'total_money_received': total.toStringAsFixed(2)};
   }
 
   // ============================================================================
-  // WAYBILL APIs
+  // PDF Generation (local)
   // ============================================================================
 
-  /// Create a new waybill
-  static Future<Map<String, dynamic>> createWaybill(Map<String, dynamic> data) async {
-    final response = await http
-        .post(
-          Uri.parse('$baseUrl/waybills/api/create/'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(data),
-        )
-        .timeout(timeout);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to create waybill: ${response.body}');
+  /// Generate invoice PDF bytes locally
+  static Future<Uint8List> generateInvoicePdfBytes(Invoice invoice) async {
+    return PdfService.generateInvoicePdfData(invoice);
   }
 
-  /// Get waybill by ID
-  static Future<Map<String, dynamic>> getWaybill(int id) async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/waybills/api/$id/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to get waybill: ${response.statusCode}');
+  /// Generate receipt PDF bytes locally
+  static Future<Uint8List> generateReceiptPdfBytes(Receipt receipt) async {
+    return PdfService.generateReceiptPdfData(receipt);
   }
 
-  /// Update an existing waybill
-  static Future<Map<String, dynamic>> updateWaybill(int id, Map<String, dynamic> data) async {
-    final response = await http
-        .put(
-          Uri.parse('$baseUrl/waybills/api/$id/'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(data),
-        )
-        .timeout(timeout);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to update waybill: ${response.body}');
-  }
-
-  /// Download waybill PDF
-  static Future<http.Response> downloadWaybillPDF(int id) async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/waybills/$id/pdf/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return response;
-    }
-    throw Exception('Failed to download waybill PDF: ${response.statusCode}');
+  /// Generate waybill PDF bytes locally
+  static Future<Uint8List> generateWaybillPdfBytes(Waybill waybill) async {
+    return PdfService.generateWaybillPdfData(waybill);
   }
 
   // ============================================================================
-  // COUNTER APIs (Document Numbering)
+  // Document Counts
   // ============================================================================
 
-  /// Get next invoice number (POST to increment, GET for preview)
-  static Future<String> getNextInvoiceNumber({bool increment = false}) async {
-    final uri = Uri.parse('$baseUrl/api/counter/invoice/next/');
-    final response = increment
-        ? await http.post(uri).timeout(timeout)
-        : await http.get(uri).timeout(timeout);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final data = jsonDecode(response.body);
-      return data['next_number'];
-    }
-    throw Exception('Failed to get next invoice number: ${response.statusCode}');
-  }
-
-  /// Get next receipt number (POST to increment, GET for preview)
-  static Future<String> getNextReceiptNumber({bool increment = false}) async {
-    final uri = Uri.parse('$baseUrl/api/counter/receipt/next/');
-    final response = increment
-        ? await http.post(uri).timeout(timeout)
-        : await http.get(uri).timeout(timeout);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final data = jsonDecode(response.body);
-      return data['next_number'];
-    }
-    throw Exception('Failed to get next receipt number: ${response.statusCode}');
-  }
-
-  /// Get next waybill number (POST to increment, GET for preview)
-  static Future<String> getNextWaybillNumber({bool increment = false}) async {
-    final uri = Uri.parse('$baseUrl/api/counter/waybill/next/');
-    final response = increment
-        ? await http.post(uri).timeout(timeout)
-        : await http.get(uri).timeout(timeout);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final data = jsonDecode(response.body);
-      return data['next_number'];
-    }
-    throw Exception('Failed to get next waybill number: ${response.statusCode}');
-  }
-
-  /// Get current document counts for all document types
   static Future<Map<String, dynamic>> getDocumentCounts() async {
-    final response = await http
-        .get(Uri.parse('$baseUrl/api/counter/counts/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to get document counts: ${response.statusCode}');
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'invoice_count': prefs.getInt(_invoiceCounterKey) ?? 0,
+      'receipt_count': prefs.getInt(_receiptCounterKey) ?? 0,
+      'waybill_count': prefs.getInt(_waybillCounterKey) ?? 0,
+    };
   }
 
   // ============================================================================
-  // PROJECT APIs (Export/Import)
+  // Helpers
   // ============================================================================
 
-  /// Export entire project as archive
-  static Future<http.Response> exportProject() async {
-    final response = await http
-        .post(Uri.parse('$baseUrl/api/project/export/'))
-        .timeout(timeout);
-    if (response.statusCode == 200) {
-      return response;
+  static String _extractPath(String settingsJson, String key) {
+    try {
+      // Simple JSON parse to extract path value
+      final decoded = settingsJson;
+      final idx = decoded.indexOf('"$key"');
+      if (idx == -1) return '';
+      final colonIdx = decoded.indexOf(':', idx);
+      if (colonIdx == -1) return '';
+      final startQuote = decoded.indexOf('"', colonIdx + 1);
+      if (startQuote == -1) return '';
+      final endQuote = decoded.indexOf('"', startQuote + 1);
+      if (endQuote == -1) return '';
+      return decoded.substring(startQuote + 1, endQuote);
+    } catch (_) {
+      return '';
     }
-    throw Exception('Failed to export project: ${response.statusCode}');
-  }
-
-  /// Import project from archive
-  static Future<Map<String, dynamic>> importProject(List<int> archiveBytes) async {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$baseUrl/api/project/import/'),
-    );
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        archiveBytes,
-        filename: 'project.billproj',
-      ),
-    );
-    final streamedResponse = await request.send().timeout(timeout);
-    final response = await http.Response.fromStream(streamedResponse);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to import project: ${response.body}');
   }
 }

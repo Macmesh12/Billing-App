@@ -8,6 +8,7 @@ import '../models/invoice.dart';
 import '../models/receipt.dart';
 import '../models/waybill.dart';
 import '../services/api_service.dart';
+import '../services/pdf_service.dart';
 import '../widgets/left_nav.dart';
 import '../widgets/top_bar.dart';
 import '../widgets/custom_card.dart';
@@ -382,18 +383,12 @@ class _HomeScreenState extends State<HomeScreen> {
             physics: const NeverScrollableScrollPhysics(),
             childAspectRatio: 3,
             children: [
-              FutureBuilder<Map<String, dynamic>>(
-                future: ApiService.getInvoiceStats(),
-                builder: (context, snapshot) {
-                  final revenue = snapshot.data?['total_estimated_revenue']?.toString() ?? '0.00';
-                  return _buildStatCard(
-                    icon: Icons.trending_up,
-                    iconColor: const Color(0xFFEAB308),
-                    iconBg: const Color(0xFFFEF3C7),
-                    label: 'Total Estimated Revenue',
-                    value: snapshot.hasData ? '₵$revenue' : 'Loading...',
-                  );
-                },
+              _buildStatCard(
+                icon: Icons.trending_up,
+                iconColor: const Color(0xFFEAB308),
+                iconBg: const Color(0xFFFEF3C7),
+                label: 'Total Estimated Revenue',
+                value: 'GHS ${_calculateInvoiceRevenue(appState)}',
               ),
               _buildStatCard(
                 icon: Icons.description,
@@ -425,18 +420,12 @@ class _HomeScreenState extends State<HomeScreen> {
             physics: const NeverScrollableScrollPhysics(),
             childAspectRatio: 3,
             children: [
-              FutureBuilder<Map<String, dynamic>>(
-                future: ApiService.getReceiptStats(),
-                builder: (context, snapshot) {
-                  final received = snapshot.data?['total_money_received']?.toString() ?? '0.00';
-                  return _buildStatCard(
-                    icon: Icons.trending_up,
-                    iconColor: const Color(0xFF10B981),
-                    iconBg: const Color(0xFFD1FAE5),
-                    label: 'Total Received',
-                    value: snapshot.hasData ? '₵$received' : 'Loading...',
-                  );
-                },
+              _buildStatCard(
+                icon: Icons.trending_up,
+                iconColor: const Color(0xFF10B981),
+                iconBg: const Color(0xFFD1FAE5),
+                label: 'Total Received',
+                value: 'GHS ${_calculateReceiptTotal(appState)}',
               ),
               _buildStatCard(
                 icon: Icons.receipt,
@@ -702,21 +691,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _generateInvoicePdf(BuildContext context, Invoice invoice, String pdfExportPath) async {
     try {
-      // Create invoice on backend and get PDF
-      final result = await ApiService.createInvoice({
-        'customer_name': invoice.customerName,
-        'issue_date': invoice.date,
-        'items_payload': invoice.items.map((i) => {
-          'description': i.description,
-          'qty': i.quantity,
-          'unit_price': i.unitPrice,
-          'discount': i.discount,
-          'amount': i.amount,
-        }).toList(),
-      });
-      
-      final invoiceId = result['id'];
-      final response = await ApiService.downloadInvoicePDF(invoiceId);
+      // Generate PDF locally
+      final pdfBytes = await PdfService.generateInvoicePdfData(invoice);
 
       // Create invoices subfolder
       final invoicesDir = Directory(path.join(pdfExportPath, 'invoices'));
@@ -728,7 +704,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final sanitizedCustomer = invoice.customerName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
       final fileName = '${invoice.invoiceNumber}_$sanitizedCustomer.pdf';
       final file = File(path.join(invoicesDir.path, fileName));
-      await file.writeAsBytes(response.bodyBytes);
+      await file.writeAsBytes(pdfBytes);
 
       if (context.mounted) {
         Navigator.pop(context);
@@ -747,18 +723,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _generateReceiptPdf(BuildContext context, Receipt receipt, String pdfExportPath) async {
     try {
-      // Create receipt on backend and get PDF
-      final result = await ApiService.createReceipt({
-        'received_from': receipt.customerName,
-        'issue_date': receipt.date,
-        'amount': receipt.totalAmount,
-        'payment_method': receipt.paymentMethod,
-        'description': receipt.items.isNotEmpty ? receipt.items.first.description : '',
-        'approved_by': receipt.issuer,
-      });
-      
-      final receiptId = result['id'];
-      final response = await ApiService.downloadReceiptPDF(receiptId);
+      // Generate PDF locally
+      final pdfBytes = await PdfService.generateReceiptPdfData(receipt);
 
       // Create receipts subfolder
       final receiptsDir = Directory(path.join(pdfExportPath, 'receipts'));
@@ -770,7 +736,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final sanitizedCustomer = receipt.customerName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
       final fileName = '${receipt.receiptNumber}_$sanitizedCustomer.pdf';
       final file = File(path.join(receiptsDir.path, fileName));
-      await file.writeAsBytes(response.bodyBytes);
+      await file.writeAsBytes(pdfBytes);
 
       if (context.mounted) {
         Navigator.pop(context);
@@ -789,22 +755,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _generateWaybillPdf(BuildContext context, Waybill waybill, String pdfExportPath) async {
     try {
-      // Create waybill on backend and get PDF
-      final result = await ApiService.createWaybill({
-        'consignee_name': waybill.consigneeName,
-        'consignee_address': waybill.consigneeAddress,
-        'destination': waybill.destinationLocation,
-        'issue_date': waybill.date,
-        'items_payload': waybill.items.map((i) => {
-          'description': i.description,
-          'quantity': i.quantity,
-          'weight': i.weight,
-          'unit': i.unit,
-        }).toList(),
-      });
-      
-      final waybillId = result['id'];
-      final response = await ApiService.downloadWaybillPDF(waybillId);
+      // Generate PDF locally
+      final pdfBytes = await PdfService.generateWaybillPdfData(waybill);
 
       // Create waybills subfolder
       final waybillsDir = Directory(path.join(pdfExportPath, 'waybills'));
@@ -816,7 +768,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final sanitizedCustomer = waybill.consigneeName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
       final fileName = '${waybill.waybillNumber}_$sanitizedCustomer.pdf';
       final file = File(path.join(waybillsDir.path, fileName));
-      await file.writeAsBytes(response.bodyBytes);
+      await file.writeAsBytes(pdfBytes);
 
       if (context.mounted) {
         Navigator.pop(context);
@@ -919,5 +871,23 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     }
+  }
+
+  // ── Local stats helpers ───────────────────────────────────────────────
+
+  String _calculateInvoiceRevenue(AppState appState) {
+    double total = 0;
+    for (final inv in appState.recentInvoices) {
+      total += inv.grandTotal;
+    }
+    return total.toStringAsFixed(2);
+  }
+
+  String _calculateReceiptTotal(AppState appState) {
+    double total = 0;
+    for (final r in appState.recentReceipts) {
+      total += r.totalAmount;
+    }
+    return total.toStringAsFixed(2);
   }
 }
