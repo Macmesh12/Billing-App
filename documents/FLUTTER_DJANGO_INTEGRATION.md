@@ -106,3 +106,9 @@ static const String baseUrl = 'https://your-backend.com';  // Production
 
 - `flutter /utils/pdf_generator.dart` - No longer needed
 - `flutter /assets/` - HTML preview assets removed
+
+Run subosito/flutter-action@v2
+Run chmod +x "$GITHUB_ACTION_PATH/setup.sh"
+Run $GITHUB_ACTION_PATH/setup.sh -p \
+Unable to determine Flutter version for channel: beta version: 3.41.0 architecture: x64
+Error: Process completed with exit code 1.
