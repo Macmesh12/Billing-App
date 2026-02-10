@@ -17,6 +17,7 @@ class InvoiceScreen extends StatefulWidget {
 
 class _InvoiceScreenState extends State<InvoiceScreen> {
   bool isEditMode = true;
+  int? savedInvoiceId;
 
   @override
   void initState() {
@@ -872,7 +873,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     );
   }
 
-  Future<void> _exportPDF(BuildContext context, invoice) async {
+  Future<void> _exportPDF(BuildContext context, Invoice invoice) async {
     final appState = Provider.of<AppState>(context, listen: false);
     final pdfExportPath = appState.settings.pdfExportPath;
 
@@ -912,8 +913,11 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     }
 
     try {
-      // Generate PDF locally
-      final pdfBytes = await PdfService.generateInvoicePdfData(invoice);
+      // Generate PDF locally with settings for tax info
+      final pdfBytes = await PdfService.generateInvoicePdfData(
+        invoice,
+        settings: appState.settings,
+      );
 
       // Create invoices subfolder in pdfExportPath
       final invoicesDir = Directory(path.join(pdfExportPath, 'invoices'));
