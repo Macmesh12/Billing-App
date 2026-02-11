@@ -1,4 +1,5 @@
 import 'document_item.dart';
+import 'tax_entry.dart';
 import 'dart:math';
 
 class InvoiceItem {
@@ -90,6 +91,13 @@ class Invoice {
   double calculateGetfund(double rate) => subtotal * (rate / 100);
   double calculateVat(double rate) => subtotal * (rate / 100);
 
+  /// Calculate a single tax amount from a [TaxEntry].
+  double calculateTax(TaxEntry tax) => subtotal * (tax.rate / 100);
+
+  /// Sum of all enabled taxes from the given list.
+  double calculateTotalTaxes(List<TaxEntry> taxes) =>
+      taxes.fold(0.0, (sum, t) => sum + calculateTax(t));
+
   double calculateGrandTotal({
     required bool applyTax,
     double nhilRate = 2.5,
@@ -103,6 +111,15 @@ class Invoice {
         calculateNhil(nhilRate) +
         calculateGetfund(getfundRate) +
         calculateVat(vatRate);
+  }
+
+  /// Grand total using the dynamic tax list.
+  double calculateGrandTotalFromTaxes({
+    required bool applyTax,
+    required List<TaxEntry> taxes,
+  }) {
+    if (!applyTax) return subtotal;
+    return subtotal + calculateTotalTaxes(taxes);
   }
 
   Invoice copyWith({

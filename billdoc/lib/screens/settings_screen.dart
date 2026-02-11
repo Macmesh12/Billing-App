@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import '../providers/app_state.dart';
 import '../widgets/custom_button.dart';
 import '../models/customer.dart';
+import '../models/tax_entry.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -73,7 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     SwitchListTile(
                       title: const Text('Apply Taxes'),
                       subtitle: const Text(
-                        'Enable to include NHIL, GETFund, and VAT',
+                        'Enable to include taxes/levies on invoices',
                       ),
                       value: settings.applyTax,
                       onChanged: (v) => appState.updateSettings(
@@ -82,57 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     if (settings.applyTax) ...[
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              label: 'NHIL Rate (%)',
-                              value: settings.nhilRate.toString(),
-                              keyboardType: TextInputType.number,
-                              onChanged: (v) => appState.updateSettings(
-                                settings.copyWith(
-                                  nhilRate:
-                                      double.tryParse(v) ?? settings.nhilRate,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              label: 'GETFund Levy (%)',
-                              value: settings.getfundRate.toString(),
-                              keyboardType: TextInputType.number,
-                              onChanged: (v) => appState.updateSettings(
-                                settings.copyWith(
-                                  getfundRate:
-                                      double.tryParse(v) ??
-                                      settings.getfundRate,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              label: 'VAT Rate (%)',
-                              value: settings.vatRate.toString(),
-                              keyboardType: TextInputType.number,
-                              onChanged: (v) => appState.updateSettings(
-                                settings.copyWith(
-                                  vatRate:
-                                      double.tryParse(v) ?? settings.vatRate,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const Expanded(child: SizedBox()),
-                        ],
-                      ),
+                      _buildTaxList(appState),
                     ],
                   ]),
                   const SizedBox(height: 32),
@@ -164,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (_formKey.currentState!.validate()) {
                         // Refresh documents from the new paths
                         await appState.refreshDocuments();
-                        
+
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -287,7 +238,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: const Icon(Icons.folder_open),
               label: const Text('Browse'),
               onPressed: () async {
-                String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+                String? selectedDirectory = await FilePicker.platform
+                    .getDirectoryPath();
                 if (selectedDirectory != null) {
                   onChanged(selectedDirectory);
                 }
@@ -298,6 +250,241 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
     );
   }
+
+  // --------------- Tax Management ---------------
+
+  Widget _buildTaxList(AppState appState) {
+    final taxes = appState.settings.taxes;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Taxes / Levies (${taxes.length})',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('Add Tax'),
+              onPressed: () => _showTaxDialog(appState, null, null),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (taxes.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Center(
+              child: Text(
+                'No taxes added yet',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          )
+        else
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: taxes.length,
+            onReorder: (oldIndex, newIndex) {
+              if (newIndex > oldIndex) newIndex--;
+              final updated = List<TaxEntry>.from(taxes);
+              final item = updated.removeAt(oldIndex);
+              updated.insert(newIndex, item);
+              appState.updateSettings(
+                appState.settings.copyWith(taxes: updated),
+              );
+            },
+            itemBuilder: (context, index) {
+              final tax = taxes[index];
+              final isBuiltIn = tax.isDefault;
+              return Card(
+                key: ValueKey('tax_$index'),
+                child: ListTile(
+                  leading: Switch(
+                    value: tax.enabled,
+                    activeColor: const Color(0xFFEAB308),
+                    onChanged: (v) {
+                      final updated = List<TaxEntry>.from(taxes);
+                      updated[index] = tax.copyWith(enabled: v);
+                      appState.updateSettings(
+                        appState.settings.copyWith(taxes: updated),
+                      );
+                    },
+                  ),
+                  title: Row(
+                    children: [
+                      Text(tax.name),
+                      if (isBuiltIn) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Default',
+                            style: TextStyle(fontSize: 10, color: Colors.brown),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  subtitle: Text('${tax.rate}%'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () => _showTaxDialog(appState, tax, index),
+                      ),
+                      if (!isBuiltIn)
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _confirmDeleteTax(appState, index),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  void _showTaxDialog(AppState appState, TaxEntry? existing, int? index) {
+    final isEditing = existing != null;
+    final isBuiltIn = existing?.isDefault ?? false;
+    final nameController = TextEditingController(text: existing?.name ?? '');
+    final rateController = TextEditingController(
+      text: existing != null ? existing.rate.toString() : '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          isBuiltIn
+              ? 'Edit ${existing!.name} Rate'
+              : (isEditing ? 'Edit Tax / Levy' : 'Add Tax / Levy'),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isBuiltIn)
+                TextField(
+                  controller: nameController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'Tax Name *',
+                    hintText: 'e.g. COVID LEVY',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              if (!isBuiltIn) const SizedBox(height: 12),
+              TextField(
+                controller: rateController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: isBuiltIn
+                      ? '${existing!.name} Rate (%)'
+                      : 'Rate (%) *',
+                  hintText: 'e.g. 1.0',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = isBuiltIn
+                  ? existing!.name
+                  : nameController.text.trim();
+              final rate = double.tryParse(rateController.text.trim());
+
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Tax name is required')),
+                );
+                return;
+              }
+              if (rate == null || rate < 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid rate')),
+                );
+                return;
+              }
+
+              final taxes = List<TaxEntry>.from(appState.settings.taxes);
+              if (isEditing && index != null) {
+                taxes[index] = TaxEntry(
+                  name: name,
+                  rate: rate,
+                  enabled: existing!.enabled,
+                  isDefault: existing.isDefault,
+                );
+              } else {
+                taxes.add(TaxEntry(name: name, rate: rate));
+              }
+              appState.updateSettings(appState.settings.copyWith(taxes: taxes));
+              Navigator.pop(context);
+            },
+            child: Text(isEditing ? 'Update' : 'Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteTax(AppState appState, int index) {
+    final tax = appState.settings.taxes[index];
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Tax'),
+        content: Text('Are you sure you want to delete "${tax.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              final taxes = List<TaxEntry>.from(appState.settings.taxes);
+              taxes.removeAt(index);
+              appState.updateSettings(appState.settings.copyWith(taxes: taxes));
+              Navigator.pop(context);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------- Customer Management ---------------
 
   Widget _buildCustomersList(AppState appState) {
     final customers = appState.settings.customers;

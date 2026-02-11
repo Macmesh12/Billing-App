@@ -63,18 +63,15 @@ class _InvoiceEditScreenState extends State<InvoiceEditScreen> {
       return {'subtotal': subtotal, 'grandTotal': subtotal};
     }
 
-    final nhil = subtotal * (settings.nhilRate / 100);
-    final getfund = subtotal * (settings.getfundRate / 100);
-    final vat = subtotal * (settings.vatRate / 100);
-    final grandTotal = subtotal + nhil + getfund + vat;
-
-    return {
-      'subtotal': subtotal,
-      'nhil': nhil,
-      'getfund': getfund,
-      'vat': vat,
-      'grandTotal': grandTotal,
-    };
+    double totalTax = 0.0;
+    final result = <String, double>{'subtotal': subtotal};
+    for (final tax in settings.activeTaxes) {
+      final amount = subtotal * (tax.rate / 100);
+      result[tax.name] = amount;
+      totalTax += amount;
+    }
+    result['grandTotal'] = subtotal + totalTax;
+    return result;
   }
 
   @override
@@ -209,12 +206,13 @@ class _InvoiceEditScreenState extends State<InvoiceEditScreen> {
                           _buildTotalRow(
                               'Subtotal', totals['subtotal']!, 'GHS'),
                           if (settings.applyTax) ...[
-                            _buildTotalRow('NHIL (${settings.nhilRate}%)',
-                                totals['nhil']!, 'GHS'),
-                            _buildTotalRow('GETFund (${settings.getfundRate}%)',
-                                totals['getfund']!, 'GHS'),
-                            _buildTotalRow('VAT (${settings.vatRate}%)',
-                                totals['vat']!, 'GHS'),
+                            ...settings.activeTaxes.map((tax) =>
+                              _buildTotalRow(
+                                '${tax.name} (${tax.rate}%)',
+                                totals[tax.name] ?? 0.0,
+                                'GHS',
+                              ),
+                            ),
                           ],
                           const Divider(),
                           _buildTotalRow('Grand Total', totals['grandTotal']!,

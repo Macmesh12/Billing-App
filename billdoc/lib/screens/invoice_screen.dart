@@ -400,9 +400,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Apply Taxes (NHIL, GETFund, VAT)',
-                style: TextStyle(fontWeight: FontWeight.w500),
+              Text(
+                'Apply Taxes (${settings.activeTaxes.map((t) => t.name).join(', ')})',
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
               Switch(
                 value: settings.applyTax,
@@ -438,30 +438,18 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 ),
               ],
               if (settings.applyTax) ...[
-                _buildTotalRow(
-                  'NHIL (${settings.nhilRate}%)',
-                  invoice.calculateNhil(settings.nhilRate),
+                ...settings.activeTaxes.map((tax) => _buildTotalRow(
+                  '${tax.name} (${tax.rate}%)',
+                  invoice.calculateTax(tax),
                   'GHS',
-                ),
-                _buildTotalRow(
-                  'GETFund (${settings.getfundRate}%)',
-                  invoice.calculateGetfund(settings.getfundRate),
-                  'GHS',
-                ),
-                _buildTotalRow(
-                  'VAT (${settings.vatRate}%)',
-                  invoice.calculateVat(settings.vatRate),
-                  'GHS',
-                ),
+                )),
               ],
               const Divider(),
               _buildTotalRow(
                 'GRAND TOTAL',
-                invoice.calculateGrandTotal(
+                invoice.calculateGrandTotalFromTaxes(
                   applyTax: settings.applyTax,
-                  nhilRate: settings.nhilRate,
-                  getfundRate: settings.getfundRate,
-                  vatRate: settings.vatRate,
+                  taxes: settings.activeTaxes,
                 ) + invoice.customerPreviousBalance,
                 'GHS',
                 isTotal: true,
@@ -697,30 +685,18 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
               ),
             ],
             if (settings.applyTax) ...[
-              _buildTotalRow(
-                'NHIL (${settings.nhilRate}%)',
-                invoice.calculateNhil(settings.nhilRate),
+              ...settings.activeTaxes.map((tax) => _buildTotalRow(
+                '${tax.name} (${tax.rate}%)',
+                invoice.calculateTax(tax),
                 'GHS',
-              ),
-              _buildTotalRow(
-                'GETFund (${settings.getfundRate}%)',
-                invoice.calculateGetfund(settings.getfundRate),
-                'GHS',
-              ),
-              _buildTotalRow(
-                'VAT (${settings.vatRate}%)',
-                invoice.calculateVat(settings.vatRate),
-                'GHS',
-              ),
+              )),
             ],
             const Divider(),
             _buildTotalRow(
               'GRAND TOTAL',
-              invoice.calculateGrandTotal(
+              invoice.calculateGrandTotalFromTaxes(
                 applyTax: settings.applyTax,
-                nhilRate: settings.nhilRate,
-                getfundRate: settings.getfundRate,
-                vatRate: settings.vatRate,
+                taxes: settings.activeTaxes,
               ) + invoice.customerPreviousBalance,
               'GHS',
               isTotal: true,

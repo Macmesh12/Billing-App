@@ -1,33 +1,43 @@
 import 'customer.dart';
+import 'tax_entry.dart';
 
 class AppSettings {
   final bool applyTax;
-  final double nhilRate;
-  final double getfundRate;
-  final double vatRate;
+  final List<TaxEntry> taxes;
   final bool enableCustomerManagement;
   final List<Customer> customers;
   final String draftSavePath;
   final String pdfExportPath;
   final String invoiceNote;
 
+  // ---------- backward-compat convenience getters ----------
+  double get nhilRate => taxes
+      .where((t) => t.name.toUpperCase() == 'NHIL')
+      .fold(0.0, (_, t) => t.rate);
+  double get getfundRate => taxes
+      .where((t) => t.name.toUpperCase() == 'GETFUND')
+      .fold(0.0, (_, t) => t.rate);
+  double get vatRate => taxes
+      .where((t) => t.name.toUpperCase() == 'VAT')
+      .fold(0.0, (_, t) => t.rate);
+
+  /// Only the taxes that are currently enabled.
+  List<TaxEntry> get activeTaxes => taxes.where((t) => t.enabled).toList();
+
   AppSettings({
     this.applyTax = true,
-    this.nhilRate = 2.5,
-    this.getfundRate = 2.5,
-    this.vatRate = 15.0,
+    List<TaxEntry>? taxes,
     this.enableCustomerManagement = false,
     List<Customer>? customers,
     this.draftSavePath = '',
     this.pdfExportPath = '',
     this.invoiceNote = '',
-  }) : customers = customers ?? [];
+  }) : taxes = taxes ?? List<TaxEntry>.from(TaxEntry.defaults),
+       customers = customers ?? [];
 
   AppSettings copyWith({
     bool? applyTax,
-    double? nhilRate,
-    double? getfundRate,
-    double? vatRate,
+    List<TaxEntry>? taxes,
     bool? enableCustomerManagement,
     List<Customer>? customers,
     String? draftSavePath,
@@ -36,9 +46,7 @@ class AppSettings {
   }) {
     return AppSettings(
       applyTax: applyTax ?? this.applyTax,
-      nhilRate: nhilRate ?? this.nhilRate,
-      getfundRate: getfundRate ?? this.getfundRate,
-      vatRate: vatRate ?? this.vatRate,
+      taxes: taxes ?? this.taxes,
       enableCustomerManagement:
           enableCustomerManagement ?? this.enableCustomerManagement,
       customers: customers ?? this.customers,
@@ -51,9 +59,7 @@ class AppSettings {
   Map<String, dynamic> toJson() {
     return {
       'applyTax': applyTax,
-      'nhilRate': nhilRate,
-      'getfundRate': getfundRate,
-      'vatRate': vatRate,
+      'taxes': taxes.map((t) => t.toJson()).toList(),
       'enableCustomerManagement': enableCustomerManagement,
       'customers': customers.map((c) => c.toJson()).toList(),
       'draftSavePath': draftSavePath,
@@ -63,15 +69,40 @@ class AppSettings {
   }
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
+    // Migrate from old format that had nhilRate/getfundRate/vatRate
+    List<TaxEntry> taxes;
+    if (json.containsKey('taxes')) {
+      taxes = (json['taxes'] as List)
+          .map((t) => TaxEntry.fromJson(t as Map<String, dynamic>))
+          .toList();
+    } else {
+      // Legacy migration: build list from old individual fields
+      taxes = [
+        TaxEntry(
+          name: 'NHIL',
+          rate: (json['nhilRate'] as num?)?.toDouble() ?? 2.5,
+        ),
+        TaxEntry(
+          name: 'GETFund',
+          rate: (json['getfundRate'] as num?)?.toDouble() ?? 2.5,
+        ),
+        TaxEntry(
+          name: 'VAT',
+          rate: (json['vatRate'] as num?)?.toDouble() ?? 15.0,
+        ),
+      ];
+    }
+
     return AppSettings(
       applyTax: json['applyTax'] as bool? ?? true,
-      nhilRate: (json['nhilRate'] as num?)?.toDouble() ?? 2.5,
-      getfundRate: (json['getfundRate'] as num?)?.toDouble() ?? 2.5,
-      vatRate: (json['vatRate'] as num?)?.toDouble() ?? 15.0,
-      enableCustomerManagement: json['enableCustomerManagement'] as bool? ?? false,
-      customers: (json['customers'] as List?)
-          ?.map((c) => Customer.fromJson(c as Map<String, dynamic>))
-          .toList() ?? [],
+      taxes: taxes,
+      enableCustomerManagement:
+          json['enableCustomerManagement'] as bool? ?? false,
+      customers:
+          (json['customers'] as List?)
+              ?.map((c) => Customer.fromJson(c as Map<String, dynamic>))
+              .toList() ??
+          [],
       draftSavePath: json['draftSavePath'] as String? ?? '',
       pdfExportPath: json['pdfExportPath'] as String? ?? '',
       invoiceNote: json['invoiceNote'] as String? ?? '',

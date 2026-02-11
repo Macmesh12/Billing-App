@@ -8,6 +8,7 @@ import '../models/invoice.dart';
 import '../models/receipt.dart';
 import '../models/waybill.dart';
 import '../models/settings.dart';
+import '../models/tax_entry.dart';
 
 /// Brand colour used throughout all PDFs (matches the Flutter UI yellow).
 const _brandColor = PdfColor.fromInt(0xFFEAB308);
@@ -145,9 +146,7 @@ class PdfService {
     final logo = await _getLogo();
     final sign = await _getSignature();
     final applyTax = settings?.applyTax ?? false;
-    final nhilRate = settings?.nhilRate ?? 2.5;
-    final getfundRate = settings?.getfundRate ?? 2.5;
-    final vatRate = settings?.vatRate ?? 15.0;
+    final activeTaxes = settings?.activeTaxes ?? <TaxEntry>[];
     final invoiceNote = settings?.invoiceNote ?? '';
 
     final pdf = pw.Document();
@@ -231,27 +230,17 @@ class PdfService {
               color: PdfColor.fromInt(0xFFEA580C),
             ),
           if (applyTax) ...[
-            _totalsRow(
-              'NHIL ($nhilRate%)',
-              'GHS ${invoice.calculateNhil(nhilRate).toStringAsFixed(2)}',
-            ),
-            _totalsRow(
-              'GETFund ($getfundRate%)',
-              'GHS ${invoice.calculateGetfund(getfundRate).toStringAsFixed(2)}',
-            ),
-            _totalsRow(
-              'VAT ($vatRate%)',
-              'GHS ${invoice.calculateVat(vatRate).toStringAsFixed(2)}',
-            ),
+            ...activeTaxes.map((tax) => _totalsRow(
+              '${tax.name} (${tax.rate}%)',
+              'GHS ${invoice.calculateTax(tax).toStringAsFixed(2)}',
+            )),
           ],
           pw.Divider(color: PdfColors.grey400),
           _totalsRow(
             'GRAND TOTAL',
-            'GHS ${(invoice.calculateGrandTotal(
+            'GHS ${(invoice.calculateGrandTotalFromTaxes(
                   applyTax: applyTax,
-                  nhilRate: nhilRate,
-                  getfundRate: getfundRate,
-                  vatRate: vatRate,
+                  taxes: activeTaxes,
                 ) + invoice.customerPreviousBalance).toStringAsFixed(2)}',
             bold: true,
             fontSize: 13,
